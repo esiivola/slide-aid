@@ -1,0 +1,246 @@
+<!doctype html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root { --blue:#1f4e79; --line:#d8dce0; --muted:#687078; --bg:#f7f8fa; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:#202124; font:13px/1.35 Arial,sans-serif; background:#fff; }
+    header { padding:12px 14px 9px; border-bottom:1px solid var(--line); }
+    h1 { margin:0 0 3px; font-size:18px; color:var(--blue); }
+    .subtitle { color:var(--muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tabs { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--line); background:var(--bg); }
+    .tab { padding:8px 2px; border:0; border-bottom:2px solid transparent; background:transparent; font-size:11px; cursor:pointer; }
+    .tab.active { color:var(--blue); border-bottom-color:var(--blue); font-weight:bold; background:#fff; }
+    main { padding:10px; }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    .section { margin:0 0 13px; }
+    .section-title { margin:0 0 6px; color:#4b5156; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:.35px; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+    .grid.two { grid-template-columns:repeat(2,1fr); }
+    button.action { min-height:40px; padding:5px 3px; border:1px solid var(--line); border-radius:4px; background:#fff; cursor:pointer; color:#202124; }
+    button.action:hover { background:#eef4fb; border-color:#9ab7d0; }
+    button.action img { display:block; width:20px; height:20px; object-fit:contain; margin:0 auto 2px; }
+    button.primary { border-color:var(--blue); background:var(--blue); color:#fff; }
+    .row { display:flex; gap:6px; align-items:center; margin:5px 0; }
+    .row > label { min-width:72px; color:#4b5156; }
+    select,input[type=number],input[type=color],input:not([type]) { min-width:0; height:29px; border:1px solid var(--line); border-radius:3px; background:#fff; }
+    select,input[type=number],input:not([type]) { flex:1; padding:3px 5px; }
+    input[type=color] { width:42px; padding:2px; }
+    .reference { padding:8px; border:1px solid var(--line); border-radius:4px; background:var(--bg); }
+    .reference strong { display:block; margin-bottom:3px; }
+    .small-buttons { display:flex; gap:5px; margin-top:7px; }
+    .small-buttons button { flex:1; padding:6px; border:1px solid var(--line); border-radius:3px; background:#fff; cursor:pointer; }
+    #status { position:sticky; bottom:0; padding:8px 10px; border-top:1px solid var(--line); background:#fff; color:var(--muted); min-height:34px; }
+    #status.error { color:#b3261e; }
+    #status.success { color:#137333; }
+    .busy { opacity:.55; pointer-events:none; }
+    .note { color:var(--muted); font-size:11px; margin-top:5px; }
+    .search { width:100%; margin-top:8px; padding:7px 9px; border:1px solid var(--line); border-radius:4px; }
+    .inspector { margin-top:8px; padding:7px; border-radius:4px; background:var(--bg); color:var(--muted); font-size:11px; }
+    .inspector strong { color:#202124; }
+    .swatches { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; }
+    .swatch { height:34px; border:1px solid var(--line); border-radius:4px; cursor:pointer; font-size:9px; padding-top:18px; text-shadow:0 0 2px #fff; }
+    .list { display:flex; flex-direction:column; gap:5px; }
+    .list-item { padding:7px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+    .list-item .meta { color:var(--muted); font-size:10px; }
+    .list-item .actions { display:flex; gap:4px; margin-top:5px; }
+    .list-item button { padding:4px 7px; }
+    .preview { display:grid; gap:3px; width:100%; height:70px; padding:5px; border:1px solid var(--line); background:var(--bg); }
+    .preview span { background:#9dc3e6; border:1px solid #5b9bd5; }
+    .hidden-by-search { display:none !important; }
+    #searchResults { margin-top:6px; max-height:160px; overflow:auto; }
+    #searchResults button { width:100%; text-align:left; padding:6px; background:#fff; border:1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <header><h1>Slide Aid</h1><div class="subtitle" id="deck">Loading presentation…</div>
+    <input class="search" id="commandSearch" placeholder="Search commands…" oninput="filterCommands()">
+    <div class="list" id="searchResults" hidden></div>
+    <div class="inspector"><strong id="inspectorTitle">No objects selected</strong><div id="inspectorDetails">Select objects, then refresh.</div><button onclick="refresh()">Refresh selection</button></div>
+  </header>
+  <nav class="tabs">
+    <button class="tab active" data-panel="position">Position</button>
+    <button class="tab" data-panel="size">Size & text</button>
+    <button class="tab" data-panel="color">Color</button>
+    <button class="tab" data-panel="charts">Charts</button>
+    <button class="tab" data-panel="layouts">Layouts</button>
+    <button class="tab" data-panel="library">Library</button>
+    <button class="tab" data-panel="qa">Deck QA</button>
+  </nav>
+  <main id="content">
+    <section class="panel active" id="position">
+      <div class="section">
+        <div class="section-title">Reference</div>
+        <div class="reference"><strong id="referenceLabel">No reference pinned</strong><span id="selectionCount">0 objects selected</span>
+          <div class="small-buttons"><button onclick="setReference()">Set reference</button><button onclick="clearReference()">Clear</button></div>
+        </div>
+        <div class="row"><label>Align to</label><select id="referenceMode"><option value="PINNED">Pinned object</option><option value="SLIDE">Slide</option><option value="BOUNDS">Selection bounds</option></select></div>
+      </div>
+      <div class="section"><div class="section-title">Align</div><div class="grid">
+        <button class="action" onclick="command('align','L')"><img src="{{ICON:sa_align_left}}">Left</button>
+        <button class="action" onclick="command('align','CH')"><img src="{{ICON:sa_align_center}}">Center</button>
+        <button class="action" onclick="command('align','R')"><img src="{{ICON:sa_align_right}}">Right</button>
+        <button class="action" onclick="command('align','T')"><img src="{{ICON:sa_align_top}}">Top</button>
+        <button class="action" onclick="command('align','CV')"><img src="{{ICON:sa_align_middle}}">Middle</button>
+        <button class="action" onclick="command('align','B')"><img src="{{ICON:sa_align_bottom}}">Bottom</button>
+      </div></div>
+      <div class="section"><div class="section-title">Dock / stretch / fill gap</div><div class="grid">
+        <button class="action" onclick="command('dock','L')"><img src="{{ICON:sa_dock}}">Dock L</button><button class="action" onclick="command('dock','T')">Dock ↑</button><button class="action" onclick="command('dock','R')">Dock R</button>
+        <button class="action" onclick="command('stretch','L')"><img src="{{ICON:sa_stretch}}">Stretch L</button><button class="action" onclick="command('stretch','R')">Stretch R</button><button class="action" onclick="command('fillGap','R')"><img src="{{ICON:sa_fill}}">Fill →</button>
+      </div></div>
+      <div class="section"><div class="section-title">Arrange</div>
+        <div class="row"><label>Gap (cm)</label><input id="gap" type="number" value="0.2" step="0.1"></div>
+        <div class="row"><label>Columns</label><input id="columns" type="number" value="3" min="1" step="1"></div>
+        <div class="grid">
+          <button class="action" onclick="command('stack','H')"><img src="{{ICON:sa_stack}}">Stack H</button><button class="action" onclick="command('stack','V')">Stack V</button><button class="action" onclick="command('matrix')"><img src="{{ICON:sa_matrix}}">Matrix</button>
+          <button class="action" onclick="command('spacing','H')"><img src="{{ICON:sa_spacing}}">Space H</button><button class="action" onclick="command('spacing','V')">Space V</button><button class="action" onclick="command('distribute','H')"><img src="{{ICON:sa_dist_h}}">Distribute H</button>
+        </div>
+      </div>
+      <div class="section"><div class="section-title">Place on slide</div><div class="grid">
+        <button class="action" onclick="command('place','LH')">Left half</button><button class="action" onclick="command('place','RH')">Right half</button><button class="action" onclick="command('place','FULL')"><img src="{{ICON:sa_place}}">Full</button>
+        <button class="action" onclick="command('place','Q1')">Top-left</button><button class="action" onclick="command('place','Q2')">Top-right</button><button class="action" onclick="command('golden')"><img src="{{ICON:sa_golden}}">Golden</button>
+      </div></div>
+    </section>
+
+    <section class="panel" id="size">
+      <div class="section"><div class="section-title">Match reference</div><div class="grid">
+        <button class="action" onclick="command('size','W')"><img src="{{ICON:sa_width}}">Width</button><button class="action" onclick="command('size','H')"><img src="{{ICON:sa_height}}">Height</button><button class="action" onclick="command('size','WH')"><img src="{{ICON:sa_size}}">Both</button>
+      </div></div>
+      <div class="section"><div class="section-title">Resize and duplicate</div>
+        <div class="row"><label>Scale (%)</label><input id="scale" type="number" value="120" min="1"></div>
+        <div class="row"><label>Rows</label><input id="rows" type="number" value="2" min="1"><label style="min-width:auto">Cols</label><input id="dupeColumns" type="number" value="2" min="1"></div>
+        <div class="grid"><button class="action" onclick="command('scale')"><img src="{{ICON:sa_magic}}">Resize</button><button class="action" onclick="command('slice')"><img src="{{ICON:sa_slice}}">Slice</button><button class="action" onclick="command('multiply')"><img src="{{ICON:sa_multiply}}">Multiply</button></div>
+      </div>
+      <div class="section"><div class="section-title">Shape</div><div class="grid two"><button class="action" onclick="command('angles')"><img src="{{ICON:sa_angles}}">Match rotation</button><button class="action" onclick="command('golden')"><img src="{{ICON:sa_golden}}">Golden canon</button></div></div>
+      <div class="section"><div class="section-title">Text</div><div class="grid">
+        <button class="action" onclick="command('text','U')">UPPER</button><button class="action" onclick="command('text','L')">lower</button><button class="action" onclick="command('text','T')">Title</button>
+        <button class="action" onclick="command('text','S')">Sentence</button><button class="action" onclick="command('text','TIDY')"><img src="{{ICON:sa_cleanup}}">Tidy</button><button class="action" onclick="command('swapText')"><img src="{{ICON:sa_swap}}">Swap text</button>
+      </div><div class="note">Selection-order tools use spatial order in Google Slides.</div></div>
+    </section>
+
+    <section class="panel" id="color">
+      <div class="section"><div class="section-title">Apply RGB color</div>
+        <div class="row"><label>Target</label><select id="colorTarget"><option value="F">Fill</option><option value="L">Line</option><option value="T">Text</option></select><input id="shapeColor" type="color" value="#4472c4"><button onclick="applyColor()">Apply</button></div>
+      </div>
+      <div class="section"><div class="section-title">Chart palette</div><div class="row"><label>Palette</label><select id="palette" onchange="setPalette(this.value)"></select></div><div class="note">The nine palettes match the PowerPoint Chart Aid gallery. Restyle charts after changing the palette.</div></div>
+      <div class="section"><div class="section-title">Theme-linked colors</div><div class="row"><label>Target</label><select id="themeTarget"><option value="F">Fill</option><option value="L">Line</option><option value="T">Text</option></select></div><div class="swatches" id="themeSwatches"></div></div>
+      <div class="section"><div class="section-title">Convert and manage theme</div><div class="grid">
+        <button class="action" onclick="call('convertSlideAidColors',true)">RGB → theme</button><button class="action" onclick="call('convertSlideAidColors',false)">Theme → RGB</button><button class="action" onclick="applyPaletteTheme()">Palette → accents</button>
+      </div><div class="note">Changing theme accents affects every theme-linked object in the deck.</div></div>
+    </section>
+
+    <section class="panel" id="charts">
+      <div class="section"><div class="section-title">Build from selected table</div><div class="grid">
+        <button class="action" onclick="chart('COL')"><img src="{{ICON:sa_ch_col}}">Column</button><button class="action" onclick="chart('BAR')"><img src="{{ICON:sa_ch_bar}}">Bar</button><button class="action" onclick="chart('STK')"><img src="{{ICON:sa_ch_stk}}">Stacked</button>
+        <button class="action" onclick="chart('SBR')"><img src="{{ICON:sa_ch_sbr}}">Stacked bar</button><button class="action" onclick="chart('PCT')"><img src="{{ICON:sa_ch_pct}}">100%</button><button class="action" onclick="chart('WF')"><img src="{{ICON:sa_ch_wf}}">Waterfall</button>
+        <button class="action" onclick="chart('MEK')"><img src="{{ICON:sa_ch_mek}}">Mekko</button><button class="action" onclick="chart('LINE')"><img src="{{ICON:sa_ch_line}}">Line</button><button class="action" onclick="chart('AREA')"><img src="{{ICON:sa_ch_area}}">Area</button>
+        <button class="action" onclick="chart('PIE')"><img src="{{ICON:sa_ch_pie}}">Pie</button><button class="action" onclick="chart('DON')"><img src="{{ICON:sa_ch_don}}">Doughnut</button><button class="action" onclick="chart('SCAT')"><img src="{{ICON:sa_ch_scat}}">Scatter</button>
+        <button class="action" onclick="chart('BUB')"><img src="{{ICON:sa_ch_scat}}">Bubble</button><button class="action" onclick="chart('GANTT')"><img src="{{ICON:sa_ch_gantt}}">Gantt</button>
+      </div></div>
+      <div class="section"><div class="section-title">Edit and style</div><div class="grid two">
+        <button class="action" onclick="api('editSlideAidChartData')"><img src="{{ICON:sa_ch_edit}}">Edit data</button><button class="action" onclick="api('rebuildSlideAidChart')"><img src="{{ICON:sa_ch_rebuild}}">Rebuild</button>
+        <button class="action" onclick="restyle(false)"><img src="{{ICON:sa_ch_restyle}}">Restyle selected</button><button class="action" onclick="restyle(true)">Restyle all</button>
+      </div>
+      <div class="row"><label>Series</label><input id="series" type="number" value="1" min="1"><input id="seriesColor" type="color" value="#4472c4"><button onclick="recolorSeries()">Recolor</button></div>
+      <div class="note">Area, pie and doughnut remain data-editable but render as images because Google Slides does not expose PowerPoint-style freeform paths or adjustment handles.</div></div>
+      <div class="section"><div class="section-title">Linked Google Sheets data</div>
+        <div class="row"><label>Sheet URL</label><input id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/…"></div>
+        <div class="row"><label>Tab</label><input id="sheetName" placeholder="Sheet1"><label style="min-width:auto">Range</label><input id="sheetRange" value="A1:D6"></div>
+        <div class="row"><label>Chart</label><select id="linkedKind"><option>COL</option><option>BAR</option><option>STK</option><option>SBR</option><option>PCT</option><option>WF</option><option>MEK</option><option>LINE</option><option>AREA</option><option>PIE</option><option>DON</option><option>SCAT</option><option>BUB</option><option>GANTT</option></select></div>
+        <div class="grid"><button class="action" onclick="validateLinked()">Validate</button><button class="action" onclick="buildLinked()">Build linked</button><button class="action" onclick="api('refreshLinkedSlideAidChart')">Refresh selected</button></div>
+        <div class="note" id="linkedStatus">Linked charts store the Sheet tab and range, then rebuild from fresh values.</div>
+      </div>
+    </section>
+
+    <section class="panel" id="layouts">
+      <div class="section"><div class="section-title">Named layouts</div>
+        <div class="row"><label>Name</label><input id="layoutName" placeholder="Three KPI cards"><button onclick="saveLayout()">Save selection</button></div>
+        <div class="list" id="layoutList"><div class="note">No layouts saved in this deck.</div></div>
+      </div>
+      <div class="section"><div class="section-title">Matrix preview</div><div class="preview" id="matrixPreview"></div><div class="note">Preview uses the current selection count and Columns setting.</div></div>
+    </section>
+
+    <section class="panel" id="library">
+      <div class="section"><div class="section-title">Shared Slides library</div>
+        <div class="row"><label>Deck URL</label><input id="libraryUrl" placeholder="Explicit Google Slides URL"></div>
+        <div class="grid"><button class="action" onclick="configureLibrary()">Connect</button><button class="action" onclick="loadLibrary()">Refresh list</button><button class="action" onclick="api('refreshSelectedSlideAidLibraryItem')">Refresh selected</button></div>
+        <div class="note">Only the explicitly connected presentation is accessed; Slide Aid does not browse your Drive.</div>
+      </div>
+      <div class="section"><div class="section-title">Add current selection</div><div class="row"><label>Name</label><input id="libraryName" placeholder="KPI card"><button onclick="addToLibrary()">Add</button></div></div>
+      <div class="section"><div class="section-title">Items</div><div class="list" id="libraryList"><div class="note">Connect and load a library.</div></div></div>
+    </section>
+
+    <section class="panel" id="qa">
+      <div class="section"><div class="section-title">Presentation quality scan</div><button class="action primary" style="width:100%" onclick="scanQa()">Scan entire deck</button><div class="note">Reports off-slide objects, tiny text, missing alt text, low contrast, fixed RGB fills, stale data, orphan datasheets, and irregular rows.</div></div>
+      <div class="section"><div class="list" id="qaList"><div class="note">No scan run yet.</div></div></div>
+    </section>
+  </main>
+  <div id="status">Ready.</div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab,.panel').forEach((item) => item.classList.remove('active'));
+      tab.classList.add('active'); $(tab.dataset.panel).classList.add('active');
+    }));
+    function busy(value) { $('content').classList.toggle('busy', value); }
+    function status(message, type='') { $('status').textContent = message; $('status').className = type; }
+    function handle(response) {
+      busy(false);
+      if (!response || !response.ok) { status(response?.error || 'The operation failed.', 'error'); return; }
+      status(response.message || response.data?.message || 'Done.', 'success');
+      refresh();
+    }
+    function failure(error) { busy(false); status(error.message || String(error), 'error'); }
+    function callWith(name, args=[], success=handle) { busy(true); status('Working…'); google.script.run.withSuccessHandler(success).withFailureHandler(failure)[name](...args); }
+    function call(name, ...args) { callWith(name, args); }
+    function api(name) { call(name); }
+    function command(command, argument) {
+      call('runSlideAidCommand', { command, argument, referenceMode:$('referenceMode').value, gapCm:Number($('gap').value), columns:Number($('columns').value), rows:Number($('rows').value), scalePercent:Number($('scale').value) });
+    }
+    function applyColor() { call('runSlideAidCommand', { command:'color', color:$('shapeColor').value, colorTarget:$('colorTarget').value }); }
+    function chart(kind) { call('buildSlideAidChart', kind); }
+    function restyle(all) { call('restyleSlideAidCharts', all); }
+    function setReference() { call('setReferenceFromSelection'); }
+    function clearReference() { call('clearReference'); }
+    function setPalette(name) { call('setSlideAidPalette', name); }
+    function recolorSeries() { call('recolorSlideAidSeries', Number($('series').value), $('seriesColor').value); }
+    function buildLinked() { call('buildLinkedSlideAidChart', $('linkedKind').value, $('sheetUrl').value, $('sheetName').value, $('sheetRange').value); }
+    function validateLinked() { callWith('validateLinkedSlideAidChart',[$('linkedKind').value,$('sheetUrl').value,$('sheetName').value,$('sheetRange').value],(response)=>{busy(false);if(!response?.ok){status(response?.error||'Validation failed.','error');return;}$('linkedStatus').textContent=`${response.data.message} Preview: ${response.data.preview.map((row)=>row.join(' | ')).join(' / ')}`;status(response.data.message,'success');}); }
+    function applyPaletteTheme() { if (confirm('Replace the deck’s six theme accent colors with this palette?')) call('applySlideAidPaletteToTheme', $('palette').value); }
+    function saveLayout() { call('saveSlideAidLayout', $('layoutName').value); }
+    function configureLibrary() { call('configureSlideAidLibrary', $('libraryUrl').value); }
+    function addToLibrary() { call('addSelectionToSlideAidLibrary', $('libraryName').value); }
+    function filterCommands() { const query=$('commandSearch').value.trim().toLowerCase();const results=$('searchResults');results.innerHTML='';if(!query){results.hidden=true;return;}const matches=[...document.querySelectorAll('main button.action')].filter((button)=>button.textContent.toLowerCase().includes(query)).slice(0,12);matches.forEach((source)=>{const button=document.createElement('button');button.textContent=source.textContent.trim();button.onclick=()=>{source.click();$('commandSearch').value='';results.hidden=true;};results.appendChild(button);});if(!matches.length){const empty=document.createElement('div');empty.className='note';empty.textContent='No matching commands.';results.appendChild(empty);}results.hidden=false; }
+    function updateMatrixPreview(count, columns) { const preview=$('matrixPreview'); preview.innerHTML=''; const safeCount=Math.max(1,count); const safeColumns=Math.max(1,columns); preview.style.gridTemplateColumns=`repeat(${safeColumns},1fr)`; for(let i=0;i<safeCount;i++) preview.appendChild(document.createElement('span')); }
+    function renderTheme(swatches) { const target=$('themeSwatches'); target.innerHTML=''; swatches.forEach((swatch)=>{ const button=document.createElement('button'); button.className='swatch'; button.style.background=swatch.hex; button.textContent=swatch.name.replace('ACCENT','A'); button.title=`${swatch.name} ${swatch.hex}`; button.onclick=()=>call('applySlideAidThemeColor',$('themeTarget').value,swatch.name); target.appendChild(button); }); }
+    function renderLayouts(layouts) { const list=$('layoutList'); list.innerHTML=''; if(!layouts.length){const empty=document.createElement('div');empty.className='note';empty.textContent='No layouts saved in this deck.';list.appendChild(empty);return;} layouts.forEach((layout)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=layout.name;const meta=document.createElement('div');meta.className='meta';meta.textContent=`${layout.slots.length} slots`;const actions=document.createElement('div');actions.className='actions';const apply=document.createElement('button');apply.textContent='Apply';apply.onclick=()=>call('applySlideAidLayout',layout.name);const del=document.createElement('button');del.textContent='Delete';del.onclick=()=>confirm(`Delete layout “${layout.name}”?`)&&call('deleteSlideAidLayout',layout.name);actions.append(apply,del);item.append(title,meta,actions);list.appendChild(item);}); }
+    function loadLibrary() { callWith('getSlideAidLibraryItems',[],(response)=>{busy(false);if(!response?.ok){status(response?.error||'Could not load library.','error');return;}renderLibrary(response.data);status(`Loaded ${response.data.length} library items.`,'success');}); }
+    function renderLibrary(items) { const list=$('libraryList');list.innerHTML='';if(!items.length){const empty=document.createElement('div');empty.className='note';empty.textContent='The library is empty.';list.appendChild(empty);return;}items.forEach((entry)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=entry.name;const meta=document.createElement('div');meta.className='meta';meta.textContent=`Library slide ${entry.index+1}${entry.updatedAt?' · '+entry.updatedAt:''}`;const button=document.createElement('button');button.textContent='Insert';button.onclick=()=>call('insertSlideAidLibraryItem',entry.slideId);item.append(title,meta,button);list.appendChild(item);}); }
+    function scanQa() { callWith('scanSlideAidDeck',[],(response)=>{busy(false);if(!response?.ok){status(response?.error||'Scan failed.','error');return;}renderQa(response.data.issues);status(response.data.message,'success');}); }
+    function renderQa(issues) { const list=$('qaList');list.innerHTML='';if(!issues.length){const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent='No issues found.';item.appendChild(title);list.appendChild(item);return;}issues.forEach((issue)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=`${issue.severity.toUpperCase()} · Slide ${issue.slideNumber}`;const message=document.createElement('div');message.textContent=issue.message;const meta=document.createElement('div');meta.className='meta';meta.textContent=issue.type.replaceAll('_',' ');const actions=document.createElement('div');actions.className='actions';const show=document.createElement('button');show.textContent='Select';show.onclick=()=>call('focusSlideAidQaIssue',issue.slideId,issue.objectIds[0]);actions.appendChild(show);if(issue.fixable){const fix=document.createElement('button');fix.textContent='Fix';fix.onclick=()=>call('fixSlideAidQaIssue',{type:issue.type,slideId:issue.slideId,objectIds:issue.objectIds});actions.appendChild(fix);}item.append(title,message,meta,actions);list.appendChild(item);}); }
+    function refresh() {
+      google.script.run.withSuccessHandler((response) => {
+        if (!response?.ok) return;
+        const state = response.data;
+        $('deck').textContent = state.presentationName;
+        $('selectionCount').textContent = `${state.selectedCount} object${state.selectedCount === 1 ? '' : 's'} selected`;
+        $('referenceLabel').textContent = state.reference ? state.reference.label : 'No reference pinned';
+        $('inspectorTitle').textContent = `${state.selectedCount} object${state.selectedCount === 1 ? '' : 's'} selected`;
+        $('inspectorDetails').textContent = state.selectionBounds ? `Bounds ${state.selectionBounds.width.toFixed(1)} × ${state.selectionBounds.height.toFixed(1)} pt · ${state.selection.slice(0,3).map((item)=>item.label).join(', ')}` : 'Select objects to inspect or modify.';
+        $('gap').value = state.settings.gapCm; $('columns').value = state.settings.matrixColumns;
+        if (!$('palette').options.length) state.palettes.forEach((name) => $('palette').add(new Option(name, name)));
+        $('palette').value = state.settings.palette;
+        renderTheme(state.theme); renderLayouts(state.layouts); updateMatrixPreview(state.selectedCount,state.settings.matrixColumns);
+        if (state.deckSettings.libraryPresentationUrl) $('libraryUrl').value=state.deckSettings.libraryPresentationUrl;
+        if (state.selectedChart?.source) { $('sheetUrl').value=state.selectedChart.source.spreadsheetUrl; $('sheetName').value=state.selectedChart.source.sheetName; $('sheetRange').value=state.selectedChart.source.rangeA1; $('linkedKind').value=state.selectedChart.kind; $('linkedStatus').textContent=`Linked to ${state.selectedChart.source.sheetName}!${state.selectedChart.source.rangeA1}`; }
+      }).getSidebarState();
+    }
+    $('columns').addEventListener('input',()=>updateMatrixPreview(Number($('selectionCount').textContent.split(' ')[0])||1,Number($('columns').value)||1));
+    window.addEventListener('focus',refresh);
+    refresh();
+  </script>
+</body>
+</html>

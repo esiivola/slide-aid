@@ -1,0 +1,21 @@
+{
+  "name": "slide-aid-google-slides",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Google Slides companion to the canonical Slide Aid PowerPoint add-in",
+  "type": "module",
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "push": "npm run build && clasp push",
+    "open": "clasp open-script"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.1.0",
+    "@types/google-apps-script": "^2.0.8",
+    "esbuild": "^0.25.6",
+    "typescript": "^5.8.3"
+  }
+}

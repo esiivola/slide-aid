@@ -1,0 +1,6 @@
+node_modules/
+dist/
+dist-types/
+.test-build/
+.clasp.json
+*.log

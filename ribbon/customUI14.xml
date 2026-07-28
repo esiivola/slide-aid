@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="RB_OnLoad">
+  <ribbon>
+    <tabs>
+      <tab id="saTab" label="Slide Aid">
+
+        <!-- Slide Aid order: Wizards | Position | Size | Shape | Color | Text | View -->
+
+        <group id="saWiz" label="Wizards">
+          <dynamicMenu id="saLib" label="My Elements" image="sa_elements" size="normal" getContent="RB_GetLibraryMenu" screentip="Insert one of your reusable elements." supertip="Your personal element library. 'Add Selection to My Elements' stores any shapes for reuse; clicking an entry inserts it on the current slide."/>
+          <dynamicMenu id="saFmt" label="My Formats" image="sa_formats" size="normal" getContent="RB_GetFormatsMenu" screentip="Apply one of your saved formats." supertip="Save the Master's complete format once ('Save Master's Format'), then reapply it to any selection with one click."/>
+          <button id="saAgd" label="Agenda" image="sa_agenda" size="normal" onAction="RB_Dispatch" tag="Agenda:0" screentip="Generate agenda slides from your sections." supertip="Creates an overview slide plus a separator before each PowerPoint section, with the current item highlighted. Re-run after changing sections - generated slides are replaced automatically."/>
+          <button id="saPnt" label="Format Painter" image="sa_painter" size="normal" onAction="RB_Dispatch" tag="Painter:0" screentip="Copy the Master's complete format to the other objects." supertip="The Master is always the object you selected last. Fill, line, shadow, font, margins and alignment are copied - the whole look."/>
+          <menu id="saSim" label="Select Similar" image="sa_similar" itemSize="normal" screentip="Select all similar shapes on this slide." supertip="Similar to the Master by shape type, fill color, or both - then apply any tool to all of them at once.">
+            <button id="saSimT" label="Same Shape Type" onAction="RB_Dispatch" tag="SelSim:T"/>
+            <button id="saSimF" label="Same Fill Color" onAction="RB_Dispatch" tag="SelSim:F"/>
+            <button id="saSimTF" label="Same Type + Fill" onAction="RB_Dispatch" tag="SelSim:TF"/>
+          </menu>
+        </group>
+
+        <group id="saPos" label="Position">
+          <button id="saAlL" label="Left" image="sa_align_left" size="normal" onAction="RB_Dispatch" tag="AlignM:L" screentip="Align left edges to the Master." supertip="The Master is always the object you selected last. With a single object selected, the slide is the reference instead."/>
+          <button id="saAlR" label="Right" image="sa_align_right" size="normal" onAction="RB_Dispatch" tag="AlignM:R" screentip="Align right edges to the Master." supertip="The Master is always the object you selected last. With a single object selected, the slide is the reference instead."/>
+          <button id="saAlT" label="Top" image="sa_align_top" size="normal" onAction="RB_Dispatch" tag="AlignM:T" screentip="Align top edges to the Master." supertip="The Master is always the object you selected last. With a single object selected, the slide is the reference instead."/>
+          <button id="saAlB" label="Bottom" image="sa_align_bottom" size="normal" onAction="RB_Dispatch" tag="AlignM:B" screentip="Align bottom edges to the Master." supertip="The Master is always the object you selected last. With a single object selected, the slide is the reference instead."/>
+          <button id="saAlCH" label="Center" image="sa_align_center" size="normal" onAction="RB_Dispatch" tag="AlignM:CH" screentip="Center the objects horizontally on the Master." supertip="The Master is always the object you selected last. With a single object selected, the slide is the reference instead."/>
+          <button id="saAlCV" label="Middle" image="sa_align_middle" size="normal" onAction="RB_Dispatch" tag="AlignM:CV" screentip="Center the objects vertically on the Master." supertip="The Master is always the object you selected last. With a single object selected, the slide is the reference instead."/>
+          <menu id="saAlSlide" label="To Slide" image="sa_to_slide" itemSize="normal" screentip="Align to the slide instead of the Master." supertip="Use this when several objects are selected but the slide should be the reference.">
+            <button id="saAsL" label="Left" onAction="RB_Dispatch" tag="AlignS:L"/>
+            <button id="saAsR" label="Right" onAction="RB_Dispatch" tag="AlignS:R"/>
+            <button id="saAsT" label="Top" onAction="RB_Dispatch" tag="AlignS:T"/>
+            <button id="saAsB" label="Bottom" onAction="RB_Dispatch" tag="AlignS:B"/>
+            <button id="saAsCH" label="Center" onAction="RB_Dispatch" tag="AlignS:CH"/>
+            <button id="saAsCV" label="Middle" onAction="RB_Dispatch" tag="AlignS:CV"/>
+          </menu>
+          <button id="saDiH" label="Distribute H" image="sa_dist_h" size="normal" onAction="RB_Dispatch" tag="Distrib:H" screentip="Distribute horizontally with even gaps." supertip="The outermost objects keep their positions; the spaces between all objects in between are made equal."/>
+          <button id="saDiV" label="Distribute V" image="sa_dist_v" size="normal" onAction="RB_Dispatch" tag="Distrib:V" screentip="Distribute vertically with even gaps." supertip="The outermost objects keep their positions; the spaces between all objects in between are made equal."/>
+          <menu id="saSwap" label="Swap" image="sa_swap" itemSize="normal" screentip="Swap the objects' positions." supertip="Follows selection order: each object takes the next one's place (two objects simply switch). Pick the reference corner for differently sized objects. The layer position is swapped too, as that is correct in most cases.">
+            <button id="saSwC" label="At Centers" onAction="RB_Dispatch" tag="Swap:PZ:C"/>
+            <button id="saSwTL" label="At Top-Left" onAction="RB_Dispatch" tag="Swap:PZ:TL"/>
+            <button id="saSwTR" label="At Top-Right" onAction="RB_Dispatch" tag="Swap:PZ:TR"/>
+            <button id="saSwBL" label="At Bottom-Left" onAction="RB_Dispatch" tag="Swap:PZ:BL"/>
+            <button id="saSwBR" label="At Bottom-Right" onAction="RB_Dispatch" tag="Swap:PZ:BR"/>
+            <menuSeparator id="saSwSep"/>
+            <button id="saSwS" label="Incl. Sizes" onAction="RB_Dispatch" tag="Swap:PSZ:C"/>
+            <button id="saSwNoZ" label="Without Layer Swap" onAction="RB_Dispatch" tag="Swap:P:C"/>
+          </menu>
+          <menu id="saDock" label="Dock" image="sa_dock" itemSize="normal" screentip="Move the objects until they touch the Master." supertip="The Master is always the object you selected last. Example: Dock Left moves objects left until they hit the Master's right edge. With a single object selected, the slide is the reference instead.">
+            <button id="saDkL" label="Dock Left" onAction="RB_Dispatch" tag="Dock:L"/>
+            <button id="saDkR" label="Dock Right" onAction="RB_Dispatch" tag="Dock:R"/>
+            <button id="saDkT" label="Dock Up" onAction="RB_Dispatch" tag="Dock:T"/>
+            <button id="saDkB" label="Dock Down" onAction="RB_Dispatch" tag="Dock:B"/>
+          </menu>
+          <menu id="saStack" label="Stack" image="sa_stack" itemSize="normal" screentip="Stack the objects so they touch, in selection order." supertip="Click the objects in the order you want them stacked; the first one keeps its position. Use '+ Gap' for a fixed spacing - negative values overlap.">
+            <button id="saStkH" label="Horizontally" onAction="RB_Dispatch" tag="Stack:H"/>
+            <button id="saStkV" label="Vertically" onAction="RB_Dispatch" tag="Stack:V"/>
+            <menuSeparator id="saStkSep"/>
+            <button id="saSgH" label="Horizontally + Gap…" onAction="RB_Dispatch" tag="StackGap:H"/>
+            <button id="saSgV" label="Vertically + Gap…" onAction="RB_Dispatch" tag="StackGap:V"/>
+          </menu>
+          <button id="saMtx" label="Matrix" image="sa_matrix" size="normal" onAction="RB_Dispatch" tag="Matrix:Q" screentip="Arrange the objects in a grid - one click." supertip="Near-square grid, objects touching, filled row by row in selection order. Use 'Matrix...' to choose columns and gaps."/>
+          <button id="saMtxO" label="Matrix…" image="sa_matrix_custom" size="normal" onAction="RB_Dispatch" tag="Matrix:O" screentip="Arrange in a grid with custom columns and gaps." supertip="You choose the number of columns and the horizontal/vertical gaps (cm)."/>
+          <menu id="saPlace" label="Place on Slide" image="sa_place" itemSize="normal" screentip="Move the selection into a slide region." supertip="A single object is resized to fill the region (small margin); several objects are moved as a block to the region's top-left corner, keeping their sizes and spacing.">
+            <button id="saPlLH" label="Left Half" onAction="RB_Dispatch" tag="Place:LH"/>
+            <button id="saPlRH" label="Right Half" onAction="RB_Dispatch" tag="Place:RH"/>
+            <button id="saPlTH" label="Top Half" onAction="RB_Dispatch" tag="Place:TH"/>
+            <button id="saPlBH" label="Bottom Half" onAction="RB_Dispatch" tag="Place:BH"/>
+            <menuSeparator id="saPlSep1"/>
+            <button id="saPlL3" label="Left Third" onAction="RB_Dispatch" tag="Place:L3"/>
+            <button id="saPlC3" label="Center Third" onAction="RB_Dispatch" tag="Place:C3"/>
+            <button id="saPlR3" label="Right Third" onAction="RB_Dispatch" tag="Place:R3"/>
+            <menuSeparator id="saPlSep2"/>
+            <button id="saPlQ1" label="Top-Left Quadrant" onAction="RB_Dispatch" tag="Place:Q1"/>
+            <button id="saPlQ2" label="Top-Right Quadrant" onAction="RB_Dispatch" tag="Place:Q2"/>
+            <button id="saPlQ3" label="Bottom-Left Quadrant" onAction="RB_Dispatch" tag="Place:Q3"/>
+            <button id="saPlQ4" label="Bottom-Right Quadrant" onAction="RB_Dispatch" tag="Place:Q4"/>
+            <menuSeparator id="saPlSep3"/>
+            <button id="saPlFull" label="Full Slide" onAction="RB_Dispatch" tag="Place:FULL"/>
+          </menu>
+          <menu id="saSpc" label="Spacing" image="sa_spacing" itemSize="normal" screentip="Set an exact distance between the objects." supertip="Enter the spacing in cm; negative values make objects overlap. Objects are spaced in their current position order.">
+            <button id="saSpH" label="Horizontal…" onAction="RB_Dispatch" tag="Spacing:H"/>
+            <button id="saSpV" label="Vertical…" onAction="RB_Dispatch" tag="Spacing:V"/>
+          </menu>
+          <button id="saGold" label="Golden Canon" image="sa_golden" size="normal" onAction="RB_Dispatch" tag="Golden:0" screentip="Place objects at the golden-canon height inside the Master." supertip="The bottom margin becomes twice the top margin - the vertical position most pleasing to the eye. The Master (last selected) should be taller than the objects."/>
+        </group>
+
+        <group id="saSize" label="Size">
+          <button id="saMag" label="Magic Resizer" image="sa_magic" size="normal" onAction="RB_Dispatch" tag="Magic:0" screentip="Resize the selection by a percentage." supertip="Scales width, height and font sizes of all selected objects around their centers - shrink or enlarge whole arrangements without breaking proportions."/>
+          <button id="saSzW" label="Width" image="sa_width" size="normal" onAction="RB_Dispatch" tag="Size:W" screentip="Give all objects the Master's width." supertip="The Master is always the object you selected last. Objects keep their centers."/>
+          <button id="saSzH" label="Height" image="sa_height" size="normal" onAction="RB_Dispatch" tag="Size:H" screentip="Give all objects the Master's height." supertip="The Master is always the object you selected last. Objects keep their centers."/>
+          <button id="saSzWH" label="Width + Height" image="sa_size" size="normal" onAction="RB_Dispatch" tag="Size:WH" screentip="Give all objects the Master's size." supertip="The Master is always the object you selected last. Objects keep their centers."/>
+          <menu id="saStretch" label="Stretch" image="sa_stretch" itemSize="normal" screentip="Stretch the objects to the far edge of the Master." supertip="The Master is always the object you selected last. Example: Stretch Right extends each object's right edge to the Master's right edge; the opposite edge stays fixed. With a single object selected, the slide is the reference instead.">
+            <button id="saStL" label="Left" onAction="RB_Dispatch" tag="Stretch:L"/>
+            <button id="saStR" label="Right" onAction="RB_Dispatch" tag="Stretch:R"/>
+            <button id="saStT" label="Top" onAction="RB_Dispatch" tag="Stretch:T"/>
+            <button id="saStB" label="Bottom" onAction="RB_Dispatch" tag="Stretch:B"/>
+          </menu>
+          <menu id="saFillGap" label="Fill Gap" image="sa_fill" itemSize="normal" screentip="Fill the gap between the objects and the Master." supertip="The Master is always the object you selected last. Each object is extended toward the Master until they touch. Example: Fill Rightwards extends right edges to the Master's left edge.">
+            <button id="saFgL" label="Leftwards" onAction="RB_Dispatch" tag="FillGap:L"/>
+            <button id="saFgR" label="Rightwards" onAction="RB_Dispatch" tag="FillGap:R"/>
+            <button id="saFgT" label="Upwards" onAction="RB_Dispatch" tag="FillGap:T"/>
+            <button id="saFgB" label="Downwards" onAction="RB_Dispatch" tag="FillGap:B"/>
+          </menu>
+          <button id="saSlice" label="Slice" image="sa_slice" size="normal" onAction="RB_Dispatch" tag="Slice:0" screentip="Slice the shape into equal pieces." supertip="Cuts the selected shape into a rows-by-columns grid with a gap you choose; the pieces exactly reassemble the original footprint."/>
+          <button id="saMult" label="Multiply" image="sa_multiply" size="normal" onAction="RB_Dispatch" tag="Multiply:0" screentip="Duplicate the shape into a grid." supertip="Creates a rows-by-columns grid of copies at the original size, with a gap you choose."/>
+        </group>
+
+        <group id="saShape" label="Shape">
+          <button id="saPChain" label="Process Chain" image="sa_chain" size="normal" onAction="RB_Dispatch" tag="ProcChain:0" screentip="Align block arrows into a process chain." supertip="The Master is always the object you selected last. It defines the angle, vertical position and height for all arrows; gaps are closed from left to right."/>
+          <button id="saAng" label="Align Angles" image="sa_angles" size="normal" onAction="RB_Dispatch" tag="Angles:0" screentip="Copy the Master's rotation to all objects." supertip="The Master is always the object you selected last. Adjustment handles (e.g. arrowhead proportions) are copied too when the shapes are of the same type."/>
+          <button id="saBArr" label="Block Arrows" image="sa_blockarrow" size="normal" onAction="RB_Dispatch" tag="BlockArr:0" screentip="Apply the Master's arrow metrics to all block arrows." supertip="Arrowhead size and shaft thickness are copied so mixed arrows look uniform. The Master is always the object you selected last."/>
+          <button id="saRRect" label="Rounded Rect." image="sa_roundrect" size="normal" onAction="RB_Dispatch" tag="RoundRect:0" screentip="Give all rounded rectangles the same corner radius." supertip="PowerPoint stores the radius relative to shape size, so equal-looking corners need different settings per shape - this applies one absolute radius (default: the Master's) to all."/>
+          <menu id="saTbl" label="Snap to Table" image="sa_table" itemSize="normal" screentip="Snap objects to the table cell beneath them." supertip="Aligns icons, Harvey balls or flags to the cell they roughly sit over - centered, or left/right-aligned with a margin you choose.">
+            <button id="saTbC" label="Center in Cell" onAction="RB_Dispatch" tag="TblSnap:C"/>
+            <button id="saTbL" label="Left in Cell…" onAction="RB_Dispatch" tag="TblSnap:L"/>
+            <button id="saTbR" label="Right in Cell…" onAction="RB_Dispatch" tag="TblSnap:R"/>
+          </menu>
+        </group>
+
+        <group id="saColors" label="Color">
+          <menu id="saFillCol" label="Fill" image="sa_fillcolor" itemSize="normal" screentip="Set the fill color." supertip="Theme colors stay linked to the template and adapt when the design changes; palette colors are fixed RGB. Swatches preview the standard Office theme - the applied color follows your actual template.">
+            <button id="saFcA1" label="Accent 1" image="sa_sw_t5" onAction="RB_Dispatch" tag="ThemeCol:F:5"/>
+            <button id="saFcA2" label="Accent 2" image="sa_sw_t6" onAction="RB_Dispatch" tag="ThemeCol:F:6"/>
+            <button id="saFcA3" label="Accent 3" image="sa_sw_t7" onAction="RB_Dispatch" tag="ThemeCol:F:7"/>
+            <button id="saFcA4" label="Accent 4" image="sa_sw_t8" onAction="RB_Dispatch" tag="ThemeCol:F:8"/>
+            <button id="saFcA5" label="Accent 5" image="sa_sw_t9" onAction="RB_Dispatch" tag="ThemeCol:F:9"/>
+            <button id="saFcA6" label="Accent 6" image="sa_sw_t10" onAction="RB_Dispatch" tag="ThemeCol:F:10"/>
+            <button id="saFcD1" label="Text/Dark 1" image="sa_sw_t1" onAction="RB_Dispatch" tag="ThemeCol:F:1"/>
+            <button id="saFcL1" label="Background/Light 1" image="sa_sw_t2" onAction="RB_Dispatch" tag="ThemeCol:F:2"/>
+            <button id="saFcD2" label="Text/Dark 2" image="sa_sw_t3" onAction="RB_Dispatch" tag="ThemeCol:F:3"/>
+            <button id="saFcL2" label="Background/Light 2" image="sa_sw_t4" onAction="RB_Dispatch" tag="ThemeCol:F:4"/>
+            <menuSeparator id="saFcSep"/>
+            <button id="saFcP1" label="Dark blue" image="sa_sw_p1" onAction="RB_Dispatch" tag="PalCol:F:1"/>
+            <button id="saFcP2" label="Blue" image="sa_sw_p2" onAction="RB_Dispatch" tag="PalCol:F:2"/>
+            <button id="saFcP3" label="Green" image="sa_sw_p3" onAction="RB_Dispatch" tag="PalCol:F:3"/>
+            <button id="saFcP4" label="Red" image="sa_sw_p4" onAction="RB_Dispatch" tag="PalCol:F:4"/>
+            <button id="saFcP5" label="Orange" image="sa_sw_p5" onAction="RB_Dispatch" tag="PalCol:F:5"/>
+            <button id="saFcP6" label="Purple" image="sa_sw_p6" onAction="RB_Dispatch" tag="PalCol:F:6"/>
+            <button id="saFcP7" label="Dark grey" image="sa_sw_p7" onAction="RB_Dispatch" tag="PalCol:F:7"/>
+            <button id="saFcP8" label="Light grey" image="sa_sw_p8" onAction="RB_Dispatch" tag="PalCol:F:8"/>
+          </menu>
+          <menu id="saLineCol" label="Line" image="sa_linecolor" itemSize="normal" screentip="Set the line color." supertip="Theme colors stay linked to the template; palette colors are fixed RGB.">
+            <button id="saLcA1" label="Accent 1" image="sa_sw_t5" onAction="RB_Dispatch" tag="ThemeCol:L:5"/>
+            <button id="saLcA2" label="Accent 2" image="sa_sw_t6" onAction="RB_Dispatch" tag="ThemeCol:L:6"/>
+            <button id="saLcA3" label="Accent 3" image="sa_sw_t7" onAction="RB_Dispatch" tag="ThemeCol:L:7"/>
+            <button id="saLcA4" label="Accent 4" image="sa_sw_t8" onAction="RB_Dispatch" tag="ThemeCol:L:8"/>
+            <button id="saLcA5" label="Accent 5" image="sa_sw_t9" onAction="RB_Dispatch" tag="ThemeCol:L:9"/>
+            <button id="saLcA6" label="Accent 6" image="sa_sw_t10" onAction="RB_Dispatch" tag="ThemeCol:L:10"/>
+            <button id="saLcD1" label="Text/Dark 1" image="sa_sw_t1" onAction="RB_Dispatch" tag="ThemeCol:L:1"/>
+            <button id="saLcD2" label="Text/Dark 2" image="sa_sw_t3" onAction="RB_Dispatch" tag="ThemeCol:L:3"/>
+            <menuSeparator id="saLcSep"/>
+            <button id="saLcP1" label="Dark blue" image="sa_sw_p1" onAction="RB_Dispatch" tag="PalCol:L:1"/>
+            <button id="saLcP4" label="Red" image="sa_sw_p4" onAction="RB_Dispatch" tag="PalCol:L:4"/>
+            <button id="saLcP7" label="Dark grey" image="sa_sw_p7" onAction="RB_Dispatch" tag="PalCol:L:7"/>
+          </menu>
+          <menu id="saTextCol" label="Font" image="sa_fontcolor" itemSize="normal" screentip="Set the font color." supertip="Theme colors stay linked to the template; palette colors are fixed RGB.">
+            <button id="saTcA1" label="Accent 1" image="sa_sw_t5" onAction="RB_Dispatch" tag="ThemeCol:T:5"/>
+            <button id="saTcA2" label="Accent 2" image="sa_sw_t6" onAction="RB_Dispatch" tag="ThemeCol:T:6"/>
+            <button id="saTcA3" label="Accent 3" image="sa_sw_t7" onAction="RB_Dispatch" tag="ThemeCol:T:7"/>
+            <button id="saTcA4" label="Accent 4" image="sa_sw_t8" onAction="RB_Dispatch" tag="ThemeCol:T:8"/>
+            <button id="saTcA5" label="Accent 5" image="sa_sw_t9" onAction="RB_Dispatch" tag="ThemeCol:T:9"/>
+            <button id="saTcA6" label="Accent 6" image="sa_sw_t10" onAction="RB_Dispatch" tag="ThemeCol:T:10"/>
+            <button id="saTcD1" label="Text/Dark 1" image="sa_sw_t1" onAction="RB_Dispatch" tag="ThemeCol:T:1"/>
+            <button id="saTcL1" label="Background/Light 1" image="sa_sw_t2" onAction="RB_Dispatch" tag="ThemeCol:T:2"/>
+            <menuSeparator id="saTcSep"/>
+            <button id="saTcP1" label="Dark blue" image="sa_sw_p1" onAction="RB_Dispatch" tag="PalCol:T:1"/>
+            <button id="saTcP4" label="Red" image="sa_sw_p4" onAction="RB_Dispatch" tag="PalCol:T:4"/>
+            <button id="saTcP7" label="Dark grey" image="sa_sw_p7" onAction="RB_Dispatch" tag="PalCol:T:7"/>
+          </menu>
+          <menu id="saPick" label="Pick from Master" image="sa_pick" itemSize="normal" screentip="Copy the Master's colors to the other objects." supertip="The Master is always the object you selected last. Copy fill, line and font color together or individually; theme links are preserved.">
+            <button id="saPkA" label="Fill + Line + Font" onAction="RB_Dispatch" tag="PickCol:ALL"/>
+            <button id="saPkF" label="Fill only" onAction="RB_Dispatch" tag="PickCol:F"/>
+            <button id="saPkL" label="Line only" onAction="RB_Dispatch" tag="PickCol:L"/>
+            <button id="saPkT" label="Font only" onAction="RB_Dispatch" tag="PickCol:T"/>
+          </menu>
+          <button id="saT2R" label="Convert to RGB" image="sa_torgb" size="normal" onAction="RB_Dispatch" tag="Theme2RGB:0" screentip="Convert theme colors to fixed RGB." supertip="Makes the colors independent of the slide master and theme - they stay identical when the slides move to another template."/>
+          <button id="saR2T" label="Convert to Theme" image="sa_totheme" size="normal" onAction="RB_Dispatch" tag="RGB2Theme:0" screentip="Convert matching RGB colors to theme colors." supertip="Colors that match the current theme become theme-linked and adapt automatically to the slide master and theme used."/>
+          <button id="saCInfo" label="Color Info" image="sa_info" size="normal" onAction="RB_Dispatch" tag="ColInfo:0" screentip="Show the selected object's fill color." supertip="Displays RGB and hex values and whether the color is theme-linked."/>
+        </group>
+
+        <group id="saText" label="Text">
+          <button id="saTxMar" label="Set Margins" image="sa_margins" size="normal" onAction="RB_Dispatch" tag="TxtMargin:0" screentip="Set all four text margins at once." supertip="One value (cm) is applied to the left, right, top and bottom internal margins of every selected text box."/>
+          <button id="saTxFit" label="Fit to Text" image="sa_fit" size="normal" onAction="RB_Dispatch" tag="TxtFit:0" screentip="Fit the shape to its text." supertip="Shrinks or grows each selected shape to the size of the contained text."/>
+          <button id="saTxWrp" label="Wrap Text" image="sa_wrap" size="normal" onAction="RB_Dispatch" tag="TxtWrap:0" screentip="Toggle text wrapping." supertip="Switches word wrap on or off in the selected shapes."/>
+          <button id="saTxS" label="Split at Cursor" image="sa_split" size="normal" onAction="RB_Dispatch" tag="TxtSplit:0" screentip="Split the text box at the cursor." supertip="Click into the text where the split should happen, then run - you get two text boxes with formatting preserved."/>
+          <button id="saTxM" label="Merge Boxes" image="sa_merge" size="normal" onAction="RB_Dispatch" tag="TxtMerge:0" screentip="Merge the text boxes into one." supertip="In selection order; each box becomes a paragraph of the first one. Formatting is kept where possible."/>
+          <menu id="saTxMore" label="More" image="sa_txt_more" itemSize="normal" screentip="Case, tidy-up and swap tools." supertip="Change case keeps per-run formatting. Swap Text exchanges the plain text of exactly two objects (each adopts its box's formatting).">
+            <button id="saCaseU" label="UPPERCASE" onAction="RB_Dispatch" tag="TxtCase:U"/>
+            <button id="saCaseL" label="lowercase" onAction="RB_Dispatch" tag="TxtCase:L"/>
+            <button id="saCaseT" label="Title Case" onAction="RB_Dispatch" tag="TxtCase:T"/>
+            <button id="saCaseS" label="Sentence case" onAction="RB_Dispatch" tag="TxtCase:S"/>
+            <menuSeparator id="saTxMSep"/>
+            <button id="saTidy" label="Remove Double Spaces" onAction="RB_Dispatch" tag="TxtTidy:0"/>
+            <button id="saTxSwap" label="Swap Text (2 objects)" onAction="RB_Dispatch" tag="TxtSwap:0"/>
+          </menu>
+        </group>
+
+        <group id="saView" label="View &amp; Expert">
+          <button id="saHide" label="Hide Objects" image="sa_hide" size="normal" onAction="RB_Dispatch" tag="HideObj:0" screentip="Hide the selected objects temporarily." supertip="Objects keep their position and layer while hidden - useful on crowded slides. Bring everything back with Unhide All."/>
+          <button id="saUnhide" label="Unhide All" image="sa_unhide" size="normal" onAction="RB_Dispatch" tag="UnhideObj:0" screentip="Unhide all hidden objects on this slide."/>
+          <button id="saMasterO" label="Master Objects" image="sa_masterobj" size="normal" onAction="RB_Dispatch" tag="MasterObj:0" screentip="Show or hide the slide master's background objects."/>
+          <menu id="saClean" label="Clean-up" image="sa_cleanup" itemSize="normal" screentip="Clean up the presentation before sending." supertip="Remove all speaker notes or animations, delete unused designs to shrink the file, or copy a slide-title summary to the clipboard.">
+            <button id="saClNotes" label="Remove All Speaker Notes" onAction="RB_Dispatch" tag="Notes:0"/>
+            <button id="saClAnim" label="Remove All Animations" onAction="RB_Dispatch" tag="Anim:0"/>
+            <button id="saClDes" label="Delete Unused Designs" onAction="RB_Dispatch" tag="Designs:0"/>
+            <menuSeparator id="saClSep"/>
+            <button id="saClSum" label="Copy Slide Summary to Clipboard" onAction="RB_Dispatch" tag="Summary:0"/>
+            <button id="saClXtr" label="Selected Slides to New Presentation" onAction="RB_Dispatch" tag="Extract:0"/>
+            <menuSeparator id="saClSep2"/>
+            <button id="saClAgdDel" label="Remove Generated Agenda" onAction="RB_Dispatch" tag="AgendaDel:0"/>
+            <button id="saClSmpDel" label="Remove Chart Sample Slides" onAction="RB_Dispatch" tag="ChSamplesDel:0"/>
+          </menu>
+          <button id="saPaste" label="Paste on Slides" image="sa_paste" size="normal" onAction="RB_Dispatch" tag="PasteAll:0" screentip="Paste the clipboard on every selected slide." supertip="Copy an object first, select several slides in the thumbnail pane, then click."/>
+          <menu id="saLang" label="Language" image="sa_lang" itemSize="normal" screentip="Set the proofing language." supertip="For the current selection or the whole presentation.">
+            <button id="saLgFiS" label="Selection: Suomi" onAction="RB_Dispatch" tag="Lang:FI:SEL"/>
+            <button id="saLgEnS" label="Selection: English (US)" onAction="RB_Dispatch" tag="Lang:ENUS:SEL"/>
+            <button id="saLgUkS" label="Selection: English (UK)" onAction="RB_Dispatch" tag="Lang:ENUK:SEL"/>
+            <button id="saLgSvS" label="Selection: Svenska" onAction="RB_Dispatch" tag="Lang:SV:SEL"/>
+            <button id="saLgDeS" label="Selection: Deutsch" onAction="RB_Dispatch" tag="Lang:DE:SEL"/>
+            <menuSeparator id="saLgSep"/>
+            <button id="saLgFiA" label="Whole Presentation: Suomi" onAction="RB_Dispatch" tag="Lang:FI:ALL"/>
+            <button id="saLgEnA" label="Whole Presentation: English (US)" onAction="RB_Dispatch" tag="Lang:ENUS:ALL"/>
+            <button id="saLgUkA" label="Whole Presentation: English (UK)" onAction="RB_Dispatch" tag="Lang:ENUK:ALL"/>
+            <button id="saLgSvA" label="Whole Presentation: Svenska" onAction="RB_Dispatch" tag="Lang:SV:ALL"/>
+            <button id="saLgDeA" label="Whole Presentation: Deutsch" onAction="RB_Dispatch" tag="Lang:DE:ALL"/>
+          </menu>
+          <button id="saShort" label="Shortcuts" image="sa_shortcut" size="normal" onAction="RB_Dispatch" tag="ShortMenu:0" screentip="Edit your keyboard shortcuts." supertip="Opens the Hammerspoon shortcut config (one line per shortcut; saving applies immediately). If Hammerspoon isn't installed, shows how to set it up."/>
+        </group>
+
+      </tab>
+
+      <tab id="caTab" label="Chart Aid">
+
+        <group id="caCharts" label="Charts">
+          <button id="caCol" label="Column" image="sa_ch_col" size="normal" onAction="RB_Dispatch" tag="Ch:COL" screentip="Column chart from the selected table." supertip="Table layout: row 1 = category names (top-left cell stays empty), column 1 = series names, body = numbers. See Sample Slides for a live example."/>
+          <button id="caBar" label="Bar" image="sa_ch_bar" size="normal" onAction="RB_Dispatch" tag="Ch:BAR" screentip="Bar chart (horizontal) from the selected table." supertip="Table layout: row 1 = category names (top-left cell stays empty), column 1 = series names, body = numbers. See Sample Slides for a live example."/>
+          <button id="caStk" label="Stacked" image="sa_ch_stk" size="normal" onAction="RB_Dispatch" tag="Ch:STK" screentip="Stacked column chart with segment and total labels." supertip="Table layout: row 1 = category names (top-left cell stays empty), column 1 = series names, body = numbers. See Sample Slides for a live example."/>
+          <button id="caSbr" label="Stacked Bar" image="sa_ch_sbr" size="normal" onAction="RB_Dispatch" tag="Ch:SBR" screentip="Stacked bar chart." supertip="Table layout: row 1 = category names (top-left cell stays empty), column 1 = series names, body = numbers. See Sample Slides for a live example."/>
+          <button id="caPct" label="100%" image="sa_ch_pct" size="normal" onAction="RB_Dispatch" tag="Ch:PCT" screentip="100% stacked columns with percentage labels." supertip="Table layout: row 1 = category names (top-left cell stays empty), column 1 = series names, body = numbers. See Sample Slides for a live example. Each column is normalized to 100%."/>
+          <button id="caWf" label="Waterfall" image="sa_ch_wf" size="normal" onAction="RB_Dispatch" tag="Ch:WF" screentip="Waterfall chart from rows of label | value." supertip="A value of 'e' or '=' creates a computed subtotal bar that always shows the running total. Positive segments green, negative red, subtotals grey, with connectors."/>
+          <button id="caMek" label="Mekko" image="sa_ch_mek" size="normal" onAction="RB_Dispatch" tag="Ch:MEK" screentip="Mekko chart - column widths show column totals." supertip="Table layout: row 1 = category names (top-left cell stays empty), column 1 = series names, body = numbers. See Sample Slides for a live example. Column widths are proportional to column totals; segments show shares, totals appear above."/>
+          <button id="caLine" label="Line" image="sa_ch_line" size="normal" onAction="RB_Dispatch" tag="Ch:LINE" screentip="Line chart with markers and value labels." supertip="Table layout: row 1 = category names (top-left cell stays empty), column 1 = series names, body = numbers. See Sample Slides for a live example."/>
+          <button id="caArea" label="Area" image="sa_ch_area" size="normal" onAction="RB_Dispatch" tag="Ch:AREA" screentip="Stacked area chart." supertip="Table layout: row 1 = category names (top-left cell stays empty), column 1 = series names, body = numbers. See Sample Slides for a live example."/>
+          <button id="caPie" label="Pie" image="sa_ch_pie" size="normal" onAction="RB_Dispatch" tag="Ch:PIE" screentip="Pie chart from rows of label | value."/>
+          <button id="caDon" label="Doughnut" image="sa_ch_don" size="normal" onAction="RB_Dispatch" tag="Ch:DON" screentip="Doughnut chart from rows of label | value."/>
+          <button id="caScat" label="Scatter" image="sa_ch_scat" size="normal" onAction="RB_Dispatch" tag="Ch:SCAT" screentip="Scatter or bubble chart." supertip="Table: rows of label | x | y. Add a fourth column with sizes to get bubbles."/>
+          <button id="caGantt" label="Gantt" image="sa_ch_gantt" size="normal" onAction="RB_Dispatch" tag="Ch:GANTT" screentip="Gantt / timeline from rows of activity | start | end." supertip="Numbers (weeks, sprints) or dates like 1.3.2026 both work. start = end creates a milestone diamond."/>
+        </group>
+
+        <group id="caData" label="Data">
+          <button id="caEdit" label="Edit Data" image="sa_ch_edit" size="normal" onAction="RB_Dispatch" tag="ChEdit:0" screentip="Edit the selected chart's data." supertip="Recreates the chart's data table next to it. Edit the numbers, select table + chart, and click Rebuild - the chart is rebuilt in place and the table is removed automatically."/>
+          <button id="caRebuild" label="Rebuild" image="sa_ch_rebuild" size="normal" onAction="RB_Dispatch" tag="ChRebuild:0" screentip="Rebuild the selected chart in place." supertip="Uses the chart's own type - no need to remember which chart button created it. Select the chart alone (uses its stored data) or together with an edited data table."/>
+          <button id="caHelp" label="Data Layouts" image="sa_ch_help" size="normal" onAction="RB_Dispatch" tag="ChHelp:0" screentip="Show the table layout each chart type expects."/>
+          <button id="caSamples" label="Sample Slides" image="sa_ch_samples" size="normal" onAction="RB_Dispatch" tag="ChSamples:0" screentip="Insert one live example slide per chart type." supertip="14 slides, each with a correctly formatted data table and the chart built from it by the real chart code. Copy any table as a starting point."/>
+        </group>
+
+        <group id="caStyleG" label="Style">
+          <gallery id="caPalGal" label="Color Themes" image="sa_ch_colors" size="normal" columns="1" rows="9" itemWidth="96" itemHeight="20" showItemLabel="true" onAction="RB_PalGallery" screentip="Pick a color theme - you see the actual colors." supertip="One click sets the palette for all chart families and offers to restyle every existing chart. Fine-tune individual colors afterwards via Style > Edit Palettes.">
+            <item id="palOffice" label="Office" image="sa_pal_office"/>
+            <item id="palNordic" label="Nordic Blue" image="sa_pal_nordic"/>
+            <item id="palFjord" label="Fjord" image="sa_pal_fjord"/>
+            <item id="palForest" label="Forest" image="sa_pal_forest"/>
+            <item id="palSunset" label="Sunset" image="sa_pal_sunset"/>
+            <item id="palBerry" label="Berry" image="sa_pal_berry"/>
+            <item id="palGrey" label="Greyscale" image="sa_pal_greyscale"/>
+            <item id="palFin" label="Financial" image="sa_pal_financial"/>
+            <item id="palVivid" label="Vivid" image="sa_pal_vivid"/>
+          </gallery>
+          <menu id="caStyle" label="Customize" image="sa_ch_colors" itemSize="normal" screentip="Chart colors and layout parameters - edited visually on the slide." supertip="Edit Palettes inserts recolorable swatches (use PowerPoint's own color tools, incl. the eyedropper). Edit Settings inserts a parameter table. Apply from Selection reads whichever is selected.">
+            <menu id="caStThemes" label="Color Themes (List)" itemSize="normal" screentip="The same themes as the gallery - fallback list with mini previews.">
+              <button id="caThm1" label="Office" image="sa_palm_office" onAction="RB_Dispatch" tag="ChTheme:1"/>
+              <button id="caThm2" label="Nordic Blue" image="sa_palm_nordic" onAction="RB_Dispatch" tag="ChTheme:2"/>
+              <button id="caThm3" label="Fjord" image="sa_palm_fjord" onAction="RB_Dispatch" tag="ChTheme:3"/>
+              <button id="caThm4" label="Forest" image="sa_palm_forest" onAction="RB_Dispatch" tag="ChTheme:4"/>
+              <button id="caThm5" label="Sunset" image="sa_palm_sunset" onAction="RB_Dispatch" tag="ChTheme:5"/>
+              <button id="caThm6" label="Berry" image="sa_palm_berry" onAction="RB_Dispatch" tag="ChTheme:6"/>
+              <button id="caThm7" label="Greyscale" image="sa_palm_greyscale" onAction="RB_Dispatch" tag="ChTheme:7"/>
+              <button id="caThm8" label="Financial" image="sa_palm_financial" onAction="RB_Dispatch" tag="ChTheme:8"/>
+              <button id="caThm9" label="Vivid" image="sa_palm_vivid" onAction="RB_Dispatch" tag="ChTheme:9"/>
+            </menu>
+            <button id="caStSetK" label="Settings for Selected Chart Type…" onAction="RB_Dispatch" tag="ChStyleSetK:0" screentip="Insert a parameter table that applies ONLY to the selected chart's type (e.g. waterfall bar width and colors)."/>
+            <button id="caStPal" label="Edit Palettes (Swatches)" onAction="RB_Dispatch" tag="ChStylePal:0" screentip="Insert one recolorable swatch row per chart family (bars / lines / pies). Recolor with PowerPoint's fill tools, then Apply from Selection."/>
+            <button id="caStSet" label="Edit Settings (Table)" onAction="RB_Dispatch" tag="ChStyleSet:0" screentip="Insert a table of all chart parameters (bar widths, gaps, label size, decimals, toggles) with current values. Edit and Apply from Selection."/>
+            <button id="caStApply" label="Apply from Selection" onAction="RB_Dispatch" tag="ChStyleApply:0" screentip="Read the selected swatch rows into their color groups and/or the selected settings table into the parameters."/>
+            <button id="caStAll" label="Restyle All Charts" onAction="RB_Dispatch" tag="ChStyleAll:0" screentip="Rebuild every Chart Aid chart in the presentation with the current palettes and settings - data, position and size are kept."/>
+            <menuSeparator id="caStSep"/>
+            <button id="caStReset" label="Reset to Defaults" onAction="RB_Dispatch" tag="ChStyleReset:0" screentip="Back to theme colors and default parameters."/>
+            <button id="caStFile" label="Advanced: Palette File…" onAction="RB_Dispatch" tag="ChColors:0" screentip="Edit the palette as a text file (hex or R,G,B per line)."/>
+          </menu>
+          <button id="caStyleAll" label="Restyle All" image="sa_ch_restyle" size="normal" onAction="RB_Dispatch" tag="ChStyleAll:0" screentip="Rebuild every Chart Aid chart with the current style." supertip="The required second step after changing palettes or settings. Data, position and size are kept; manual series recolors are kept too."/>
+          <button id="caRecol" label="Recolor Series" image="sa_ch_recolor" size="normal" onAction="RB_Dispatch" tag="ChRecolor:0" screentip="Recolor a whole series." supertip="Click one bar, segment or point inside a chart and pick a color - every element of that series changes across the chart. The recolor is remembered and survives Edit Data and Restyle."/>
+        </group>
+
+        <group id="caAnno" label="Annotations">
+          <button id="caDiff" label="Difference" image="sa_ch_diff" size="normal" onAction="RB_Dispatch" tag="ChDiff:ABS" screentip="Difference arrow between two bars." supertip="Click into the chart to select one bar, then Cmd-click a second one. Values come from the bars' actual data, not from pixel sizes."/>
+          <button id="caPDiff" label="% Difference" image="sa_ch_pctdiff" size="normal" onAction="RB_Dispatch" tag="ChDiff:PCT" screentip="Percent difference arrow between two bars." supertip="Click into the chart to select one bar, then Cmd-click a second one. Values come from the bars' actual data, not from pixel sizes."/>
+          <button id="caCagr" label="CAGR" image="sa_ch_cagr" size="normal" onAction="RB_Dispatch" tag="ChCAGR:0" screentip="CAGR arrow between two bars." supertip="Click into the chart to select one bar, then Cmd-click a second one. Values come from the bars' actual data, not from pixel sizes. You choose the number of periods; the compound annual growth rate is calculated from the data."/>
+          <button id="caVline" label="Value Line" image="sa_ch_vline" size="normal" onAction="RB_Dispatch" tag="ChVLine:0" screentip="Line at a value you choose." supertip="Select the chart and enter the value; a dashed line is placed on the chart's own scale. On bar charts the line is vertical."/>
+          <button id="caAvg" label="Average Line" image="sa_ch_avg" size="normal" onAction="RB_Dispatch" tag="ChAvg:0" screentip="Line at the average of the selected bars." supertip="Select several bars inside a chart; a dashed line marks their average data value."/>
+        </group>
+
+        <group id="caElem" label="Elements">
+          <button id="caHarvey" label="Harvey Ball" image="sa_ch_harvey" size="normal" onAction="RB_Dispatch" tag="ChHarvey:0" screentip="Insert a Harvey ball." supertip="A circle filled 0-100% - enter the percentage (e.g. 25, 50, 75)."/>
+          <button id="caCheck" label="Checkbox" image="sa_ch_check" size="normal" onAction="RB_Dispatch" tag="ChCheck:0" screentip="Insert a checkbox." supertip="Change its state with Cycle State."/>
+          <button id="caCycle" label="Cycle State" image="sa_ch_cycle" size="normal" onAction="RB_Dispatch" tag="ChCycle:0" screentip="Cycle checkboxes and Harvey balls." supertip="Checkboxes step checked - crossed - empty; Harvey balls step 0 - 25 - 50 - 75 - 100%. Select one or more and click repeatedly."/>
+        </group>
+
+      </tab>
+    </tabs>
+  </ribbon>
+
+  <!-- Right-click integration (RibbonX contextMenus - the supported
+       route on Mac; if this build ignores it, nothing breaks). -->
+  <contextMenus>
+    <contextMenu idMso="ContextMenuShape">
+      <menu id="cmShapeSA" label="Slide Aid" insertBeforeMso="Cut">
+        <button id="cmAlL" label="Align Left to Master" onAction="RB_Dispatch" tag="AlignM:L"/>
+        <button id="cmAlR" label="Align Right to Master" onAction="RB_Dispatch" tag="AlignM:R"/>
+        <button id="cmAlT" label="Align Top to Master" onAction="RB_Dispatch" tag="AlignM:T"/>
+        <button id="cmAlB" label="Align Bottom to Master" onAction="RB_Dispatch" tag="AlignM:B"/>
+        <button id="cmAlCH" label="Center on Master" onAction="RB_Dispatch" tag="AlignM:CH"/>
+        <button id="cmAlCV" label="Middle on Master" onAction="RB_Dispatch" tag="AlignM:CV"/>
+        <menuSeparator id="cmSep1"/>
+        <button id="cmDiH" label="Distribute Horizontally" onAction="RB_Dispatch" tag="Distrib:H"/>
+        <button id="cmDiV" label="Distribute Vertically" onAction="RB_Dispatch" tag="Distrib:V"/>
+        <button id="cmPnt" label="Format Painter (from Master)" onAction="RB_Dispatch" tag="Painter:0"/>
+        <menuSeparator id="cmSep2"/>
+        <button id="cmRecol" label="Recolor Series…" onAction="RB_Dispatch" tag="ChRecolor:0"/>
+        <menuSeparator id="cmSep4"/>
+        <button id="cmHarvey" label="Insert Harvey Ball…" onAction="RB_Dispatch" tag="ChHarvey:0"/>
+        <button id="cmCheckIns" label="Insert Checkbox" onAction="RB_Dispatch" tag="ChCheck:0"/>
+        <button id="cmCycle" label="Cycle State" onAction="RB_Dispatch" tag="ChCycle:0"/>
+      </menu>
+    </contextMenu>
+    <contextMenu idMso="ContextMenuObjectsGroup">
+      <menu id="cmGroupCA" label="Chart Aid" insertBeforeMso="Cut">
+        <button id="cmEdit" label="Edit Chart Data" onAction="RB_Dispatch" tag="ChEdit:0"/>
+        <button id="cmRebuild" label="Rebuild Chart" onAction="RB_Dispatch" tag="ChRebuild:0"/>
+        <button id="cmReOne" label="Restyle This Chart" onAction="RB_Dispatch" tag="ChReOne:0"/>
+        <button id="cmVline" label="Value Line…" onAction="RB_Dispatch" tag="ChVLine:0"/>
+        <button id="cmSetK" label="Settings for This Chart Type…" onAction="RB_Dispatch" tag="ChStyleSetK:0"/>
+        <menuSeparator id="cmSep3"/>
+        <button id="cmGAlCH" label="Center on Master" onAction="RB_Dispatch" tag="AlignM:CH"/>
+        <button id="cmGAlCV" label="Middle on Master" onAction="RB_Dispatch" tag="AlignM:CV"/>
+      </menu>
+    </contextMenu>
+  </contextMenus>
+</customUI>
