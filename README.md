@@ -2,25 +2,27 @@
 
 A VBA add-in with two ribbon tabs: **Slide Aid** (Master-based productivity tools; the **Master** is always the object you selected **last**, single object → slide) and **Chart Aid** (table-driven charts drawn from shapes).
 
-The PowerPoint add-in is the canonical version. Its exact tab order, group order, control names, icon files, ribbon tags, and behavior are documented in [docs/POWERPOINT_UI_REFERENCE.md](docs/POWERPOINT_UI_REFERENCE.md). The separate [Google Slides companion](google-slides/README.md) references that contract and records only its platform-specific differences.
+![Slide Aid ribbon tour](docs/img/ribbon-tour.gif)
 
-## Chart Aid
+## Documentation
 
-Charts are built from a PowerPoint table you select (the "datasheet") and are **re-editable**: each chart remembers its data, *Edit Data* recreates the table, and **Rebuild** rebuilds the chart in place using its own stored type (the datasheet is removed automatically afterwards). **Style:** theme accents by default. **Color Themes** (ribbon gallery next to Style) shows 9 curated palettes as actual color strips — one click applies globally and offers to restyle all existing charts. Per-chart-type parameters: select a chart → *Style → Settings for Selected Chart Type* (or right-click → Chart Aid) → a table with only that type's parameters (e.g. `WF.WaterfallFill`) — type-scoped overrides that merge with, not replace, global settings. *Style → Edit Palette* inserts recolorable swatch squares — recolor them with PowerPoint's own color tools (incl. eyedropper), reorder/add/delete, then *Apply from Selection*. *Style → Edit Settings* inserts a parameter table (bar widths, gaps, label size, decimals, label/legend toggles, waterfall colors, plot size) — edit values, *Apply from Selection*. *Recolor Series* changes a whole series by clicking any one of its bars — manual recolors are remembered per chart and survive *Edit Data* and *Restyle*. Types: column, bar, stacked (column/bar), 100%, waterfall (with computed subtotals and connectors), Mekko, line, area, pie, doughnut, scatter, bubble, Gantt (dates or numbers, milestones). Annotations calculate from the bars' actual data values: difference and %-difference arrows, CAGR arrow, value line, average line. Elements: Harvey balls and checkboxes, both steppable with *Cycle State* (0→25→50→75→100% / checked→crossed→empty; also on the shape right-click menu). Click *Data Layouts* on the tab for the expected table formats, click **Sample Slides** to insert one live example slide per chart type (table + chart, built by the real code; removable again via *Clean-up → Remove Chart Sample Slides*), or see the illustrated reference in [docs/CHARTS.md](docs/CHARTS.md). Not implemented in Mac VBA: drag-to-edit chart handles, live Excel links, and automatic label decluttering.
+Start with the visual guide:
 
-## Features
+- [Slide Aid Documentation](DOCUMENTATION.md) — workflows, ribbon tour, and icon-by-icon reference.
+- [Chart layouts and examples](docs/CHARTS.md) — table formats for every Chart Aid chart type.
+- [PowerPoint UI reference](docs/POWERPOINT_UI_REFERENCE.md) — source-of-truth tab order, groups, control names, icon files, ribbon tags, and behavior.
+- [Google Slides companion](google-slides/README.md) — platform-specific notes for the separate Apps Script implementation.
 
-The ribbon is organized for slide-production workflows (Wizards → Position → Size → Shape → Color → Text → View):
+## What It Does
 
-| Group | Tools |
-|---|---|
-| Wizards | My Elements (personal element library), My Formats (saved formats), Agenda from PowerPoint sections (overview + separators with highlight, regenerable), Advanced Format Painter, Select Similar Shapes |
-| Position | Align L/R/T/B/Center/Middle to Master, align to slide from the "To Slide" menu, Dock until touching Master, Distribute H/V (outermost fixed), Swap in selection order (reference point: centers or any corner; layer swapped by default), Stack H/V touching or with gap (negative gap = overlap), Matrix grid, Place on Slide presets (halves, thirds, quadrants, full slide), exact Spacing H/V, Golden Canon |
-| Size | Magic Resizer (% incl. fonts), Same Width/Height/Size as Master, Stretch to Master's far edge, Fill gap toward Master, Slice, Multiply |
-| Shape | Align Process Chain (Master sets angle/position/height, gaps closed left→right), Align Angles, Align Block Arrows (Master's metrics), Align Rounded Rectangles (same absolute corner radius), Snap to table cell (center/left/right) |
-| Color | Theme-linked fill/line/font colors of the current slide theme + generic palette; Convert to RGB; Convert to Theme Colors; Pick colors from Master; Color info (RGB/hex) |
-| Text | Split at cursor, Merge in selection order, Set Margins, Fit Form to Text, Wrap Text, Change Case (UPPER/lower/Title/Sentence, formatting kept), Remove Double Spaces, Swap Text between two objects |
-| View & Expert | Hide/Unhide objects, Master objects toggle, Clean-up (remove notes / animations / unused designs / generated agenda / chart samples, slide summary to clipboard, selected slides → new presentation), Paste on selected slides, proofing Language (FI/EN/SV/DE), Shortcuts setup |
+- **Slide Aid** handles everyday production work: align, size, dock, distribute, stack, grid, recolor, format-paint, clean up, reuse components, and manage text boxes.
+- **Chart Aid** builds editable shape-based charts from PowerPoint tables: column, bar, stacked, 100%, waterfall, Mekko, line, area, pie, doughnut, scatter, bubble, and Gantt.
+- **Reusable libraries** store personal elements and saved formats in PowerPoint's sandbox-safe Slide Aid folder.
+- **Mac-native helpers** provide optional color picking and PowerPoint-scoped keyboard shortcuts through Hammerspoon.
+
+## Core Model
+
+Select the objects you want to change first, then select the reference object last. Slide Aid calls that last object the **Master**. With a single selected object, tools that need a reference use the slide itself.
 
 All distance inputs are in **cm**, and dialogs remember your last-used values. My Elements / My Formats / preferences are stored in PowerPoint's sandbox container (`~/Library/Containers/com.microsoft.Powerpoint/Data/SlideAid/`) — the one location macro file I/O works without permission prompts.
 
