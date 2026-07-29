@@ -1,17 +1,17 @@
 # Slide Aid — PowerPoint productivity tools for Mac
 
-A VBA add-in with two ribbon tabs: **Slide Aid** (Master-based productivity tools; the **Master** is always the object you selected **last**, single object → slide) and **Chart Aid** (table-driven charts drawn from shapes).
+A VBA add-in with two ribbon tabs: **Slide Aid** (Master-based productivity tools; the **Master** is always the object you selected **last**, single object -> slide) and **Chart Aid** (table-driven charts drawn from shapes).
 
-![Slide Aid ribbon tour](docs/img/ribbon-tour.gif)
+![Slide Aid and Chart Aid ribbon overview](docs/img/ribbon-overview.png)
 
 ## Documentation
 
 Start with the visual guide:
 
-- [Slide Aid Documentation](DOCUMENTATION.md) — workflows, ribbon tour, and icon-by-icon reference.
-- [Chart layouts and examples](docs/CHARTS.md) — table formats for every Chart Aid chart type.
-- [PowerPoint UI reference](docs/POWERPOINT_UI_REFERENCE.md) — source-of-truth tab order, groups, control names, icon files, ribbon tags, and behavior.
-- [Google Slides companion](google-slides/README.md) — platform-specific notes for the separate Apps Script implementation.
+- [Slide Aid Documentation](DOCUMENTATION.md) - visual workflow demos, ribbon tour, and icon-by-icon reference.
+- [Chart layouts and examples](docs/CHARTS.md) - table formats for every Chart Aid chart type.
+- [PowerPoint UI reference](docs/POWERPOINT_UI_REFERENCE.md) - source-of-truth tab order, groups, control names, icon files, ribbon tags, and behavior.
+- [Google Slides companion](google-slides/README.md) - platform-specific notes for the separate Apps Script implementation.
 
 ## What It Does
 

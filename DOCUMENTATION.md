@@ -2,7 +2,7 @@
 
 Slide Aid is a PowerPoint productivity add-in for Mac. It focuses on repeatable slide-production tasks: aligning objects, matching sizes, managing colors and text, reusing components, and building editable shape-based charts from PowerPoint tables.
 
-![Slide Aid ribbon tour](docs/img/ribbon-tour.gif)
+![Slide Aid and Chart Aid ribbon overview](docs/img/ribbon-overview.png)
 
 ## Core model
 
@@ -12,6 +12,216 @@ Slide Aid is a PowerPoint productivity add-in for Mac. It focuses on repeatable 
 - **Objects stay editable.** The tools operate on normal PowerPoint shapes, tables, and text boxes. Chart Aid charts are also built from ordinary shapes and carry metadata for rebuilding.
 
 ## Common workflows
+
+### Visual workflow demos
+
+Some demos below were captured from PowerPoint using temporary demo presentations and the real Slide Aid ribbon commands. Others are simplified visual explainers for tools where the movement is easier to understand without PowerPoint's selection handles and menus in the way.
+
+#### Master Selection Order
+
+![Master selection order demo](docs/img/demo-master-selection-order.gif)
+
+For Master-based tools, click every target object first, then click the reference object last. Slide Aid treats that last selected object as the **Master**. The command changes the targets, not the Master.
+
+#### Single Object Uses the Slide
+
+![Single object slide reference demo](docs/img/demo-single-object-slide-reference.gif)
+
+When a command needs a reference but only one object is selected, Slide Aid uses the slide itself. This makes one-click slide alignment fast for common cleanup tasks.
+
+#### To Slide
+
+![To Slide reference demo](docs/img/demo-to-slide-reference.gif)
+
+Use **To Slide** when several objects are selected but the slide should be the reference. This avoids accidentally using the last selected shape as the Master.
+
+#### Reusable Elements and Formats
+
+![Reusable libraries demo](docs/img/demo-reusable-libraries.gif)
+
+Use **My Elements** to save a selected shape or group and insert it later. Use **My Formats** to save the full visual style of a Master object and apply it to another selection.
+
+#### Format Painter and Select Similar
+
+![Format Painter and Select Similar demo](docs/img/demo-format-painter-select-similar.gif)
+
+Use **Select Similar** to find objects that match the Master by shape type, fill color, or both. Then use **Format Painter** to copy the Master's fill, line, shadow, font, margins, and alignment to the selected objects.
+
+#### Agenda
+
+![Agenda demo](docs/img/demo-agenda.gif)
+
+Use **Agenda** to generate an overview slide and section-divider slides from the presentation's PowerPoint sections. Re-run it after changing sections; Slide Aid replaces its generated agenda slides.
+
+#### Align to Master
+
+![Align to Master demo](docs/img/demo-align-to-master.gif)
+
+Select the target objects first and the reference object last. The **Left** command moves every target to the Master's left edge.
+
+The same Master model applies to **Right**, **Top**, **Bottom**, **Center**, and **Middle**. With only one object selected, Slide Aid uses the slide itself as the reference.
+
+#### Distribute H
+
+![Distribute horizontal demo](docs/img/demo-distribute-horizontal.gif)
+
+Use **Distribute H** when the outer objects should stay fixed but the gaps between everything in the middle should become equal.
+
+Use **Distribute V** for the same cleanup vertically. These tools preserve the outer bounds, which makes them useful after rough manual placement.
+
+#### Stack
+
+![Stack horizontally demo](docs/img/demo-stack-horizontal.gif)
+
+Use **Stack** when objects should touch each other in selection order. The first selected object keeps its position; every following object is placed after it. Use the gap variants when you need a fixed positive or negative spacing.
+
+#### Exact Spacing
+
+![Exact spacing demo](docs/img/demo-spacing-exact-gap.gif)
+
+Use **Spacing** when the gap itself matters. Enter the distance in cm; Slide Aid spaces the objects in their current visual order.
+
+#### Matrix
+
+![Matrix demo](docs/img/demo-matrix-grid.gif)
+
+Use **Matrix** to turn a loose selection into a compact grid. The quick command chooses a near-square layout automatically.
+
+Use **Matrix...** when you need a specific number of columns or exact horizontal and vertical gaps.
+
+#### Golden Canon
+
+![Golden Canon demo](docs/img/demo-golden-canon-placement.gif)
+
+Use **Golden Canon** to place objects at the golden-canon height inside the Master. The bottom margin becomes twice the top margin.
+
+#### Magic Resizer
+
+![Magic Resizer demo](docs/img/demo-magic-resizer.gif)
+
+Use **Magic Resizer** to scale a selected arrangement around its center. Shape sizes and text sizes scale together, so the layout keeps its proportions.
+
+#### Match Size
+
+![Match size demo](docs/img/demo-match-size.gif)
+
+Select the objects to resize first and the Master last. **Width + Height** gives each target the Master's size while preserving each target's center point.
+
+Use **Width** or **Height** when only one dimension should match. This is useful for cards, icons, labels, and bars that already sit in the right place.
+
+#### Dock, Fill Gap, and Stretch
+
+![Dock, Fill Gap, and Stretch demo](docs/img/demo-dock-fill-stretch.gif)
+
+Use **Dock** to move objects until they touch the Master. Use **Fill Gap** to extend objects across the empty space between themselves and the Master. Use **Stretch** to extend an edge to the far side of the Master.
+
+#### Swap
+
+![Swap positions demo](docs/img/demo-swap-positions.gif)
+
+Use **Swap** when two or more objects already have the right content or formatting but sit in the wrong positions. The menu lets you choose whether objects swap by center, corner, size, and layer order.
+
+#### Place on Slide
+
+![Place on Slide demo](docs/img/demo-place-on-slide.gif)
+
+Use **Place on Slide** to move a selection into a common slide region such as the right half, a third, a quadrant, or the full slide. One selected object is resized into the target region; several selected objects move as a block.
+
+#### Slice and Multiply
+
+![Slice and Multiply demo](docs/img/demo-slice-multiply.gif)
+
+Use **Slice** to split one shape into an editable rows-by-columns grid that still fits the original footprint. Use **Multiply** to create a grid of copies at the original size.
+
+#### Shape Helpers
+
+![Shape helpers demo](docs/img/demo-shape-helpers.gif)
+
+Use **Process Chain** to normalize block arrows into a connected flow. Use **Align Angles**, **Block Arrows**, and **Rounded Rect.** when shapes should share the same rotation, arrow geometry, or corner radius.
+
+#### Snap to Table
+
+![Snap to Table demo](docs/img/demo-snap-to-table.gif)
+
+Use **Snap to Table** to place icons, Harvey balls, checkboxes, or flags into the table cells underneath them. The menu supports centered placement and left/right placement with a chosen margin.
+
+#### Color Tools
+
+![Color tools demo](docs/img/demo-color-tools.gif)
+
+Use **Pick from Master** to copy fill, line, and font colors from the Master to the rest of the selection. Use **Convert to RGB** when colors must stay fixed across templates, and **Convert to Theme** when matching colors should follow the current PowerPoint theme.
+
+#### Text Boxes
+
+![Text box tools demo](docs/img/demo-text-tools.gif)
+
+Use **Set Margins**, **Fit to Text**, **Wrap Text**, **Split at Cursor**, **Merge Boxes**, and **More** to clean up text boxes without rebuilding them manually.
+
+![Split at Cursor demo](docs/img/demo-split-at-cursor.gif)
+
+Use **Split at Cursor** when one text box should become two editable text boxes. Click inside the text at the split point, then run the command.
+
+![Fit to Text demo](docs/img/demo-fit-to-text.gif)
+
+**Fit to Text** is the fastest fix for labels that have too much empty box around them or boxes that need to grow to fit the text.
+
+#### View and Cleanup
+
+![View and cleanup demo](docs/img/demo-view-cleanup.gif)
+
+Use **Hide Objects** when a slide is too crowded to edit comfortably, then bring everything back with **Unhide All**. Use **Clean-up** before sending a deck to remove notes, animations, unused designs, generated agendas, generated chart samples, or to extract selected slides.
+
+![Paste on Slides demo](docs/img/demo-paste-on-slides.gif)
+
+Use **Paste on Slides** after copying an object and selecting several slide thumbnails. The copied object is pasted onto every selected slide.
+
+#### Chart Aid Create Chart
+
+![Create chart from table demo](docs/img/demo-chart-create-from-table.gif)
+
+Create a PowerPoint table in the expected layout, select it, then click a Chart Aid chart type. Chart Aid builds the chart from editable PowerPoint shapes instead of embedding a native chart object.
+
+#### Chart Aid Rebuild
+
+![Chart Aid rebuild demo](docs/img/demo-chart-rebuild.gif)
+
+Use **Edit Data** to recreate the table behind a Chart Aid chart, edit the numbers, then select the table and chart and click **Rebuild**. The chart is redrawn as editable PowerPoint shapes in the same position.
+
+#### Chart Aid Samples
+
+![Chart Aid sample slides demo](docs/img/demo-chart-samples.gif)
+
+Use **Chart Aid → Sample Slides** to insert live examples for every chart type. Copy a sample table when you want a known-good starting layout.
+
+#### Chart Styling and Annotations
+
+![Chart styling and annotations demo](docs/img/demo-chart-annotations-style.gif)
+
+Use **Color Themes**, **Customize**, **Restyle All**, and **Recolor Series** to keep shape-based charts visually consistent. Use **Difference**, **% Difference**, **CAGR**, **Value Line**, and **Average Line** to add annotations based on chart data instead of eyeballed positions.
+
+![Recolor Series demo](docs/img/demo-recolor-series-click.gif)
+
+Use **Recolor Series** by selecting one bar, segment, point, or marker inside a chart. Slide Aid applies the chosen color to that full data series and remembers it for rebuilds.
+
+![Difference arrow click demo](docs/img/demo-difference-arrow-clicks.gif)
+
+Use **Difference**, **% Difference**, or **CAGR** by selecting the two chart elements to compare. Slide Aid calculates the annotation from the chart data.
+
+#### Chart Elements
+
+![Chart elements demo](docs/img/demo-chart-elements.gif)
+
+Use **Harvey Ball**, **Checkbox**, and **Cycle State** for small editable status markers. Harvey balls cycle through common completion values; checkboxes cycle through checked, crossed, and empty states.
+
+![Cycle State click demo](docs/img/demo-cycle-state-clicks.gif)
+
+Use **Cycle State** repeatedly to step selected Harvey balls and checkboxes through their states without opening dialogs.
+
+### Ribbon tour
+
+![Slide Aid ribbon tour](docs/img/ribbon-tour.gif)
+
+The ribbon is split into the main production jobs: reusable wizards, positioning, sizing, shape fixes, colors, text, deck cleanup, chart creation, chart data, chart styling, chart annotations, and small chart elements.
 
 ### Align and size objects
 
