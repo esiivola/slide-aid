@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+  <Id>8C84BA23-A010-4D06-AFFB-41D61305E19B</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Slide Aid</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="IconAid"/>
+  <Description DefaultValue="Search and insert editable business and technology vector icons."/>
+  <IconUrl DefaultValue="https://localhost:3000/shared/icons/sa_elements.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:3000/shared/icons/sa_elements.png"/>
+  <SupportUrl DefaultValue="https://github.com/esiivola/slide-aid"/>
+  <AppDomains>
+    <AppDomain>https://localhost:3000</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Presentation"/>
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.8">
+      <Set Name="PowerPointApi"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:3000/apps/powerpoint-iconaid/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+    xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.8">
+        <bt:Set Name="PowerPointApi"/>
+      </bt:Sets>
+    </Requirements>
+    <Hosts>
+      <Host xsi:type="Presentation">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="IconAid.Group">
+                <Label resid="IconAid.GroupLabel"/>
+                <Icon>
+                  <bt:Image size="16" resid="IconAid.Icon"/>
+                  <bt:Image size="32" resid="IconAid.Icon"/>
+                  <bt:Image size="80" resid="IconAid.Icon"/>
+                </Icon>
+                <Control xsi:type="Button" id="IconAid.Open">
+                  <Label resid="IconAid.ButtonLabel"/>
+                  <Supertip>
+                    <Title resid="IconAid.ButtonLabel"/>
+                    <Description resid="IconAid.ButtonDescription"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconAid.Icon"/>
+                    <bt:Image size="32" resid="IconAid.Icon"/>
+                    <bt:Image size="80" resid="IconAid.Icon"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>IconAid.Taskpane</TaskpaneId>
+                    <SourceLocation resid="IconAid.TaskpaneUrl"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="IconAid.Icon" DefaultValue="https://localhost:3000/shared/icons/sa_elements.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="IconAid.TaskpaneUrl" DefaultValue="https://localhost:3000/apps/powerpoint-iconaid/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="IconAid.GroupLabel" DefaultValue="Slide Aid"/>
+        <bt:String id="IconAid.ButtonLabel" DefaultValue="IconAid"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="IconAid.ButtonDescription" DefaultValue="Open the searchable IconAid vector library."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
