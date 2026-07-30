@@ -1,0 +1,22 @@
+{
+  "chartKinds": [
+    "COL",
+    "BAR",
+    "STK",
+    "SBR",
+    "PCT",
+    "WF",
+    "MEK",
+    "LINE",
+    "AREA",
+    "PIE",
+    "DON",
+    "SCAT",
+    "BUB",
+    "GANTT"
+  ],
+  "metadata": {
+    "powerpointTagPrefix": "SACH_",
+    "googleSlidesDescriptionPrefix": "SLIDE_AID_CHART_V1:"
+  }
+}

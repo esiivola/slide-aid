@@ -4,5 +4,21 @@ Thumbs.db
 node_modules/
 __pycache__/
 *.py[cod]
+.pytest_cache/
 
 *.log
+
+tmp/
+
+# Local PowerPoint build outputs. Release zips should be published from
+# apps/powerpoint/dist rather than developed against as source.
+apps/powerpoint/Slide Aid.pptm
+apps/powerpoint/Slide Aid.ppam
+apps/powerpoint/*.bak
+apps/powerpoint/*.tmp
+
+# Google Apps Script local build and auth outputs.
+apps/google-slides/node_modules/
+apps/google-slides/.test-build/
+apps/google-slides/dist-types/
+apps/google-slides/.clasp.json
