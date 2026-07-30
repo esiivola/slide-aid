@@ -87,7 +87,7 @@ def text(
 def rounded(
     d: ImageDraw.ImageDraw,
     box: tuple[float, float, float, float],
-    fill: tuple[int, int, int],
+    fill: tuple[int, int, int] | None,
     outline: tuple[int, int, int] | None = None,
     width: int = 2,
     radius: int = 8,
@@ -352,33 +352,55 @@ def bars(d: ImageDraw.ImageDraw, x: int, y: int, vals: Iterable[int], color: tup
 
 
 class Demo:
-    def __init__(self, name: str, icon: str, label: str, detail: str, scene: Callable[[ImageDraw.ImageDraw, float], tuple[float, float] | None]):
+    def __init__(
+        self,
+        name: str,
+        icon: str,
+        label: str,
+        detail: str,
+        scene: Callable[[ImageDraw.ImageDraw, float], tuple[float, float] | None],
+        clicks: list[tuple[float, float]] | None = None,
+    ):
         self.name = name
         self.icon = icon
         self.label = label
         self.detail = detail
         self.scene = scene
+        self.clicks = clicks
 
 
-def normal_progress(idx: int, n: int) -> float:
-    return max(0.0, min(1.0, (idx - 9) / (n - 11)))
+def normal_progress(idx: int, start: int, n: int) -> float:
+    return max(0.0, min(1.0, (idx - start) / max(1, n - start - 1)))
 
 
-def make_gif(demo: Demo, frames: int = 26) -> None:
+def make_gif(demo: Demo, frames: int = 34) -> None:
     imgs = []
     hotspot = (720, 58)
+    object_clicks = demo.clicks
+    if object_clicks is None:
+        probe = frame_base()
+        object_click = demo.scene(ImageDraw.Draw(probe), 0.0)
+        object_clicks = [object_click] if object_click else []
+    object_clicks = [p for p in object_clicks if p is not None]
+    click_frames = len(object_clicks) * 4
+    ribbon_move_start = click_frames
+    ribbon_click_start = ribbon_move_start + 5
+    action_start = ribbon_click_start + 5
+    frames = max(frames, action_start + 14)
     for i in range(frames):
-        p = normal_progress(i, frames)
-        click = 1.0 - abs(i - 8) / 3 if 5 <= i <= 11 else 0.0
+        p = normal_progress(i, action_start, frames)
+        ribbon_click = 1.0 - abs(i - (ribbon_click_start + 2)) / 3 if ribbon_click_start <= i <= ribbon_click_start + 4 else 0.0
         img = frame_base()
         d = ImageDraw.Draw(img)
-        object_cursor = demo.scene(d, p)
-        hotspot = draw_ribbon(img, demo.icon, demo.label, max(0.0, click))
-        if i < 4 and object_cursor:
-            pos = object_cursor
-            click_ring(d, pos, 1.0 - i / 4)
-        elif i < 10:
-            pos = (lerp(360, hotspot[0], (i - 4) / 5), lerp(300, hotspot[1], (i - 4) / 5))
+        demo.scene(d, p)
+        hotspot = draw_ribbon(img, demo.icon, demo.label, max(0.0, ribbon_click))
+        if object_clicks and i < click_frames:
+            idx = min(len(object_clicks) - 1, i // 4)
+            pos = object_clicks[idx]
+            click_ring(d, pos, 1.0 - (i % 4) / 4)
+        elif i < ribbon_click_start:
+            start = object_clicks[-1] if object_clicks else (360, 300)
+            pos = (lerp(start[0], hotspot[0], (i - ribbon_move_start) / 5), lerp(start[1], hotspot[1], (i - ribbon_move_start) / 5))
         else:
             pos = hotspot
         draw_cursor(d, (pos[0] - 2, pos[1] - 2))
@@ -390,12 +412,11 @@ def make_gif(demo: Demo, frames: int = 26) -> None:
 def align_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     master_box = (640, 292, 790, 370)
     target_x = lerp(250, 640, p)
+    second_target_x = lerp(420, 640, p)
     shape(d, (target_x, 184, target_x + 120, 246), ORANGE, "Target", selected=True)
-    shape(d, (420, 318, 540, 380), GREEN, "Target", selected=True)
+    shape(d, (second_target_x, 404, second_target_x + 120, 466), GREEN, "Target", selected=True)
     shape(d, master_box, NAVY, "Master", master=True)
-    d.line([640, 160, 640, 406], fill=(211, 84, 74), width=2)
-    text(d, (650, 150), "left edge", fill=MASTER, anchor="lm", fnt=FONT_13)
-    return (305, 215)
+    return (250, 184)
 
 
 def master_order_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -403,11 +424,8 @@ def master_order_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     labels = ["1 target", "2 target", "3 master"]
     for j, box in enumerate(boxes):
         is_master = j == 2
-        selected = p > 0.15 * j
-        shape(d, box, NAVY if is_master else (ORANGE if j == 0 else GREEN), labels[j], selected=selected and not is_master, master=selected and is_master)
-    arrow(d, (300, 270), (570, 315), fill=MASTER)
-    text(d, (420, 430), "Last selected object becomes the Master", fill=MASTER, fnt=FONT_20)
-    return (230, 228)
+        shape(d, box, NAVY if is_master else (ORANGE if j == 0 else GREEN), labels[j], selected=not is_master, master=is_master)
+    return (165, 195)
 
 
 def single_slide_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -416,17 +434,16 @@ def single_slide_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     shape(d, (x, y, x + 105, y + 70), BLUE, "One", selected=True)
     d.line([480, 132, 480, 492], fill=(220, 226, 236), width=2)
     d.line([54, 312, 906, 312], fill=(220, 226, 236), width=2)
-    text(d, (480, 480), "single selection uses the slide as reference", fill=GREY, fnt=FONT_16)
-    return (232, 224)
+    return (180, 190)
 
 
 def to_slide_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     dx, dy = lerp(0, 220, p), lerp(0, 65, p)
     for x, y, c in [(155, 190, ORANGE), (285, 250, GREEN), (210, 340, BLUE)]:
         shape(d, (x + dx, y + dy, x + dx + 92, y + dy + 52), c, selected=True)
-    d.rectangle([330, 210, 630, 410], outline=(220, 226, 236), width=3)
-    text(d, (480, 198), "slide target area", fill=GREY, fnt=FONT_13)
-    return (198, 216)
+    d.line([480, 140, 480, 480], fill=(232, 237, 244), width=2)
+    d.line([70, 312, 890, 312], fill=(232, 237, 244), width=2)
+    return (155, 190)
 
 
 def reusable_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -438,7 +455,7 @@ def reusable_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     shape(d, (x, y, x + 90, y + 54), ORANGE, "", selected=False)
     if p > 0.55:
         shape(d, (360, 330, 490, 405), ORANGE, "Inserted")
-    return (214, 248)
+    return (150, 210)
 
 
 def painter_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -447,7 +464,7 @@ def painter_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     shape(d, (175, 205, 305, 285), target_col, "Target", selected=True)
     shape(d, (390, 205, 520, 285), target_col, "Target", selected=True)
     shape(d, (650, 315, 790, 395), master_col, "Master", master=True)
-    return (240, 246)
+    return (175, 205)
 
 
 def agenda_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -462,37 +479,31 @@ def agenda_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
         d.rectangle([x, y, x + 60, y + 85], fill=(255, 255, 255), outline=BLUE, width=2)
         text(d, (x + 30, y + 32), str(i + 1), fill=BLUE, fnt=FONT_24)
         text(d, (x + 30, y + 58), s, fill=INK, fnt=FONT_11)
-    return (224, 198)
+    return (130, 178)
 
 
 def distribute_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     xs = [150, lerp(292, 338, p), lerp(475, 526, p), 710]
     for i, x in enumerate(xs):
         shape(d, (x, 260, x + 92, 322), [ORANGE, GREEN, BLUE, NAVY][i], selected=True)
-    for x in [242, 430, 618]:
-        d.line([x, 236, x, 348], fill=(220, 226, 236), width=2)
-    text(d, (480, 400), "outer objects stay fixed; inner gaps become equal", fill=GREY, fnt=FONT_16)
-    return (196, 292)
+    return (150, 260)
 
 
 def stack_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     starts = [(150, 245), (360, 190), (610, 315)]
-    ends = [(150, 245), (258, 245), (366, 245)]
+    ends = [(150, 245), (250, 245), (350, 245)]
     cols = [ORANGE, GREEN, BLUE]
     for i, (s, e) in enumerate(zip(starts, ends)):
         x, y = lerp(s[0], e[0], p), lerp(s[1], e[1], p)
         shape(d, (x, y, x + 100, y + 62), cols[i], selected=True)
-    return (200, 276)
+    return (150, 245)
 
 
 def spacing_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     xs = [155, lerp(330, 305, p), lerp(560, 455, p)]
     for x, c in zip(xs, [ORANGE, GREEN, BLUE]):
         shape(d, (x, 250, x + 105, 314), c, selected=True)
-    arrow(d, (260, 336), (305, 336), fill=GREY, width=3)
-    arrow(d, (410, 336), (455, 336), fill=GREY, width=3)
-    text(d, (357, 358), "exact 0.5 cm gaps", fill=GREY, fnt=FONT_15)
-    return (205, 282)
+    return (155, 250)
 
 
 def matrix_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -502,7 +513,7 @@ def matrix_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     for s, e, c in zip(starts, ends, cols):
         x, y = lerp(s[0], e[0], p), lerp(s[1], e[1], p)
         shape(d, (x, y, x + 78, y + 56), c, selected=True, radius=6)
-    return (196, 218)
+    return (160, 190)
 
 
 def golden_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -511,8 +522,7 @@ def golden_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     y = lerp(320, 244, p)
     shape(d, (360, y, 600, y + 78), NAVY, "Content", selected=True)
     d.line([210, 244, 750, 244], fill=YELLOW, width=4)
-    text(d, (760, 244), "golden-canon height", fill=GREY, anchor="lm", fnt=FONT_13)
-    return (480, 360)
+    return (360, 320)
 
 
 def magic_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -521,8 +531,7 @@ def magic_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     for ox, oy, w, h, c in [(-150, -65, 105, 58, ORANGE), (-20, -75, 155, 70, GREEN), (-120, 30, 240, 48, BLUE)]:
         box = (cx + ox * scale, cy + oy * scale, cx + (ox + w) * scale, cy + (oy + h) * scale)
         shape(d, box, c, selected=True)
-    text(d, (420, 420), "sizes and text scale together", fill=GREY, fnt=FONT_16)
-    return (285, 232)
+    return (270, 223)
 
 
 def match_size_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -532,7 +541,7 @@ def match_size_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
         box = tuple(lerp(a, b, p) for a, b in zip(start, end))
         shape(d, box, col, "Target", selected=True)
     shape(d, master_box, NAVY, "Master", master=True)
-    return (255, 220)
+    return (200, 190)
 
 
 def dock_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -540,8 +549,7 @@ def dock_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     x = lerp(260, 500, p)
     shape(d, (x, 252, x + 120, 328), ORANGE, "Target", selected=True)
     shape(d, master, NAVY, "Master", master=True)
-    text(d, (560, 372), "target moves until it touches the Master", fill=GREY, fnt=FONT_15)
-    return (315, 290)
+    return (260, 252)
 
 
 def fill_gap_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -550,8 +558,7 @@ def fill_gap_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     right = lerp(360, 650, p)
     shape(d, (left, 258, right, 322), ORANGE, "Target", selected=True)
     shape(d, master, NAVY, "Master", master=True)
-    text(d, (500, 372), "target extends across the gap to the Master", fill=GREY, fnt=FONT_15)
-    return (292, 290)
+    return (220, 258)
 
 
 def stretch_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -559,11 +566,9 @@ def stretch_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     left = 235
     right = lerp(420, 800, p)
     shape(d, (left, 260, right, 326), ORANGE, "Target", selected=True)
-    rounded(d, master, fill=(255, 255, 255), outline=MASTER, width=3, radius=6)
-    text(d, (615, 186), "MASTER", fill=MASTER, anchor="lm", fnt=FONT_16)
-    d.line([800, 190, 800, 400], fill=MASTER, width=2)
-    text(d, (510, 430), "right edge stretches to the Master's far edge", fill=GREY, fnt=FONT_15)
-    return (326, 292)
+    rounded(d, master, fill=None, outline=MASTER, width=3, radius=6)
+    text(d, (622, 195), "MASTER", fill=MASTER, anchor="lm", fnt=FONT_16)
+    return (235, 260)
 
 
 def swap_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -571,18 +576,15 @@ def swap_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     b = (lerp(610, 190, p), 330)
     shape(d, (a[0], a[1], a[0] + 130, a[1] + 68), ORANGE, "A", selected=True)
     shape(d, (b[0], b[1], b[0] + 130, b[1] + 68), BLUE, "B", selected=True)
-    arrow(d, (340, 260), (590, 350), fill=GREY, width=3)
-    arrow(d, (590, 350), (340, 260), fill=GREY, width=3)
-    return (255, 266)
+    return (190, 230)
 
 
 def place_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     d.rectangle([480, 130, 910, 494], outline=(220, 226, 236), width=3)
-    text(d, (695, 148), "right half", fill=GREY, fnt=FONT_13)
     x, y = lerp(145, 520, p), lerp(230, 210, p)
     w, h = lerp(150, 330, p), lerp(95, 245, p)
     shape(d, (x, y, x + w, y + h), BLUE, "Selection", selected=True)
-    return (220, 278)
+    return (145, 230)
 
 
 def slice_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -596,8 +598,7 @@ def slice_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
                 bx = x + c * (w / 4)
                 by = y + r * (h / 3)
                 d.rectangle([bx + gap / 2, by + gap / 2, bx + w / 4 - gap / 2, by + h / 3 - gap / 2], fill=BLUE, outline=(255, 255, 255), width=2)
-    text(d, (435, 438), "one shape becomes editable pieces", fill=GREY, fnt=FONT_16)
-    return (430, 292)
+    return (245, 180)
 
 
 def multiply_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -612,8 +613,7 @@ def multiply_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
                 bx = lerp(x, x + c * 116, q)
                 by = lerp(y, y + r * 76, q)
                 shape(d, (bx, by, bx + w, by + h), BLUE)
-    text(d, (470, 468), "copies keep the original size", fill=GREY, fnt=FONT_16)
-    return (360, 240)
+    return (310, 210)
 
 
 def chain_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -622,7 +622,7 @@ def chain_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     for i, (s, e) in enumerate(zip(starts, ends)):
         x, y = lerp(s[0], e[0], p), lerp(s[1], e[1], p)
         d.polygon([(x, y), (x + 120, y), (x + 150, y + 42), (x + 120, y + 84), (x, y + 84), (x + 30, y + 42)], fill=[ORANGE, GREEN, BLUE][i], outline=(255, 255, 255))
-    return (225, 256)
+    return (150, 215)
 
 
 def snap_table_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -639,8 +639,7 @@ def colors_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     target_col = mix((220, 224, 230), ORANGE, p)
     shape(d, (190, 230, 335, 310), target_col, "Target", selected=True)
     shape(d, (610, 230, 755, 310), ORANGE, "Master", master=True)
-    arrow(d, (585, 270), (350, 270), fill=ORANGE)
-    return (260, 270)
+    return (190, 230)
 
 
 def text_tools_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -649,7 +648,7 @@ def text_tools_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     margin = lerp(12, 36, p)
     text(d, (box[0] + margin, box[1] + margin), "Text box margins", anchor="la", fnt=FONT_24, fill=NAVY)
     d.rectangle([box[0] + margin, box[1] + margin, box[2] - margin, box[3] - margin], outline=(220, 226, 236), width=2)
-    return (420, 275)
+    return (210, 205)
 
 
 def split_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -662,22 +661,24 @@ def split_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
         rounded(d, (470, 235, 725, 320), fill=(255, 255, 255), outline=BLUE, width=3, radius=5)
         text(d, (295, 278), "First thought", fill=NAVY, fnt=FONT_20)
         text(d, (598, 278), "second thought", fill=NAVY, fnt=FONT_20)
-    return (463, 276)
+    return (463, 242)
 
 
 def fit_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     box = (lerp(205, 310, p), lerp(205, 245, p), lerp(710, 600, p), lerp(385, 325, p))
     rounded(d, box, fill=(255, 255, 255), outline=BLUE, width=3, radius=5)
     text(d, ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), "Short label", fill=NAVY, fnt=FONT_30)
-    return (458, 294)
+    return (205, 205)
 
 
 def hide_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
-    alpha_col = mix(ORANGE, (248, 250, 253), p)
     for i, (x, y) in enumerate([(180, 190), (310, 230), (460, 180), (590, 265), (720, 220)]):
-        shape(d, (x, y, x + 95, y + 65), alpha_col if i % 2 == 0 else mix(BLUE, (248, 250, 253), p), selected=True)
-    text(d, (450, 420), "crowded objects are hidden temporarily", fill=GREY, fnt=FONT_16)
-    return (230, 222)
+        base = ORANGE if i % 2 == 0 else BLUE
+        fill = mix(base, (255, 255, 255), p)
+        outline = mix((255, 255, 255), (255, 255, 255), p)
+        if p < 0.94:
+            rounded(d, (x, y, x + 95, y + 65), fill=fill, outline=outline, width=2, radius=8)
+    return (180, 190)
 
 
 def paste_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -688,25 +689,27 @@ def paste_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
         d.rectangle([x, 175, x + 88, 124 + 190], fill=(255, 255, 255), outline=(188, 200, 216), width=2)
         if p > i * 0.2:
             shape(d, (x + 16, 222, x + 72, 258), ORANGE)
-    return (205, 220)
+    return (150, 185)
 
 
 def chart_create_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
-    if p < 0.55:
+    if p < 0.65:
         table(d, 185, 185, 4, 4, 82, 44)
         for c, val in enumerate(["Q1", "Q2", "Q3"]):
             text(d, (185 + (c + 1) * 82 + 41, 207), val, fnt=FONT_13)
-    x = lerp(520, 440, p)
-    bars(d, int(x), 390, [55, 85, 70], BLUE)
-    return (315, 235)
+    if p > 0.18:
+        q = min(1.0, (p - 0.18) / 0.82)
+        x = lerp(575, 440, q)
+        bars(d, int(x), 390, [55, 85, 70], BLUE)
+    return (185, 185)
 
 
 def chart_rebuild_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     vals = [lerp(45, 60, p), lerp(70, 42, p), lerp(52, 90, p)]
-    table(d, 165, 190, 3, 4, 78, 40)
+    if p < 0.78:
+        table(d, 165, 190, 3, 4, 78, 40)
     bars(d, 470, 390, vals, BLUE)
-    text(d, (250, 382), "edited data", fill=GREY, fnt=FONT_15)
-    return (535, 315)
+    return (470, 300)
 
 
 def samples_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -717,7 +720,7 @@ def samples_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
         d.rectangle([x, y, x + 108, y + 78], fill=(255, 255, 255), outline=BLUE, width=2)
         text(d, (x + 54, y + 25), name, fnt=FONT_13)
         bars(d, int(x + 22), int(y + 62), [15, 24, 20], [ORANGE, GREEN, BLUE, NAVY][i])
-    return (225, 250)
+    return (180, 210)
 
 
 def style_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -725,16 +728,14 @@ def style_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     bars(d, 265, 390, [60, 82, 42, 74], col)
     for i, c in enumerate([BLUE, GREEN, ORANGE, RED]):
         d.rectangle([610, 200 + i * 36, 665, 224 + i * 36], fill=c, outline=(255, 255, 255), width=2)
-    text(d, (695, 254), "theme swatches", fill=GREY, anchor="lm", fnt=FONT_15)
-    return (340, 300)
+    return (265, 270)
 
 
 def recolor_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     colors = [ORANGE, mix(BLUE, RED, p), GREEN]
     for i, c in enumerate(colors):
         bars(d, 300 + i * 46, 390, [40 + i * 15], c)
-    text(d, (392, 420), "one selected series changes color", fill=GREY, fnt=FONT_15)
-    return (382, 310)
+    return (346, 310)
 
 
 def diff_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -742,7 +743,7 @@ def diff_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
     if p > 0.35:
         arrow(d, (277, 285), (333, 235), fill=RED, width=4)
         text(d, (306, 250), "+33", fill=RED, fnt=FONT_18)
-    return (278, 300)
+    return (260, 300)
 
 
 def chart_elements_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -751,8 +752,7 @@ def chart_elements_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float
     if p > 0.25:
         d.pieslice([cx - 52, cy - 52, cx + 52, cy + 52], -90, -90 + 270 * p, fill=BLUE)
     d.ellipse([cx - 30, cy - 30, cx + 30, cy + 30], fill=(255, 255, 255))
-    text(d, (430, 375), "editable status marker", fill=GREY, fnt=FONT_16)
-    return (430, 285)
+    return (378, 233)
 
 
 def cycle_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
@@ -764,49 +764,49 @@ def cycle_scene(d: ImageDraw.ImageDraw, p: float) -> tuple[float, float]:
         d.pieslice([cx - 54, cy - 54, cx + 54, cy + 54], -90, -90 + 360 * state, fill=BLUE)
     d.ellipse([cx - 31, cy - 31, cx + 31, cy + 31], fill=(255, 255, 255))
     text(d, (430, 375), f"{int(state * 100)}%", fill=NAVY, fnt=FONT_24)
-    return (430, 285)
+    return (376, 231)
 
 
 DEMOS = [
-    Demo("demo-master-selection-order.gif", "sa_align_left", "Left", "Align to Master", master_order_scene),
-    Demo("demo-single-object-slide-reference.gif", "sa_align_center", "Center", "Slide reference", single_slide_scene),
-    Demo("demo-to-slide-reference.gif", "sa_to_slide", "To Slide", "Center on slide", to_slide_scene),
-    Demo("demo-reusable-libraries.gif", "sa_elements", "My Elements", "Save and insert", reusable_scene),
-    Demo("demo-format-painter-select-similar.gif", "sa_painter", "Format Painter", "Copy Master style", painter_scene),
-    Demo("demo-agenda.gif", "sa_agenda", "Agenda", "Build section slides", agenda_scene),
-    Demo("demo-align-to-master.gif", "sa_align_left", "Left", "Align to Master", align_scene),
-    Demo("demo-distribute-horizontal.gif", "sa_dist_h", "Distribute H", "Equal horizontal gaps", distribute_scene),
-    Demo("demo-stack-horizontal.gif", "sa_stack", "Stack", "Horizontally", stack_scene),
-    Demo("demo-spacing-exact-gap.gif", "sa_spacing", "Spacing", "Horizontal gap", spacing_scene),
-    Demo("demo-matrix-grid.gif", "sa_matrix", "Matrix", "Arrange as grid", matrix_scene),
-    Demo("demo-golden-canon-placement.gif", "sa_golden", "Golden Canon", "Place in Master", golden_scene),
-    Demo("demo-magic-resizer.gif", "sa_magic", "Magic Resizer", "Scale arrangement", magic_scene),
-    Demo("demo-match-size.gif", "sa_size", "Width + Height", "Match Master size", match_size_scene),
-    Demo("demo-dock-fill-stretch.gif", "sa_dock", "Dock", "Touch the Master", dock_scene),
-    Demo("demo-dock.gif", "sa_dock", "Dock", "Touch the Master", dock_scene),
-    Demo("demo-fill-gap.gif", "sa_fill", "Fill Gap", "Extend to Master", fill_gap_scene),
-    Demo("demo-stretch.gif", "sa_stretch", "Stretch", "Extend to far edge", stretch_scene),
-    Demo("demo-swap-positions.gif", "sa_swap", "Swap", "Exchange positions", swap_scene),
-    Demo("demo-place-on-slide.gif", "sa_place", "Place on Slide", "Right half", place_scene),
-    Demo("demo-slice-multiply.gif", "sa_slice", "Slice", "Split into pieces", slice_scene),
-    Demo("demo-slice.gif", "sa_slice", "Slice", "Split into pieces", slice_scene),
-    Demo("demo-multiply.gif", "sa_multiply", "Multiply", "Create copies", multiply_scene),
-    Demo("demo-shape-helpers.gif", "sa_chain", "Process Chain", "Connect arrows", chain_scene),
-    Demo("demo-snap-to-table.gif", "sa_table", "Snap to Table", "Center in cell", snap_table_scene),
-    Demo("demo-color-tools.gif", "sa_pick", "Pick from Master", "Copy colors", colors_scene),
-    Demo("demo-text-tools.gif", "sa_margins", "Set Margins", "Text box margins", text_tools_scene),
-    Demo("demo-split-at-cursor.gif", "sa_split", "Split at Cursor", "Split text box", split_scene),
-    Demo("demo-fit-to-text.gif", "sa_fit", "Fit to Text", "Resize text box", fit_scene),
-    Demo("demo-view-cleanup.gif", "sa_hide", "Hide Objects", "Temporary cleanup", hide_scene),
-    Demo("demo-paste-on-slides.gif", "sa_paste", "Paste on Slides", "Repeat paste", paste_scene),
-    Demo("demo-chart-create-from-table.gif", "sa_ch_col", "Column", "Create from table", chart_create_scene),
-    Demo("demo-chart-rebuild.gif", "sa_ch_rebuild", "Rebuild", "Update chart", chart_rebuild_scene),
-    Demo("demo-chart-samples.gif", "sa_ch_samples", "Sample Slides", "Insert examples", samples_scene),
-    Demo("demo-chart-annotations-style.gif", "sa_ch_restyle", "Restyle All", "Apply chart style", style_scene),
-    Demo("demo-recolor-series-click.gif", "sa_ch_recolor", "Recolor Series", "Selected series", recolor_scene),
-    Demo("demo-difference-arrow-clicks.gif", "sa_ch_diff", "Difference", "Compare two bars", diff_scene),
-    Demo("demo-chart-elements.gif", "sa_ch_harvey", "Harvey Ball", "Insert element", chart_elements_scene),
-    Demo("demo-cycle-state-clicks.gif", "sa_ch_cycle", "Cycle State", "Advance state", cycle_scene),
+    Demo("demo-master-selection-order.gif", "sa_align_left", "Left", "Align to Master", master_order_scene, [(180, 205), (365, 205), (595, 315)]),
+    Demo("demo-single-object-slide-reference.gif", "sa_align_center", "Center", "Slide reference", single_slide_scene, [(180, 190)]),
+    Demo("demo-to-slide-reference.gif", "sa_to_slide", "To Slide", "Center on slide", to_slide_scene, [(155, 190), (285, 250), (210, 340)]),
+    Demo("demo-reusable-libraries.gif", "sa_elements", "My Elements", "Save and insert", reusable_scene, [(150, 210)]),
+    Demo("demo-format-painter-select-similar.gif", "sa_painter", "Format Painter", "Copy Master style", painter_scene, [(175, 205), (390, 205), (650, 315)]),
+    Demo("demo-agenda.gif", "sa_agenda", "Agenda", "Build section slides", agenda_scene, []),
+    Demo("demo-align-to-master.gif", "sa_align_left", "Left", "Align to Master", align_scene, [(250, 184), (420, 404), (640, 292)]),
+    Demo("demo-distribute-horizontal.gif", "sa_dist_h", "Distribute H", "Equal horizontal gaps", distribute_scene, [(150, 260), (292, 260), (475, 260), (710, 260)]),
+    Demo("demo-stack-horizontal.gif", "sa_stack", "Stack", "Horizontally", stack_scene, [(150, 245), (360, 190), (610, 315)]),
+    Demo("demo-spacing-exact-gap.gif", "sa_spacing", "Spacing", "Horizontal gap", spacing_scene, [(155, 250), (330, 250), (560, 250)]),
+    Demo("demo-matrix-grid.gif", "sa_matrix", "Matrix", "Arrange as grid", matrix_scene, [(160, 190), (405, 155), (620, 235), (275, 365), (520, 345), (720, 390)]),
+    Demo("demo-golden-canon-placement.gif", "sa_golden", "Golden Canon", "Place in Master", golden_scene, [(360, 320), (210, 165)]),
+    Demo("demo-magic-resizer.gif", "sa_magic", "Magic Resizer", "Scale arrangement", magic_scene, [(295, 218), (425, 208), (325, 312)]),
+    Demo("demo-match-size.gif", "sa_size", "Width + Height", "Match Master size", match_size_scene, [(200, 190), (365, 250), (620, 285)]),
+    Demo("demo-dock-fill-stretch.gif", "sa_dock", "Dock", "Touch the Master", dock_scene, [(260, 252), (620, 245)]),
+    Demo("demo-dock.gif", "sa_dock", "Dock", "Touch the Master", dock_scene, [(260, 252), (620, 245)]),
+    Demo("demo-fill-gap.gif", "sa_fill", "Fill Gap", "Extend to Master", fill_gap_scene, [(220, 258), (650, 245)]),
+    Demo("demo-stretch.gif", "sa_stretch", "Stretch", "Extend to far edge", stretch_scene, [(235, 260), (615, 205)]),
+    Demo("demo-swap-positions.gif", "sa_swap", "Swap", "Exchange positions", swap_scene, [(190, 230), (610, 330)]),
+    Demo("demo-place-on-slide.gif", "sa_place", "Place on Slide", "Right half", place_scene, [(145, 230)]),
+    Demo("demo-slice-multiply.gif", "sa_slice", "Slice", "Split into pieces", slice_scene, [(245, 180)]),
+    Demo("demo-slice.gif", "sa_slice", "Slice", "Split into pieces", slice_scene, [(245, 180)]),
+    Demo("demo-multiply.gif", "sa_multiply", "Multiply", "Create copies", multiply_scene, [(310, 210)]),
+    Demo("demo-shape-helpers.gif", "sa_chain", "Process Chain", "Connect arrows", chain_scene, [(150, 215), (385, 185), (640, 295)]),
+    Demo("demo-snap-to-table.gif", "sa_table", "Snap to Table", "Center in cell", snap_table_scene, [(260, 155), (430, 238), (625, 358)]),
+    Demo("demo-color-tools.gif", "sa_pick", "Pick from Master", "Copy colors", colors_scene, [(190, 230), (610, 230)]),
+    Demo("demo-text-tools.gif", "sa_margins", "Set Margins", "Text box margins", text_tools_scene, [(210, 205)]),
+    Demo("demo-split-at-cursor.gif", "sa_split", "Split at Cursor", "Split text box", split_scene, [(463, 242)]),
+    Demo("demo-fit-to-text.gif", "sa_fit", "Fit to Text", "Resize text box", fit_scene, [(205, 205)]),
+    Demo("demo-view-cleanup.gif", "sa_hide", "Hide Objects", "Temporary cleanup", hide_scene, [(180, 190), (310, 230), (460, 180), (590, 265), (720, 220)]),
+    Demo("demo-paste-on-slides.gif", "sa_paste", "Paste on Slides", "Repeat paste", paste_scene, [(150, 185), (450, 175), (575, 175), (700, 175)]),
+    Demo("demo-chart-create-from-table.gif", "sa_ch_col", "Column", "Create from table", chart_create_scene, [(185, 185)]),
+    Demo("demo-chart-rebuild.gif", "sa_ch_rebuild", "Rebuild", "Update chart", chart_rebuild_scene, [(165, 190), (470, 300)]),
+    Demo("demo-chart-samples.gif", "sa_ch_samples", "Sample Slides", "Insert examples", samples_scene, []),
+    Demo("demo-chart-annotations-style.gif", "sa_ch_restyle", "Restyle All", "Apply chart style", style_scene, []),
+    Demo("demo-recolor-series-click.gif", "sa_ch_recolor", "Recolor Series", "Selected series", recolor_scene, [(346, 310)]),
+    Demo("demo-difference-arrow-clicks.gif", "sa_ch_diff", "Difference", "Compare two bars", diff_scene, [(260, 300), (372, 235)]),
+    Demo("demo-chart-elements.gif", "sa_ch_harvey", "Harvey Ball", "Insert element", chart_elements_scene, []),
+    Demo("demo-cycle-state-clicks.gif", "sa_ch_cycle", "Cycle State", "Advance state", cycle_scene, [(376, 231)]),
 ]
 
 
