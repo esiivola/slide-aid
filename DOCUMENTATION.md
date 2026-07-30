@@ -109,11 +109,23 @@ Select the objects to resize first and the Master last. **Width + Height** gives
 
 Use **Width** or **Height** when only one dimension should match. This is useful for cards, icons, labels, and bars that already sit in the right place.
 
-#### Dock, Fill Gap, and Stretch
+#### Dock
 
-![Dock, Fill Gap, and Stretch demo](docs/img/demo-dock-fill-stretch.gif)
+![Dock demo](docs/img/demo-dock.gif)
 
-Use **Dock** to move objects until they touch the Master. Use **Fill Gap** to extend objects across the empty space between themselves and the Master. Use **Stretch** to extend an edge to the far side of the Master.
+Use **Dock** to move objects until they touch the Master.
+
+#### Fill Gap
+
+![Fill Gap demo](docs/img/demo-fill-gap.gif)
+
+Use **Fill Gap** to extend objects across the empty space between themselves and the Master.
+
+#### Stretch
+
+![Stretch demo](docs/img/demo-stretch.gif)
+
+Use **Stretch** to extend an edge to the far side of the Master.
 
 #### Swap
 
@@ -127,11 +139,17 @@ Use **Swap** when two or more objects already have the right content or formatti
 
 Use **Place on Slide** to move a selection into a common slide region such as the right half, a third, a quadrant, or the full slide. One selected object is resized into the target region; several selected objects move as a block.
 
-#### Slice and Multiply
+#### Slice
 
-![Slice and Multiply demo](docs/img/demo-slice-multiply.gif)
+![Slice demo](docs/img/demo-slice.gif)
 
-Use **Slice** to split one shape into an editable rows-by-columns grid that still fits the original footprint. Use **Multiply** to create a grid of copies at the original size.
+Use **Slice** to split one shape into an editable rows-by-columns grid that still fits the original footprint.
+
+#### Multiply
+
+![Multiply demo](docs/img/demo-multiply.gif)
+
+Use **Multiply** to create a grid of copies at the original size.
 
 #### Shape Helpers
 
