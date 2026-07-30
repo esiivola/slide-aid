@@ -109,7 +109,8 @@ def check_powerpoint_release() -> None:
 
 
 def main() -> None:
-    run([sys.executable, "-m", "py_compile", "scripts/make_icons.py", "scripts/workflow_contracts.py", "scripts/render_doc_gifs.py", "scripts/render_examples.py", "scripts/check_repo.py"])
+    run([sys.executable, "-m", "py_compile", "scripts/make_icons.py", "scripts/build_icon_catalog.py", "scripts/workflow_contracts.py", "scripts/render_doc_gifs.py", "scripts/render_examples.py", "scripts/check_repo.py"])
+    run([sys.executable, "scripts/build_icon_catalog.py", "--check"])
     run([sys.executable, "-m", "py_compile", "apps/powerpoint/tools/inject_ribbon.py"])
     run(["bash", "-n", "apps/powerpoint/tools/build.sh", "apps/powerpoint/tools/make_dist.sh"])
     check_json_specs()

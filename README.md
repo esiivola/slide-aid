@@ -17,6 +17,7 @@ Start with the visual guide:
 
 - **Slide Aid** handles everyday production work: align, size, dock, distribute, stack, grid, recolor, format-paint, clean up, reuse components, and manage text boxes.
 - **Chart Aid** builds editable shape-based charts from PowerPoint tables: column, bar, stacked, 100%, waterfall, Mekko, line, area, pie, doughnut, scatter, bubble, and Gantt.
+- **IconAid** is a visual task pane with 425 original business, technology, finance, operations, people, security, communication, and ESG icons. Search, filter, recolor, and click to insert editable grouped vectors in PowerPoint or Google Slides.
 - **Reusable libraries** store personal elements and saved formats in PowerPoint's sandbox-safe Slide Aid folder.
 - **Mac-native helpers** provide optional color picking and PowerPoint-scoped keyboard shortcuts through Hammerspoon.
 
@@ -66,6 +67,17 @@ python3 scripts/make_icons.py
 ```
 
 The generated PNGs live in `shared/icons/` and are part of the repo, so this step is normally not needed. If `apps/powerpoint/hammerspoon/slideaid.lua` changed, also re-copy it: `cp apps/powerpoint/hammerspoon/slideaid.lua ~/.hammerspoon/` (it reloads automatically on save).
+
+When the IconAid source catalog changes, regenerate its shared manifest and compact PowerPoint data modules:
+
+```bash
+python3 scripts/build_icon_catalog.py
+python3 scripts/build_icon_catalog.py --check
+```
+
+The IconAid artwork is original, MIT-licensed, and defined on a shared 24x24 primitive grid. PowerPoint uses the cross-platform Office.js task pane in `apps/powerpoint-iconaid/`; Google Slides uses the **Icons** sidebar tab. Both insert grouped native shapes rather than temporary preview slides or bitmap fallbacks.
+
+For local PowerPoint development, serve the repository over trusted HTTPS on port 3000 and sideload `apps/powerpoint-iconaid/manifest.xml`. The manifest adds an **IconAid** button to PowerPoint's Home tab; the PPAM no longer contains the retired VBA icon picker.
 
 For heavy iteration there is a live-editing setup: keep a dev .pptm open with all modules (edit → ⌘S → test) and let a thin stub add-in (`apps/powerpoint/tools/stub_addin.bas`) own the ribbon, forwarding clicks to the dev file via `Application.Run`. See comments in that file.
 
@@ -118,6 +130,7 @@ apps/powerpoint/tools/        PowerPoint build, import, inject, install, and hel
 apps/powerpoint/hammerspoon/  PowerPoint-scoped keyboard shortcut config
 apps/google-slides/           TypeScript/Apps Script companion for Google Slides
 shared/icons/                 shared PNG button icons embedded by both builds
+shared/iconaid/               generated IconAid catalog and icon-specific MIT license
 shared/specs/                 shared product constants used to prevent parity drift
 docs/                         user documentation, chart layouts, UI reference, and generated visuals
 scripts/                      repo-level generators and validation scripts

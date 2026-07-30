@@ -49,6 +49,7 @@ function getSlideAidLibraryItems() { return SlideAidBundle.getSlideAidLibraryIte
 function insertSlideAidLibraryItem(slideId) { return SlideAidBundle.insertSlideAidLibraryItem(slideId); }
 function addSelectionToSlideAidLibrary(name) { return SlideAidBundle.addSelectionToSlideAidLibrary(name); }
 function refreshSelectedSlideAidLibraryItem() { return SlideAidBundle.refreshSelectedSlideAidLibraryItem(); }
+function insertSlideAidIcon(icon, color) { return SlideAidBundle.insertSlideAidIcon(icon, color); }
 function scanSlideAidDeck() { return SlideAidBundle.scanSlideAidDeck(); }
 function focusSlideAidQaIssue(slideId, objectId) { return SlideAidBundle.focusSlideAidQaIssue(slideId, objectId); }
 function fixSlideAidQaIssue(issue) { return SlideAidBundle.fixSlideAidQaIssue(issue); }
@@ -58,6 +59,11 @@ const codePath = resolve(dist, "Code.js");
 const code = await readFile(codePath, "utf8");
 await writeFile(codePath, `${code}\n${wrappers}`, "utf8");
 let sidebar = await readFile(resolve(root, "src/ui/Sidebar.html"), "utf8");
+const iconAidCatalog = JSON.parse(await readFile(resolve(root, "../../shared/iconaid/catalog.json"), "utf8"));
+sidebar = sidebar.replace(
+  "{{ICONAID_CATALOG}}",
+  JSON.stringify(iconAidCatalog).replaceAll("<", "\\u003c"),
+);
 const iconNames = [...sidebar.matchAll(/\{\{ICON:([a-z0-9_]+)\}\}/gi)].map((match) => match[1]);
 for (const iconName of new Set(iconNames)) {
   const bytes = await readFile(resolve(root, "../../shared/icons", `${iconName}.png`));

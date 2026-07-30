@@ -18,6 +18,7 @@ This is a TypeScript Google Workspace editor add-on built with Apps Script and `
 - Read-only Google Sheets connections: build from an explicit spreadsheet URL, tab, and range, then refresh the selected chart from current values.
 - A live selection inspector, command search, matrix preview, and named layouts shared with deck collaborators.
 - Shared element libraries backed by one explicitly configured Slides presentation. Slide Aid never searches the user's Drive.
+- An **Icons** panel with 425 searchable IconAid vectors, category filters, aliases, extensive consulting keywords, color selection, and incremental loading.
 - Deck QA reporting for off-slide objects, tiny text, missing alt text, low contrast, fixed RGB fills, stale/broken Sheet sources, orphan datasheets, and irregular horizontal spacing. Safe mechanical issues have targeted fixes.
 - The PowerPoint PNG icons are embedded into the built sidebar at build time, so no public image host is required.
 
@@ -30,6 +31,8 @@ Google Workspace add-ons use menus, dialogs, and HTML sidebars rather than Offic
 Area, pie, and doughnut charts are server-rendered with the Apps Script Charts service and inserted as static images. They retain Slide Aid metadata and remain editable through **Edit data → Rebuild**, but individual segments are not native Slides shapes. Google documents server-side image rendering in the [Charts service reference](https://developers.google.com/apps-script/reference/charts/).
 
 The shared Slides library replaces the local PowerPoint My Elements store, but it is intentionally URL-based rather than a Drive-wide browser. Google Slides still lacks reliable click-order tracking and add-on keyboard-shortcut hooks.
+
+Google Slides does not accept SVG through its image API. IconAid therefore draws each icon from the shared 24x24 catalog as native lines, rectangles, and ellipses, then groups the result. Inserted icons remain vectors and can be resized, ungrouped, and edited rather than becoming PNG fallbacks.
 
 The following PowerPoint features are not yet implemented here: My Formats, Agenda, advanced Format Painter, Select Similar, Process Chain, block-arrow and rounded-rectangle adjustment handles, Snap to Table, split/merge text with formatting preservation, hide/cleanup/language tools, chart annotations, Harvey balls, checkboxes, and sample slides. See the [PowerPoint UI reference](../../docs/POWERPOINT_UI_REFERENCE.md) for their canonical behavior.
 
@@ -109,6 +112,8 @@ For a linked chart, open **Charts → Linked Google Sheets data**, paste the exa
 Named layouts store normalized object positions and sizes in the presentation. Save a selection once, then select the same number of objects elsewhere and apply the layout.
 
 For a shared library, create a normal Google Slides presentation containing one reusable component per slide. Connect its exact URL under **Library**. Library inserts copy every element except Slide Aid's metadata marker and retain a source-slide link. Saving the same item name updates that source slide; select an inserted component and use **Refresh selected** to pull the latest version while keeping its current position and size. **Add current selection** requires edit access to the library presentation.
+
+Under **Icons**, search by concept, synonym, category, or consulting terminology, choose a color, and click an icon to insert it at the center of the current slide. The sidebar renders results in batches of 90 so the full catalog remains responsive.
 
 Deck QA is non-destructive until the user clicks a specific **Fix** button. Accessibility and contrast findings that require editorial judgment are report-only.
 

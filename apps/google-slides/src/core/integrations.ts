@@ -62,3 +62,95 @@ export function contrastRatio(first: string, second: string): number {
   const b = luminance(second);
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
+
+export interface IconLinePrimitive {
+  kind: "line";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+export interface IconShapePrimitive {
+  kind: "rect" | "ellipse";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  filled: boolean;
+}
+
+export type IconPrimitive = IconLinePrimitive | IconShapePrimitive;
+
+export interface IconDefinition {
+  id: string;
+  name: string;
+  category: string;
+  aliases: string[];
+  tags: string[];
+  primitives: IconPrimitive[];
+}
+
+function iconNumber(record: Record<string, unknown>, key: string): number {
+  const value = record[key];
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 24) {
+    throw new Error(`Icon primitive ${key} must be between 0 and 24.`);
+  }
+  return value;
+}
+
+export function normalizeIconDefinition(value: unknown): IconDefinition {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("The icon definition is invalid.");
+  const record = value as Record<string, unknown>;
+  const id = typeof record.id === "string" ? record.id.trim() : "";
+  const name = typeof record.name === "string" ? record.name.trim() : "";
+  const category = typeof record.category === "string" ? record.category.trim() : "";
+  if (!/^[a-z0-9-]{1,48}$/.test(id) || !name || name.length > 80 || !category || category.length > 80) {
+    throw new Error("The icon metadata is invalid.");
+  }
+  if (!Array.isArray(record.tags) || !record.tags.length || record.tags.length > 24) {
+    throw new Error("The icon must have searchable tags.");
+  }
+  const tags = record.tags.map((tag) => {
+    if (typeof tag !== "string" || !tag.trim() || tag.length > 80) throw new Error("The icon contains an invalid tag.");
+    return tag.trim();
+  });
+  if (!Array.isArray(record.aliases) || record.aliases.length < 2 || record.aliases.length > 12) {
+    throw new Error("The icon must have searchable aliases.");
+  }
+  const aliases = record.aliases.map((alias) => {
+    if (typeof alias !== "string" || !alias.trim() || alias.length > 100) throw new Error("The icon contains an invalid alias.");
+    return alias.trim();
+  });
+  if (!Array.isArray(record.primitives) || record.primitives.length < 2 || record.primitives.length > 64) {
+    throw new Error("The icon must contain between 2 and 64 vector primitives.");
+  }
+  const primitives = record.primitives.map((primitive): IconPrimitive => {
+    if (!primitive || typeof primitive !== "object" || Array.isArray(primitive)) throw new Error("The icon contains an invalid primitive.");
+    const item = primitive as Record<string, unknown>;
+    if (item.kind === "line") {
+      return {
+        kind: "line",
+        x1: iconNumber(item, "x1"),
+        y1: iconNumber(item, "y1"),
+        x2: iconNumber(item, "x2"),
+        y2: iconNumber(item, "y2"),
+      };
+    }
+    if (item.kind === "rect" || item.kind === "ellipse") {
+      const width = iconNumber(item, "width");
+      const height = iconNumber(item, "height");
+      if (width <= 0 || height <= 0) throw new Error("Icon primitive dimensions must be positive.");
+      return {
+        kind: item.kind,
+        x: iconNumber(item, "x"),
+        y: iconNumber(item, "y"),
+        width,
+        height,
+        filled: item.filled === true,
+      };
+    }
+    throw new Error("The icon contains an unsupported primitive.");
+  });
+  return { id, name, category, aliases, tags, primitives };
+}

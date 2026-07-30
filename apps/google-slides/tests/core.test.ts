@@ -9,8 +9,10 @@ import {
   validateChartData, type ChartMetadata,
 } from "../src/core/chart-data";
 import {
-  contrastRatio, decodeLibraryReference, encodeLibraryReference, extractGoogleFileId, isOutsideSlide, normalizeLayout, projectLayout,
+  contrastRatio, decodeLibraryReference, encodeLibraryReference, extractGoogleFileId, isOutsideSlide, normalizeIconDefinition,
+  normalizeLayout, projectLayout,
 } from "../src/core/integrations";
+import { insertSlideAidIcon } from "../src/entrypoints/index";
 
 const boxes: Box[] = [
   { id: "a", left: 10, top: 20, width: 30, height: 10 },
@@ -133,4 +135,131 @@ test("deck QA detects off-slide bounds", () => {
 test("contrast ratios follow WCAG luminance math", () => {
   assert.equal(contrastRatio("#000000", "#FFFFFF"), 21);
   assert.ok(contrastRatio("#777777", "#FFFFFF") < 4.5);
+});
+
+test("IconAid definitions normalize supported vector primitives", () => {
+  const icon = normalizeIconDefinition({
+    id: "sample-icon",
+    name: "Sample",
+    category: "Technology",
+    aliases: ["example icon", "sample symbol"],
+    tags: ["example"],
+    primitives: [
+      { kind: "line", x1: 1, y1: 2, x2: 3, y2: 4 },
+      { kind: "ellipse", x: 5, y: 6, width: 7, height: 8, filled: true },
+    ],
+  });
+  assert.deepEqual(icon.primitives[1], { kind: "ellipse", x: 5, y: 6, width: 7, height: 8, filled: true });
+});
+
+test("IconAid definitions reject unsafe or unsupported payloads", () => {
+  assert.throws(() => normalizeIconDefinition({
+    id: "bad",
+    name: "Bad",
+    category: "Technology",
+    aliases: ["bad icon", "unsupported symbol"],
+    tags: ["bad"],
+    primitives: [{ kind: "path", d: "M0 0" }, { kind: "line", x1: 0, y1: 0, x2: 1, y2: 1 }],
+  }), /unsupported primitive/);
+  assert.throws(() => normalizeIconDefinition({
+    id: "outside",
+    name: "Outside",
+    category: "Technology",
+    aliases: ["outside icon", "invalid symbol"],
+    tags: ["bad"],
+    primitives: [
+      { kind: "line", x1: -1, y1: 0, x2: 1, y2: 1 },
+      { kind: "line", x1: 0, y1: 0, x2: 1, y2: 1 },
+    ],
+  }), /between 0 and 24/);
+});
+
+test("IconAid inserts and groups native Google Slides vectors", () => {
+  const inserted: Array<Record<string, unknown>> = [];
+  const byId = new Map<string, Record<string, unknown>>();
+  let groupState: Record<string, unknown> | undefined;
+
+  function register(kind: string, values: unknown[]): Record<string, unknown> {
+    const id = `element-${inserted.length + 1}`;
+    const state: Record<string, unknown> = { id, kind, values, removed: false };
+    const element = {
+      getObjectId: () => id,
+      getLineFill: () => ({ setSolidFill: (color: string) => { state.lineColor = color; } }),
+      setWeight: (weight: number) => { state.weight = weight; },
+      getFill: () => ({
+        setSolidFill: (color: string) => { state.fillColor = color; },
+        setTransparent: () => { state.fillTransparent = true; },
+      }),
+      getBorder: () => ({
+        setTransparent: () => { state.borderTransparent = true; },
+        getLineFill: () => ({ setSolidFill: (color: string) => { state.borderColor = color; } }),
+        setWeight: (weight: number) => { state.borderWeight = weight; },
+      }),
+      remove: () => { state.removed = true; },
+    };
+    Object.assign(state, element);
+    inserted.push(state);
+    byId.set(id, state);
+    return state;
+  }
+
+  const slide = {
+    insertLine: (...values: unknown[]) => register("line", values),
+    insertShape: (...values: unknown[]) => register("shape", values),
+    group: (elements: unknown[]) => {
+      groupState = { elements, selected: false };
+      return {
+        setTitle: (title: string) => { groupState!.title = title; },
+        setDescription: (description: string) => { groupState!.description = description; },
+        select: () => { groupState!.selected = true; },
+      };
+    },
+  };
+  const presentation = {
+    getPageWidth: () => 720,
+    getPageHeight: () => 405,
+    getPageElementById: (id: string) => byId.get(id),
+    getSelection: () => ({
+      getCurrentPage: () => ({
+        getPageType: () => "SLIDE",
+        asSlide: () => slide,
+      }),
+      getPageElementRange: () => null,
+    }),
+  };
+  (globalThis as unknown as { SlidesApp: unknown }).SlidesApp = {
+    getActivePresentation: () => presentation,
+    PageType: { SLIDE: "SLIDE" },
+    LineCategory: { STRAIGHT: "STRAIGHT" },
+    ShapeType: { ELLIPSE: "ELLIPSE", RECTANGLE: "RECTANGLE" },
+  };
+
+  const result = insertSlideAidIcon({
+    id: "host-smoke",
+    name: "Host Smoke",
+    category: "Technology",
+    aliases: ["runtime test", "adapter check"],
+    tags: ["host", "smoke", "vector", "native", "group", "style", "metadata", "insertion"],
+    primitives: [
+      { kind: "line", x1: 1, y1: 2, x2: 3, y2: 4 },
+      { kind: "rect", x: 5, y: 6, width: 7, height: 8, filled: true },
+      { kind: "ellipse", x: 14, y: 10, width: 6, height: 6, filled: false },
+    ],
+  }, "#123456");
+
+  assert.equal(result.ok, true);
+  assert.equal(result.message, "Inserted Host Smoke.");
+  assert.deepEqual(inserted[0]!.values, ["STRAIGHT", 327, 172.5, 333, 178.5]);
+  assert.deepEqual(inserted[1]!.values, ["RECTANGLE", 339, 184.5, 21, 24]);
+  assert.equal(inserted[0]!.lineColor, "#123456");
+  assert.equal(inserted[0]!.weight, 1.5);
+  assert.equal(inserted[1]!.fillColor, "#123456");
+  assert.equal(inserted[1]!.borderTransparent, true);
+  assert.equal(inserted[2]!.fillTransparent, true);
+  assert.equal(inserted[2]!.borderColor, "#123456");
+  assert.equal(inserted[2]!.borderWeight, 1.5);
+  assert.equal((groupState!.elements as unknown[]).length, 3);
+  assert.equal(groupState!.title, "IconAid: Host Smoke");
+  assert.equal(groupState!.description, "Editable IconAid vector icon [iconaid:host-smoke]");
+  assert.equal(groupState!.selected, true);
 });

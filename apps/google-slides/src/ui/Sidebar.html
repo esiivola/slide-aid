@@ -26,8 +26,8 @@
     button.primary { border-color:var(--blue); background:var(--blue); color:#fff; }
     .row { display:flex; gap:6px; align-items:center; margin:5px 0; }
     .row > label { min-width:72px; color:#4b5156; }
-    select,input[type=number],input[type=color],input:not([type]) { min-width:0; height:29px; border:1px solid var(--line); border-radius:3px; background:#fff; }
-    select,input[type=number],input:not([type]) { flex:1; padding:3px 5px; }
+    select,input[type=number],input[type=color],input[type=search],input:not([type]) { min-width:0; height:29px; border:1px solid var(--line); border-radius:3px; background:#fff; }
+    select,input[type=number],input[type=search],input:not([type]) { flex:1; padding:3px 5px; }
     input[type=color] { width:42px; padding:2px; }
     .reference { padding:8px; border:1px solid var(--line); border-radius:4px; background:var(--bg); }
     .reference strong { display:block; margin-bottom:3px; }
@@ -53,6 +53,12 @@
     .hidden-by-search { display:none !important; }
     #searchResults { margin-top:6px; max-height:160px; overflow:auto; }
     #searchResults button { width:100%; text-align:left; padding:6px; background:#fff; border:1px solid var(--line); }
+    .icon-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; max-height:430px; overflow:auto; padding:1px; }
+    .icon-button { height:88px; padding:7px 3px 5px; border:1px solid var(--line); border-radius:4px; background:#fff; cursor:pointer; color:var(--blue); }
+    .icon-button:hover { background:#eef4fb; border-color:#9ab7d0; }
+    .icon-button svg { display:block; width:48px; height:48px; margin:0 auto 4px; }
+    .icon-button span { display:block; color:#202124; font-size:10px; line-height:1.15; overflow-wrap:anywhere; }
+    .icon-more { grid-column:1/-1; min-height:34px; border:1px solid var(--line); background:var(--bg); cursor:pointer; }
   </style>
 </head>
 <body>
@@ -68,6 +74,7 @@
     <button class="tab" data-panel="charts">Charts</button>
     <button class="tab" data-panel="layouts">Layouts</button>
     <button class="tab" data-panel="library">Library</button>
+    <button class="tab" data-panel="icons">Icons</button>
     <button class="tab" data-panel="qa">Deck QA</button>
   </nav>
   <main id="content">
@@ -173,6 +180,15 @@
       <div class="section"><div class="section-title">Items</div><div class="list" id="libraryList"><div class="note">Connect and load a library.</div></div></div>
     </section>
 
+    <section class="panel" id="icons">
+      <div class="section"><div class="section-title">IconAid</div>
+        <div class="row"><input id="iconSearch" type="search" placeholder="Search icons…" oninput="renderIconAid(true)"></div>
+        <div class="row"><label>Category</label><select id="iconCategory" onchange="renderIconAid(true)"><option value="">All</option></select></div>
+        <div class="row"><label>Color</label><input id="iconColor" type="color" value="#1f497d" oninput="renderIconAid(true)"><span class="note">Editable vectors</span></div>
+      </div>
+      <div class="section"><div class="icon-grid" id="iconGrid"></div><div class="note" id="iconCount"></div></div>
+    </section>
+
     <section class="panel" id="qa">
       <div class="section"><div class="section-title">Presentation quality scan</div><button class="action primary" style="width:100%" onclick="scanQa()">Scan entire deck</button><div class="note">Reports off-slide objects, tiny text, missing alt text, low contrast, fixed RGB fills, stale data, orphan datasheets, and irregular rows.</div></div>
       <div class="section"><div class="list" id="qaList"><div class="note">No scan run yet.</div></div></div>
@@ -180,6 +196,8 @@
   </main>
   <div id="status">Ready.</div>
   <script>
+    const ICONAID_CATALOG = {{ICONAID_CATALOG}};
+    let iconAidVisible = 90;
     const $ = (id) => document.getElementById(id);
     document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
       document.querySelectorAll('.tab,.panel').forEach((item) => item.classList.remove('active'));
@@ -219,6 +237,31 @@
     function renderLayouts(layouts) { const list=$('layoutList'); list.innerHTML=''; if(!layouts.length){const empty=document.createElement('div');empty.className='note';empty.textContent='No layouts saved in this deck.';list.appendChild(empty);return;} layouts.forEach((layout)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=layout.name;const meta=document.createElement('div');meta.className='meta';meta.textContent=`${layout.slots.length} slots`;const actions=document.createElement('div');actions.className='actions';const apply=document.createElement('button');apply.textContent='Apply';apply.onclick=()=>call('applySlideAidLayout',layout.name);const del=document.createElement('button');del.textContent='Delete';del.onclick=()=>confirm(`Delete layout “${layout.name}”?`)&&call('deleteSlideAidLayout',layout.name);actions.append(apply,del);item.append(title,meta,actions);list.appendChild(item);}); }
     function loadLibrary() { callWith('getSlideAidLibraryItems',[],(response)=>{busy(false);if(!response?.ok){status(response?.error||'Could not load library.','error');return;}renderLibrary(response.data);status(`Loaded ${response.data.length} library items.`,'success');}); }
     function renderLibrary(items) { const list=$('libraryList');list.innerHTML='';if(!items.length){const empty=document.createElement('div');empty.className='note';empty.textContent='The library is empty.';list.appendChild(empty);return;}items.forEach((entry)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=entry.name;const meta=document.createElement('div');meta.className='meta';meta.textContent=`Library slide ${entry.index+1}${entry.updatedAt?' · '+entry.updatedAt:''}`;const button=document.createElement('button');button.textContent='Insert';button.onclick=()=>call('insertSlideAidLibraryItem',entry.slideId);item.append(title,meta,button);list.appendChild(item);}); }
+    function iconSvg(icon, color) {
+      const ns='http://www.w3.org/2000/svg'; const svg=document.createElementNS(ns,'svg');
+      svg.setAttribute('viewBox',`0 0 ${ICONAID_CATALOG.viewBox} ${ICONAID_CATALOG.viewBox}`);
+      svg.setAttribute('aria-hidden','true');
+      icon.primitives.forEach((primitive)=>{
+        const node=document.createElementNS(ns,primitive.kind==='ellipse'?'ellipse':primitive.kind==='rect'?'rect':'line');
+        if(primitive.kind==='line'){node.setAttribute('x1',primitive.x1);node.setAttribute('y1',primitive.y1);node.setAttribute('x2',primitive.x2);node.setAttribute('y2',primitive.y2);}
+        else if(primitive.kind==='ellipse'){node.setAttribute('cx',primitive.x+primitive.width/2);node.setAttribute('cy',primitive.y+primitive.height/2);node.setAttribute('rx',primitive.width/2);node.setAttribute('ry',primitive.height/2);}
+        else{node.setAttribute('x',primitive.x);node.setAttribute('y',primitive.y);node.setAttribute('width',primitive.width);node.setAttribute('height',primitive.height);}
+        node.setAttribute('fill',primitive.filled?color:'none');node.setAttribute('stroke',color);node.setAttribute('stroke-width',String(ICONAID_CATALOG.style.stroke));node.setAttribute('stroke-linecap',ICONAID_CATALOG.style.lineCap);node.setAttribute('stroke-linejoin',ICONAID_CATALOG.style.lineJoin);svg.appendChild(node);
+      });
+      return svg;
+    }
+    function renderIconAid(reset=false) {
+      if(reset) iconAidVisible=90;
+      const query=$('iconSearch').value.trim().toLowerCase(); const category=$('iconCategory').value; const color=$('iconColor').value;
+      const icons=ICONAID_CATALOG.icons.filter((icon)=>{const haystack=[icon.name,icon.category,...icon.aliases,...icon.tags].join(' ').toLowerCase();return(!query||haystack.includes(query))&&(!category||icon.category===category);});
+      const grid=$('iconGrid');grid.innerHTML='';
+      const visible=icons.slice(0,iconAidVisible);
+      visible.forEach((icon)=>{const button=document.createElement('button');button.className='icon-button';button.title=`Insert ${icon.name}`;button.appendChild(iconSvg(icon,color));const label=document.createElement('span');label.textContent=icon.name;button.appendChild(label);button.onclick=()=>call('insertSlideAidIcon',icon,color);grid.appendChild(button);});
+      if(visible.length<icons.length){const more=document.createElement('button');more.className='icon-more';more.textContent=`Load ${Math.min(90,icons.length-visible.length)} more`;more.onclick=()=>{iconAidVisible+=90;renderIconAid(false);};grid.appendChild(more);}
+      if(!icons.length){const empty=document.createElement('div');empty.className='note';empty.textContent='No matching icons.';grid.appendChild(empty);}
+      $('iconCount').textContent=`Showing ${visible.length} of ${icons.length} matches · ${ICONAID_CATALOG.icons.length} total`;
+    }
+    function initIconAid() { [...new Set(ICONAID_CATALOG.icons.map((icon)=>icon.category))].sort().forEach((category)=>$('iconCategory').add(new Option(category,category))); renderIconAid(true); }
     function scanQa() { callWith('scanSlideAidDeck',[],(response)=>{busy(false);if(!response?.ok){status(response?.error||'Scan failed.','error');return;}renderQa(response.data.issues);status(response.data.message,'success');}); }
     function renderQa(issues) { const list=$('qaList');list.innerHTML='';if(!issues.length){const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent='No issues found.';item.appendChild(title);list.appendChild(item);return;}issues.forEach((issue)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=`${issue.severity.toUpperCase()} · Slide ${issue.slideNumber}`;const message=document.createElement('div');message.textContent=issue.message;const meta=document.createElement('div');meta.className='meta';meta.textContent=issue.type.replaceAll('_',' ');const actions=document.createElement('div');actions.className='actions';const show=document.createElement('button');show.textContent='Select';show.onclick=()=>call('focusSlideAidQaIssue',issue.slideId,issue.objectIds[0]);actions.appendChild(show);if(issue.fixable){const fix=document.createElement('button');fix.textContent='Fix';fix.onclick=()=>call('fixSlideAidQaIssue',{type:issue.type,slideId:issue.slideId,objectIds:issue.objectIds});actions.appendChild(fix);}item.append(title,message,meta,actions);list.appendChild(item);}); }
     function refresh() {
@@ -240,7 +283,8 @@
     }
     $('columns').addEventListener('input',()=>updateMatrixPreview(Number($('selectionCount').textContent.split(' ')[0])||1,Number($('columns').value)||1));
     window.addEventListener('focus',refresh);
-    refresh();
+    initIconAid();
+    if (window.google?.script?.run) refresh(); else $('deck').textContent='Local IconAid preview';
   </script>
 </body>
 </html>

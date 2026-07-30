@@ -11,6 +11,7 @@ import { applyPaletteToTheme, applyThemeColor, convertSelectionColors, currentTh
 import { applyLayout, deleteLayout, listLayouts, saveLayout } from "../layouts/layouts";
 import { addSelectionToLibrary, configureLibrary, insertLibraryItem, listLibraryItems, refreshSelectedLibraryItem } from "../library/library";
 import { fixQaIssue, focusQaIssue, scanDeck, type QaIssue } from "../qa/qa";
+import { normalizeIconDefinition } from "../core/integrations";
 
 export interface ApiResponse<T = unknown> {
   ok: boolean;
@@ -170,6 +171,71 @@ export function addSelectionToSlideAidLibrary(name: string): ApiResponse {
 
 export function refreshSelectedSlideAidLibraryItem(): ApiResponse {
   return response(refreshSelectedLibraryItem);
+}
+
+export function insertSlideAidIcon(icon: unknown, color: string): ApiResponse {
+  return response(() => {
+    const definition = normalizeIconDefinition(icon);
+    if (!/^#[0-9a-f]{6}$/i.test(color)) throw new Error("Icon color must use #RRGGBB format.");
+    const context = activeContext();
+    const size = 72;
+    const scale = size / 24;
+    const left = (context.presentation.getPageWidth() - size) / 2;
+    const top = (context.presentation.getPageHeight() - size) / 2;
+    const elements: GoogleAppsScript.Slides.PageElement[] = [];
+    try {
+      for (const primitive of definition.primitives) {
+        if (primitive.kind === "line") {
+          const item = context.slide.insertLine(
+            SlidesApp.LineCategory.STRAIGHT,
+            left + primitive.x1 * scale,
+            top + primitive.y1 * scale,
+            left + primitive.x2 * scale,
+            top + primitive.y2 * scale,
+          );
+          item.getLineFill().setSolidFill(color);
+          item.setWeight(1.5);
+          const pageElement = context.presentation.getPageElementById(item.getObjectId());
+          if (!pageElement) throw new Error("Google Slides did not expose the inserted line for grouping.");
+          elements.push(pageElement);
+          continue;
+        }
+        const shapeType = primitive.kind === "ellipse" ? SlidesApp.ShapeType.ELLIPSE : SlidesApp.ShapeType.RECTANGLE;
+        const item = context.slide.insertShape(
+          shapeType,
+          left + primitive.x * scale,
+          top + primitive.y * scale,
+          primitive.width * scale,
+          primitive.height * scale,
+        );
+        if (primitive.filled) {
+          item.getFill().setSolidFill(color);
+          item.getBorder().setTransparent();
+        } else {
+          item.getFill().setTransparent();
+          item.getBorder().getLineFill().setSolidFill(color);
+          item.getBorder().setWeight(1.5);
+        }
+        const pageElement = context.presentation.getPageElementById(item.getObjectId());
+        if (!pageElement) throw new Error("Google Slides did not expose the inserted shape for grouping.");
+        elements.push(pageElement);
+      }
+      const group = context.slide.group(elements);
+      group.setTitle(`IconAid: ${definition.name}`);
+      group.setDescription(`Editable IconAid vector icon [iconaid:${definition.id}]`);
+      group.select();
+    } catch (error) {
+      for (const element of elements) {
+        try {
+          element.remove();
+        } catch {
+          // Ignore cleanup errors and report the original insertion failure.
+        }
+      }
+      throw error;
+    }
+    return { message: `Inserted ${definition.name}.` };
+  });
 }
 
 export function scanSlideAidDeck(): ApiResponse {
