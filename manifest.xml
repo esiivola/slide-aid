@@ -5,7 +5,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
   xsi:type="TaskPaneApp">
   <Id>8C84BA23-A010-4D06-AFFB-41D61305E19B</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.0.2.0</Version>
   <ProviderName>Slide Aid</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="IconAid"/>
@@ -25,7 +25,7 @@
     </Sets>
   </Requirements>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://localhost:3000/apps/powerpoint-iconaid/taskpane.html"/>
+    <SourceLocation DefaultValue="https://localhost:3000/apps/powerpoint-iconaid/taskpane.html?v=1.0.2"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
@@ -39,7 +39,7 @@
       <Host xsi:type="Presentation">
         <DesktopFormFactor>
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
-            <OfficeTab id="TabHome">
+            <CustomTab id="IconAid.Tab">
               <Group id="IconAid.Group">
                 <Label resid="IconAid.GroupLabel"/>
                 <Icon>
@@ -64,7 +64,8 @@
                   </Action>
                 </Control>
               </Group>
-            </OfficeTab>
+              <Label resid="IconAid.TabLabel"/>
+            </CustomTab>
           </ExtensionPoint>
         </DesktopFormFactor>
       </Host>
@@ -74,11 +75,12 @@
         <bt:Image id="IconAid.Icon" DefaultValue="https://localhost:3000/shared/icons/sa_elements.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="IconAid.TaskpaneUrl" DefaultValue="https://localhost:3000/apps/powerpoint-iconaid/taskpane.html"/>
+        <bt:Url id="IconAid.TaskpaneUrl" DefaultValue="https://localhost:3000/apps/powerpoint-iconaid/taskpane.html?v=1.0.2"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="IconAid.GroupLabel" DefaultValue="Slide Aid"/>
-        <bt:String id="IconAid.ButtonLabel" DefaultValue="IconAid"/>
+        <bt:String id="IconAid.TabLabel" DefaultValue="IconAid"/>
+        <bt:String id="IconAid.GroupLabel" DefaultValue="Icons"/>
+        <bt:String id="IconAid.ButtonLabel" DefaultValue="Open IconAid"/>
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="IconAid.ButtonDescription" DefaultValue="Open the searchable IconAid vector library."/>
