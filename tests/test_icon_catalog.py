@@ -112,7 +112,15 @@ def test_powerpoint_taskpane_manifest_and_vector_adapter() -> None:
     host = manifest.find("office:Hosts/office:Host", namespace)
     source = manifest.find("office:DefaultSettings/office:SourceLocation", namespace)
     assert host is not None and host.attrib["Name"] == "Presentation"
-    assert source is not None and source.attrib["DefaultValue"].endswith("/taskpane.html")
+    assert source is not None and source.attrib["DefaultValue"].split("?")[0].endswith("/taskpane.html")
+    custom_tabs = [element for element in manifest.iter() if element.tag.endswith("CustomTab")]
+    tab_labels = [
+        element.attrib.get("DefaultValue")
+        for element in manifest.iter()
+        if element.tag.endswith("String") and element.attrib.get("id") == "IconAid.TabLabel"
+    ]
+    assert len(custom_tabs) == 1 and custom_tabs[0].attrib["id"] == "IconAid.Tab"
+    assert tab_labels == ["IconAid"]
 
     script = f"""
 import {{ createRequire }} from "node:module";
@@ -127,26 +135,32 @@ const instructions = api.shapeInstructions(icon, "#1f497d");
 assert.equal(instructions.length, icon.primitives.length);
 assert.ok(instructions.some((item) => item.kind === "line"));
 assert.ok(instructions.every((item) => Number.isFinite(item.left) && Number.isFinite(item.top)));
+assert.ok(instructions.filter((item) => item.kind === "line").every((item) => item.width > 0 && item.height > 0));
+assert.ok(instructions.filter((item) => item.kind === "line").every((item) => Number.isFinite(item.rotation)));
 const calls = [];
-function shape(kind, options) {{
+let shapeNumber = 0;
+function shape(type, options) {{
   return {{
+    id: `shape-${{++shapeNumber}}`,
     fill: {{
-      clear: () => calls.push(["clear", kind]),
-      setSolidColor: (color) => calls.push(["fill", kind, color]),
+      clear: () => calls.push(["clear", type]),
+      setSolidColor: (color) => calls.push(["fill", type, color]),
     }},
     lineFormat: {{}},
-    kind,
+    type,
     options,
   }};
 }}
 const group = {{}};
 const shapes = {{
-  addLine: (type, options) => (calls.push(["line", type, options]), shape("line", options)),
-  addGeometricShape: (type, options) => (calls.push(["shape", type, options]), shape(type, options)),
-  addGroup: (items) => (calls.push(["group", items.length]), group),
+  addGeometricShape: (type, options) => {{
+    const item = shape(type, options);
+    calls.push(["shape", type, options, item]);
+    return item;
+  }},
+  addGroup: (items) => (calls.push(["group", items]), group),
 }};
 global.PowerPoint = {{
-  ConnectorType: {{ straight: "Straight" }},
   GeometricShapeType: {{ rectangle: "Rectangle", ellipse: "Ellipse" }},
   run: async (callback) => callback({{
     presentation: {{ getSelectedSlides: () => ({{ getItemAt: () => ({{ shapes }}) }}) }},
@@ -154,8 +168,14 @@ global.PowerPoint = {{
   }}),
 }};
 await api.insertVectorIcon(icon, "#1f497d", catalog.viewBox);
+const firstSync = calls.findIndex((entry) => entry[0] === "sync");
+const groupIndex = calls.findIndex((entry) => entry[0] === "group");
+const shapeCalls = calls.filter((entry) => entry[0] === "shape");
+assert.equal(shapeCalls.length, instructions.length);
+assert.ok(firstSync >= 0 && firstSync < groupIndex);
+assert.equal(calls.filter((entry) => entry[0] === "sync").length, 2);
 assert.equal(calls.filter((entry) => entry[0] === "group").length, 1);
-assert.equal(calls.at(-1)[0], "sync");
+assert.ok(shapeCalls.some((entry) => Number.isFinite(entry[3].rotation)));
 assert.equal(group.name, "IconAid - Disaster Recovery");
 assert.equal(group.altTextDescription, "IconAid vector icon: Disaster Recovery");
 """

@@ -28,12 +28,19 @@
     const scale = size / viewBox;
     return icon.primitives.map((primitive) => {
       if (primitive.kind === "line") {
+        const x1 = originLeft + primitive.x1 * scale;
+        const y1 = originTop + primitive.y1 * scale;
+        const x2 = originLeft + primitive.x2 * scale;
+        const y2 = originTop + primitive.y2 * scale;
+        const width = Math.hypot(x2 - x1, y2 - y1);
+        const height = 1.5;
         return {
           kind: "line",
-          left: originLeft + primitive.x1 * scale,
-          top: originTop + primitive.y1 * scale,
-          width: (primitive.x2 - primitive.x1) * scale,
-          height: (primitive.y2 - primitive.y1) * scale,
+          left: (x1 + x2 - width) / 2,
+          top: (y1 + y2 - height) / 2,
+          width,
+          height,
+          rotation: Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI,
           color,
         };
       }
@@ -83,6 +90,13 @@
     status.className = type;
   }
 
+  function officeErrorMessage(error) {
+    if (!error) return "IconAid could not insert the icon.";
+    const message = error.message || String(error);
+    const location = error.debugInfo && error.debugInfo.errorLocation;
+    return location ? `${message} (${location})` : message;
+  }
+
   function filteredIcons() {
     const query = document.getElementById("search").value;
     const category = document.getElementById("category").value;
@@ -127,7 +141,7 @@
       await insertVectorIcon(icon, color, catalog.viewBox);
       setStatus(`${icon.name} inserted as an editable vector.`, "success");
     } catch (error) {
-      setStatus(error && error.message ? error.message : String(error), "error");
+      setStatus(officeErrorMessage(error), "error");
     } finally {
       inserting = false;
       button.disabled = false;
@@ -141,39 +155,28 @@
     }
     await PowerPoint.run(async (context) => {
       const slide = context.presentation.getSelectedSlides().getItemAt(0);
-      const created = [];
-      for (const instruction of shapeInstructions(icon, color, 72, 72, 72, viewBox)) {
-        let shape;
-        if (instruction.kind === "line") {
-          shape = slide.shapes.addLine(PowerPoint.ConnectorType.straight, {
-            left: instruction.left,
-            top: instruction.top,
-            width: instruction.width,
-            height: instruction.height,
-          });
+      const created = shapeInstructions(icon, color, 72, 72, 72, viewBox).map((instruction) => {
+        const type = instruction.kind === "ellipse"
+          ? PowerPoint.GeometricShapeType.ellipse
+          : PowerPoint.GeometricShapeType.rectangle;
+        const shape = slide.shapes.addGeometricShape(type, {
+          left: instruction.left,
+          top: instruction.top,
+          width: instruction.width,
+          height: instruction.height,
+        });
+        if (instruction.kind === "line" || instruction.filled) {
+          shape.fill.setSolidColor(instruction.color);
+          shape.lineFormat.visible = false;
+        } else {
+          shape.fill.clear();
           shape.lineFormat.color = instruction.color;
           shape.lineFormat.weight = 1.5;
-        } else {
-          const type = instruction.kind === "rect"
-            ? PowerPoint.GeometricShapeType.rectangle
-            : PowerPoint.GeometricShapeType.ellipse;
-          shape = slide.shapes.addGeometricShape(type, {
-            left: instruction.left,
-            top: instruction.top,
-            width: instruction.width,
-            height: instruction.height,
-          });
-          if (instruction.filled) {
-            shape.fill.setSolidColor(instruction.color);
-            shape.lineFormat.visible = false;
-          } else {
-            shape.fill.clear();
-            shape.lineFormat.color = instruction.color;
-            shape.lineFormat.weight = 1.5;
-          }
         }
-        created.push(shape);
-      }
+        if (instruction.kind === "line") shape.rotation = instruction.rotation;
+        return shape;
+      });
+      await context.sync();
       const group = slide.shapes.addGroup(created);
       group.name = `IconAid - ${icon.name}`;
       group.altTextDescription = `IconAid vector icon: ${icon.name}`;
