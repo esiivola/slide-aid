@@ -1,215 +1,172 @@
-(function (root, factory) {
-  const api = factory();
-  if (typeof module === "object" && module.exports) module.exports = api;
-  else root.IconAid = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+/* Slide Aid — IconAid task pane.
+ * Browses the full icon catalog (catalog.json): a virtualized, live-filtered
+ * grid of SVG previews showing ALL matches. Clicking an icon inserts it into
+ * the slide; the companion PowerPoint add-in's "Make Editable" button turns the
+ * inserted pictures into editable freeforms. */
+(function () {
   "use strict";
 
-  const PAGE_SIZE = 120;
-  let catalog;
-  let visibleCount = PAGE_SIZE;
-  let inserting = false;
-  const officeReady = typeof Office === "undefined"
-    ? Promise.resolve()
-    : new Promise((resolve) => Office.onReady(resolve));
+  var PAGE = 240;                 // icons rendered per scroll chunk
+  var catalog = [];               // [{id,n,c,s,t,d:[subpath,...]}]
+  var filtered = [];              // current match list
+  var shownCount = 0;             // how many of `filtered` are in the DOM
 
-  function searchText(icon) {
-    return [icon.name, icon.category, ...icon.aliases, ...icon.tags].join(" ").toLowerCase();
-  }
+  var $ = function (id) { return document.getElementById(id); };
+  var gridEl, sentinelEl, searchEl, categoryEl, colorEl, countEl, statusEl;
 
-  function matchesIcon(icon, query, category) {
-    if (category && icon.category !== category) return false;
-    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    const haystack = searchText(icon);
-    return terms.every((term) => haystack.includes(term));
-  }
-
-  function shapeInstructions(icon, color, originLeft = 72, originTop = 72, size = 72, viewBox = 24) {
-    const scale = size / viewBox;
-    return icon.primitives.map((primitive) => {
-      if (primitive.kind === "line") {
-        const x1 = originLeft + primitive.x1 * scale;
-        const y1 = originTop + primitive.y1 * scale;
-        const x2 = originLeft + primitive.x2 * scale;
-        const y2 = originTop + primitive.y2 * scale;
-        const width = Math.hypot(x2 - x1, y2 - y1);
-        const height = 1.5;
-        return {
-          kind: "line",
-          left: (x1 + x2 - width) / 2,
-          top: (y1 + y2 - height) / 2,
-          width,
-          height,
-          rotation: Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI,
-          color,
-        };
-      }
-      return {
-        kind: primitive.kind,
-        left: originLeft + primitive.x * scale,
-        top: originTop + primitive.y * scale,
-        width: primitive.width * scale,
-        height: primitive.height * scale,
-        filled: Boolean(primitive.filled),
-        color,
-      };
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
     });
   }
 
   function svgFor(icon, color) {
-    const ns = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("viewBox", `0 0 ${catalog.viewBox} ${catalog.viewBox}`);
-    svg.setAttribute("aria-hidden", "true");
-    icon.primitives.forEach((primitive) => {
-      const tag = primitive.kind === "ellipse" ? "ellipse" : primitive.kind === "rect" ? "rect" : "line";
-      const node = document.createElementNS(ns, tag);
-      if (primitive.kind === "line") {
-        for (const key of ["x1", "y1", "x2", "y2"]) node.setAttribute(key, primitive[key]);
-      } else if (primitive.kind === "ellipse") {
-        node.setAttribute("cx", primitive.x + primitive.width / 2);
-        node.setAttribute("cy", primitive.y + primitive.height / 2);
-        node.setAttribute("rx", primitive.width / 2);
-        node.setAttribute("ry", primitive.height / 2);
-      } else {
-        for (const key of ["x", "y", "width", "height"]) node.setAttribute(key, primitive[key]);
-      }
-      node.setAttribute("fill", primitive.filled ? color : "none");
-      node.setAttribute("stroke", color);
-      node.setAttribute("stroke-width", catalog.style.stroke);
-      node.setAttribute("stroke-linecap", catalog.style.lineCap);
-      node.setAttribute("stroke-linejoin", catalog.style.lineJoin);
-      svg.appendChild(node);
+    var d = icon.d.join(" ");
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + esc(d) +
+      '" fill="none" stroke="' + color + '" stroke-width="1.6" ' +
+      'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function status(msg, kind) {
+    statusEl.textContent = msg;
+    statusEl.className = kind || "";
+  }
+
+  function matches(icon, terms, category) {
+    if (category && icon.c !== category) return false;
+    for (var i = 0; i < terms.length; i++) {
+      if (icon._s.indexOf(terms[i]) === -1) return false;
+    }
+    return true;
+  }
+
+  function applyFilter() {
+    var q = searchEl.value.trim().toLowerCase();
+    var terms = q ? q.split(/\s+/) : [];
+    var category = categoryEl.value;
+    filtered = [];
+    for (var i = 0; i < catalog.length; i++) {
+      if (matches(catalog[i], terms, category)) filtered.push(catalog[i]);
+    }
+    // reset the grid (keep the sentinel node)
+    var node = gridEl.firstChild;
+    while (node && node !== sentinelEl) { var next = node.nextSibling; gridEl.removeChild(node); node = next; }
+    shownCount = 0;
+    renderMore();
+    countEl.textContent = filtered.length.toLocaleString() + " icon" + (filtered.length === 1 ? "" : "s");
+    if (!filtered.length) {
+      var e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = "No icons match “" + searchEl.value + "”.";
+      gridEl.insertBefore(e, sentinelEl);
+    }
+  }
+
+  function renderMore() {
+    if (shownCount >= filtered.length) return;
+    var color = colorEl.value;
+    var end = Math.min(shownCount + PAGE, filtered.length);
+    var html = "";
+    for (var i = shownCount; i < end; i++) {
+      var ic = filtered[i];
+      html += '<button type="button" class="cell" data-idx="' + i + '" title="' + esc(ic.n) + '">' +
+        svgFor(ic, color) + '<span class="cap">' + esc(ic.n) + "</span></button>";
+    }
+    sentinelEl.insertAdjacentHTML("beforebegin", html);
+    shownCount = end;
+  }
+
+  var insertN = 0;
+
+  // Rasterize an icon's SVG to a PNG (base64 payload only) for shape.fill.setImage.
+  function rasterize(icon, color, px) {
+    return new Promise(function (resolve, reject) {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="' + px +
+        '" height="' + px + '"><path d="' + esc(icon.d.join(" ")) + '" fill="none" stroke="' +
+        color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      var img = new Image();
+      img.onload = function () {
+        var c = document.createElement("canvas"); c.width = px; c.height = px;
+        c.getContext("2d").drawImage(img, 0, 0, px, px);
+        resolve(c.toDataURL("image/png").split(",")[1]);
+      };
+      img.onerror = function () { reject(new Error("preview render failed")); };
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
     });
-    return svg;
   }
 
-  function setStatus(message, type = "") {
-    const status = document.getElementById("status");
-    status.textContent = message;
-    status.className = type;
-  }
-
-  function officeErrorMessage(error) {
-    if (!error) return "IconAid could not insert the icon.";
-    const message = error.message || String(error);
-    const location = error.debugInfo && error.debugInfo.errorLocation;
-    return location ? `${message} (${location})` : message;
-  }
-
-  function filteredIcons() {
-    const query = document.getElementById("search").value;
-    const category = document.getElementById("category").value;
-    return catalog.icons.filter((icon) => matchesIcon(icon, query, category));
-  }
-
-  function render(reset = false) {
-    if (reset) visibleCount = PAGE_SIZE;
-    const icons = filteredIcons();
-    const visible = icons.slice(0, visibleCount);
-    const color = document.getElementById("color").value;
-    const grid = document.getElementById("grid");
-    grid.replaceChildren();
-    visible.forEach((icon) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "icon";
-      button.title = `Insert ${icon.name}`;
-      button.appendChild(svgFor(icon, color));
-      const label = document.createElement("span");
-      label.textContent = icon.name;
-      button.appendChild(label);
-      button.addEventListener("click", () => insertIcon(icon, color, button));
-      grid.appendChild(button);
-    });
-    if (!icons.length) {
-      const empty = document.createElement("div");
-      empty.className = "empty";
-      empty.textContent = "No matching icons.";
-      grid.appendChild(empty);
+  function insertIcon(icon) {
+    var color = colorEl.value;
+    if (typeof PowerPoint === "undefined" || typeof Office === "undefined") {
+      status("Preview mode — would insert “" + icon.n + "” (" + icon.id + ").", "success");
+      return;
     }
-    document.getElementById("count").textContent =
-      visible.length < icons.length ? `${visible.length} of ${icons.length}` : `${icons.length} icons`;
-  }
-
-  async function insertIcon(icon, color, button) {
-    if (inserting) return;
-    inserting = true;
-    button.disabled = true;
-    setStatus(`Inserting ${icon.name}...`);
-    try {
-      await insertVectorIcon(icon, color, catalog.viewBox);
-      setStatus(`${icon.name} inserted as an editable vector.`, "success");
-    } catch (error) {
-      setStatus(officeErrorMessage(error), "error");
-    } finally {
-      inserting = false;
-      button.disabled = false;
-    }
-  }
-
-  async function insertVectorIcon(icon, color, viewBox = 24) {
-    await officeReady;
-    if (typeof PowerPoint === "undefined") {
-      throw new Error("Open IconAid inside PowerPoint to insert icons.");
-    }
-    await PowerPoint.run(async (context) => {
-      const slide = context.presentation.getSelectedSlides().getItemAt(0);
-      const created = shapeInstructions(icon, color, 72, 72, 72, viewBox).map((instruction) => {
-        const type = instruction.kind === "ellipse"
-          ? PowerPoint.GeometricShapeType.ellipse
-          : PowerPoint.GeometricShapeType.rectangle;
-        const shape = slide.shapes.addGeometricShape(type, {
-          left: instruction.left,
-          top: instruction.top,
-          width: instruction.width,
-          height: instruction.height,
-        });
-        if (instruction.kind === "line" || instruction.filled) {
-          shape.fill.setSolidColor(instruction.color);
-          shape.lineFormat.visible = false;
-        } else {
-          shape.fill.clear();
-          shape.lineFormat.color = instruction.color;
-          shape.lineFormat.weight = 1.5;
-        }
-        if (instruction.kind === "line") shape.rotation = instruction.rotation;
-        return shape;
+    status("Inserting “" + icon.n + "”…");
+    rasterize(icon, color, 256).then(function (b64) {
+      return PowerPoint.run(function (ctx) {
+        var slide = ctx.presentation.getSelectedSlides().getItemAt(0);
+        var off = (insertN++ % 6) * 12;
+        // Tag the shape name+altText with the icon id so the add-in's
+        // "Make Editable" can find it and swap in the editable freeform.
+        var shape = slide.shapes.addGeometricShape(
+          PowerPoint.GeometricShapeType.rectangle,
+          { left: 72 + off, top: 72 + off, width: 96, height: 96 });
+        shape.name = "IconAid:" + icon.id;
+        shape.altTextDescription = "IconAid:" + icon.id;
+        shape.fill.setImage(b64);
+        shape.lineFormat.visible = false;
+        return ctx.sync();
       });
-      await context.sync();
-      const group = slide.shapes.addGroup(created);
-      group.name = `IconAid - ${icon.name}`;
-      group.altTextDescription = `IconAid vector icon: ${icon.name}`;
-      await context.sync();
+    }).then(function () {
+      status("Inserted “" + icon.n + "”. Use ‘Make Editable’ on the Chart Aid ribbon to convert.", "success");
+    }).catch(function (e) {
+      status("Insert failed: " + (e.message || e), "error");
     });
   }
 
-  async function initialize() {
-    const response = await fetch("/shared/iconaid/catalog.json");
-    if (!response.ok) throw new Error(`Catalog request failed (${response.status}).`);
-    catalog = await response.json();
-    const category = document.getElementById("category");
-    [...new Set(catalog.icons.map((icon) => icon.category))].sort().forEach((name) => {
-      const option = document.createElement("option");
-      option.value = name;
-      option.textContent = name;
-      category.appendChild(option);
+  function debounce(fn, ms) {
+    var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); };
+  }
+
+  function initUI() {
+    gridEl = $("grid"); sentinelEl = $("sentinel"); searchEl = $("search");
+    categoryEl = $("category"); colorEl = $("color"); countEl = $("count"); statusEl = $("status");
+
+    searchEl.addEventListener("input", debounce(applyFilter, 120));
+    categoryEl.addEventListener("change", applyFilter);
+    colorEl.addEventListener("input", debounce(applyFilter, 120));
+    gridEl.addEventListener("click", function (ev) {
+      var cell = ev.target.closest ? ev.target.closest(".cell") : null;
+      if (cell) insertIcon(filtered[+cell.getAttribute("data-idx")]);
     });
-    document.getElementById("search").addEventListener("input", () => render(true));
-    category.addEventListener("change", () => render(true));
-    document.getElementById("color").addEventListener("input", () => render(false));
-    new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting) && visibleCount < filteredIcons().length) {
-        visibleCount += PAGE_SIZE;
-        render(false);
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) renderMore();
+    }, { root: gridEl, rootMargin: "400px" }).observe(sentinelEl);
+  }
+
+  function load() {
+    fetch("catalog.json?v=3").then(function (r) {
+      if (!r.ok) throw new Error("catalog.json " + r.status);
+      return r.json();
+    }).then(function (data) {
+      catalog = data;
+      // precompute lowercased search string + category list
+      var cats = {};
+      for (var i = 0; i < catalog.length; i++) {
+        var ic = catalog[i];
+        ic._s = (ic.id + " " + ic.n + " " + ic.c + " " + ic.t).toLowerCase();
+        cats[ic.c] = 1;
       }
-    }, { rootMargin: "240px" }).observe(document.getElementById("sentinel"));
-    render(true);
+      Object.keys(cats).sort().forEach(function (c) {
+        var o = document.createElement("option"); o.value = c; o.textContent = c;
+        categoryEl.appendChild(o);
+      });
+      applyFilter();
+      status(catalog.length.toLocaleString() + " icons ready. Click one to insert.");
+    }).catch(function (err) {
+      status("Could not load catalog: " + err.message, "error");
+    });
   }
 
-  if (typeof window !== "undefined") {
-    initialize().catch((error) => setStatus(error.message, "error"));
-  }
-
-  return { insertVectorIcon, matchesIcon, shapeInstructions };
-});
+  document.addEventListener("DOMContentLoaded", function () { initUI(); load(); });
+})();
