@@ -20,11 +20,21 @@
     });
   }
 
+  // Bootstrap icons (and a few heroicons solid/mini) are drawn as FILLED
+  // shapes; the rest are stroke outlines. Render each as designed.
+  function isFilled(icon) {
+    return icon.s === "bootstrap" || /-(solid|mini)$/.test(icon.id);
+  }
+
+  function pathAttrs(icon, color) {
+    return isFilled(icon)
+      ? 'fill="' + color + '" fill-rule="evenodd" stroke="none"'
+      : 'fill="none" stroke="' + color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+  }
+
   function svgFor(icon, color) {
-    var d = icon.d.join(" ");
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + esc(d) +
-      '" fill="none" stroke="' + color + '" stroke-width="1.6" ' +
-      'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + esc(icon.d.join(" ")) +
+      '" ' + pathAttrs(icon, color) + "/></svg>";
   }
 
   function status(msg, kind) {
@@ -82,8 +92,7 @@
   function rasterize(icon, color, px) {
     return new Promise(function (resolve, reject) {
       var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="' + px +
-        '" height="' + px + '"><path d="' + esc(icon.d.join(" ")) + '" fill="none" stroke="' +
-        color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        '" height="' + px + '"><path d="' + esc(icon.d.join(" ")) + '" ' + pathAttrs(icon, color) + "/></svg>";
       var img = new Image();
       img.onload = function () {
         var c = document.createElement("canvas"); c.width = px; c.height = px;
