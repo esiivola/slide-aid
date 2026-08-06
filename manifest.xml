@@ -5,7 +5,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
   xsi:type="TaskPaneApp">
   <Id>E2A27FE2-09CA-43E7-8A23-74ED0B89B5A6</Id>
-  <Version>2.0.0.0</Version>
+  <Version>2.2.0.0</Version>
   <ProviderName>Slide Aid</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="IconAid"/>
@@ -39,7 +39,7 @@
       <Host xsi:type="Presentation">
         <DesktopFormFactor>
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
-            <CustomTab id="IconAid.Tab">
+            <OfficeTab id="TabInsert">
               <Group id="IconAid.Group">
                 <Label resid="IconAid.GroupLabel"/>
                 <Icon>
@@ -64,8 +64,7 @@
                   </Action>
                 </Control>
               </Group>
-              <Label resid="IconAid.TabLabel"/>
-            </CustomTab>
+            </OfficeTab>
           </ExtensionPoint>
         </DesktopFormFactor>
       </Host>
@@ -81,11 +80,11 @@
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="IconAid.TabLabel" DefaultValue="IconAid"/>
-        <bt:String id="IconAid.GroupLabel" DefaultValue="Icons"/>
-        <bt:String id="IconAid.ButtonLabel" DefaultValue="Browse Icons"/>
+        <bt:String id="IconAid.GroupLabel" DefaultValue="Icon Library"/>
+        <bt:String id="IconAid.ButtonLabel" DefaultValue="Search 10k+ Icons"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="IconAid.ButtonDescription" DefaultValue="Open the searchable IconAid sidebar (10,000+ vector icons). Click an icon to insert it, then use Chart Aid &gt; Make Editable to convert to editable shapes."/>
+        <bt:String id="IconAid.ButtonDescription" DefaultValue="Open the searchable IconAid sidebar (10,000+ vector icons). Click an icon to insert it, then use Make Editable (right here on the Insert tab) to convert to editable shapes."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
