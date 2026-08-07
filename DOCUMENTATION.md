@@ -232,7 +232,7 @@ Use **Chart Aid → Sample Slides** to insert live examples for every chart type
 
 ![Chart styling and annotations demo](docs/img/demo-chart-annotations-style.gif)
 
-Use **Color Themes**, **Customize**, **Restyle All**, and **Recolor Series** to keep shape-based charts visually consistent. **Restyle All** updates every Chart Aid chart while preserving its data, position, size, and manual series recolors.
+Style shape-based charts from the ribbon's **Style** group. **Color Themes** applies a full palette in one click. **Chart Settings** opens a native panel for the selected chart's parameters - bar width, label size, decimals, legend, markers, and waterfall/Gantt colors - where **Apply** rebuilds the chart in place so you can nudge-and-see and **OK** closes; with nothing selected it edits the defaults for new charts. **Edit Colors** edits a chart family's palette as native swatches (Bars, Lines, Pies). **Restyle All** propagates a theme or palette change across every Chart Aid chart while preserving each chart's data, position, size, and manual series recolors. When the SlideAidUI helper isn't installed, Chart Settings and Edit Colors fall back to the on-slide table/swatch tools under **More**, so the add-in still works standalone.
 
 ![Recolor Series demo](docs/img/demo-recolor-series-click.gif)
 
@@ -253,6 +253,10 @@ Use **Harvey Ball** to enter and insert a fixed completion percentage, and **Che
 ![Cycle State click demo](docs/img/demo-cycle-state-clicks.gif)
 
 Use **Cycle State** repeatedly to step selected Harvey balls and checkboxes through their states without opening dialogs.
+
+#### Icons
+
+On PowerPoint's built-in **Insert** tab, click **Insert Icons** to open a searchable sidebar of 10,000+ vector icons; click any icon to drop it on the slide as a picture. To recolor or reshape one, keep it selected and click **Make Editable** (also on the Insert tab) to convert every inserted icon on the slide into an editable vector group. In Google Slides the same icons live in the **Icons** sidebar tab and insert as editable vectors directly.
 
 ### Ribbon tour
 
@@ -418,10 +422,12 @@ The tables below list the top-level controls that appear on the Slide Aid and Ch
 
 | Icon | Tool | What it does |
 |---|---|---|
-| <img src="shared/icons/sa_ch_colors.png" width="32" alt="sa_ch_colors"> | **Color Themes** | Pick a color theme - you see the actual colors. One click sets the palette for all chart families and offers to restyle every existing chart. Fine-tune individual colors afterwards via Style > Edit Palettes. Menu entries: Office, Nordic Blue, Fjord, Forest, Sunset, Berry, Greyscale, Financial, Vivid. |
-| <img src="shared/icons/sa_ch_colors.png" width="32" alt="sa_ch_colors"> | **Customize** | Chart colors and layout parameters - edited visually on the slide. Edit Palettes inserts recolorable swatches (use PowerPoint's own color tools, incl. the eyedropper). Edit Settings inserts a parameter table. Apply from Selection reads whichever is selected. Menu entries: Color Themes (List), Settings for Selected Chart Type…, Edit Palettes (Swatches), Edit Settings (Table), Apply from Selection, Restyle All Charts, Reset to Defaults, Advanced: Palette File…. |
-| <img src="shared/icons/sa_ch_restyle.png" width="32" alt="sa_ch_restyle"> | **Restyle All** | Rebuild every Chart Aid chart with the current style. The required second step after changing palettes or settings. Data, position and size are kept; manual series recolors are kept too. |
+| <img src="shared/icons/sa_ch_colors.png" width="32" alt="sa_ch_colors"> | **Color Themes** | Pick a color theme - you see the actual colors. One click sets the palette for all chart families and offers to restyle every existing chart. Fine-tune individual colors afterwards via Style > Edit Colors. Menu entries: Office, Nordic Blue, Fjord, Forest, Sunset, Berry, Greyscale, Financial, Vivid. |
+| <img src="shared/icons/sa_ch_settings.png" width="32" alt="sa_ch_settings"> | **Chart Settings** | Adjust chart parameters in a native macOS panel - sliders, checkboxes, popups, colors. Select a chart to edit its own type's settings (bar width, labels, decimals, legend, markers, waterfall/Gantt colors); **Apply** rebuilds it in place and keeps the panel open, **OK** closes. With nothing selected, edit the defaults used for new charts. Falls back to an on-slide settings table if the SlideAidUI helper isn't installed. |
+| <img src="shared/icons/sa_ch_editcolors.png" width="32" alt="sa_ch_editcolors"> | **Edit Colors** | Edit a chart family's color palette as swatches in a native dialog - change, add, or remove the colors for Bars, Lines, or Pies, then Restyle All applies them. Falls back to on-slide swatches if the helper isn't installed. |
 | <img src="shared/icons/sa_ch_recolor.png" width="32" alt="sa_ch_recolor"> | **Recolor Series** | Recolor a whole series. Click one bar, segment or point inside a chart and pick a color - every element of that series changes across the chart. The recolor is remembered and survives Edit Data and Restyle. |
+| <img src="shared/icons/sa_ch_restyle.png" width="32" alt="sa_ch_restyle"> | **Restyle All** | Rebuild every Chart Aid chart with the current style. The deck-wide update after a color theme or palette change. Data, position and size are kept; manual series recolors are kept too. |
+| <img src="shared/icons/sa_ch_colors.png" width="32" alt="sa_ch_colors"> | **More** | Color-theme list plus the manual, on-slide style tools - the fallback used when the native panels are unavailable. Menu entries: Color Themes (List), Settings Table (All)…, Settings Table (Selected Type)…, Palette Swatches…, Apply from Selection, Reset to Defaults, Palette File…. |
 
 #### Annotations
 
@@ -440,6 +446,15 @@ The tables below list the top-level controls that appear on the Slide Aid and Ch
 | <img src="shared/icons/sa_ch_harvey.png" width="32" alt="sa_ch_harvey"> | **Harvey Ball** | Insert a Harvey ball. A circle filled 0-100% - enter the percentage (e.g. 25, 50, 75). |
 | <img src="shared/icons/sa_ch_check.png" width="32" alt="sa_ch_check"> | **Checkbox** | Insert a checkbox. Change its state with Cycle State. |
 | <img src="shared/icons/sa_ch_cycle.png" width="32" alt="sa_ch_cycle"> | **Cycle State** | Cycle checkboxes and Harvey balls. Checkboxes step checked - crossed - empty; Harvey balls step 0 - 25 - 50 - 75 - 100%. Select one or more and click repeatedly. |
+
+### Insert Tab (Icons)
+
+The icon tools sit on PowerPoint's built-in **Insert** tab.
+
+| Icon | Tool | What it does |
+|---|---|---|
+| — | **Insert Icons** | Open the searchable icon browser - 10,000+ vector icons. Click any icon to drop it on the slide. Provided by the companion Office task pane in `apps/powerpoint-iconaid/` (uses its own icon); needs an internet connection for its catalog. |
+| <img src="shared/icons/sa_magic.png" width="32" alt="sa_magic"> | **Make Editable** | Turn inserted icons into editable vector shapes. Select an inserted icon (or run it to convert every inserted icon on the slide), then recolor, change the line weight, or reshape it like any PowerPoint shape. |
 
 ## Color and Palette Icons
 
@@ -466,7 +481,7 @@ Color menus use small swatch icons. Theme swatches stay linked to the current Po
 | <img src="shared/icons/sa_sw_p7.png" width="32" alt="sa_sw_p7"> | Fixed palette: dark grey |
 | <img src="shared/icons/sa_sw_p8.png" width="32" alt="sa_sw_p8"> | Fixed palette: light grey |
 
-Chart Aid also includes full chart palette previews. The gallery strips are visible in **Color Themes**; the larger mini-previews are used in the fallback list under **Customize**.
+Chart Aid also includes full chart palette previews. The gallery strips are visible in **Color Themes**; the larger mini-previews are used in the fallback list under **More**.
 
 | Icon | Palette |
 |---|---|

@@ -113,6 +113,9 @@ Public Sub RB_DispatchTag(ByVal tagStr As String)
         ' --- Shortcuts ---
         Case "ShortMenu": ShortcutsButton
 
+        ' --- Icon Aid ---  (browsing is the web task pane; VBA just materializes)
+        Case "IconMakeEditable": MakeIconsEditable
+
         ' --- Chart Aid ---
         Case "Ch":       BuildChart parts(1)
         Case "ChRebuild": RebuildChart
@@ -125,6 +128,8 @@ Public Sub RB_DispatchTag(ByVal tagStr As String)
         Case "ChVLine":  ValueLine
         Case "ChAvg":    AverageLine
         Case "ChColors": ChartColorsFile
+        Case "ChSettings": ChartSettingsDialog
+        Case "ChColors2": EditColorsDialog
         Case "ChStylePal": EditPaletteSwatches
         Case "ChStyleSet": InsertStyleTable
         Case "ChStyleSetK": InsertStyleTableForSelected

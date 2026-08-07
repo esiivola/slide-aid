@@ -4,7 +4,7 @@ Every chart is built from a **PowerPoint table** you select (the "datasheet"). S
 
 > Tip: the **Sample Slides** ribbon button inserts these exact examples as live slides — table + chart, built inside PowerPoint by the actual chart code.
 
-Each example below is chosen to show what the chart type is *for*, not just how to feed it. Images are rendered from the same geometry the add-in uses; in PowerPoint the colors follow your theme, a **Color Theme** from the ribbon gallery, or your own palette (*Style → Edit Palettes*).
+Each example below is chosen to show what the chart type is *for*, not just how to feed it. Images are rendered from the same geometry the add-in uses; in PowerPoint the colors follow your theme, a **Color Theme** from the ribbon gallery, or your own palette (*Style → Edit Colors*).
 
 ## Grid-data charts
 
@@ -143,4 +143,5 @@ Rows of **activity | start | end**. Dates (`1.9.2026`) or plain numbers (weeks, 
 
 - **Edit Data**: select the chart → recreates its table → edit → select table + chart → click **Rebuild** (or any chart button) → rebuilt in place, table removed automatically.
 - **Annotations**: click into the chart, select two bars → *Difference*, *% Difference*, or *CAGR* (values come from the data, not pixels). Select the chart → *Value Line*; select bars → *Average Line*.
-- **Colors**: pick a **Color Theme** from the gallery, or edit per-family palettes via *Style → Edit Palettes* + *Apply from Selection*; *Recolor Series* recolors a whole series from one clicked bar (remembered across rebuilds).
+- **Colors**: pick a **Color Theme** from the gallery, edit per-family palettes in *Style → Edit Colors*, or set waterfall/Gantt colors in *Style → Chart Settings*; *Recolor Series* recolors a whole series from one clicked bar (remembered across rebuilds).
+- **Parameters**: select a chart → *Style → Chart Settings* for a native panel of that type's options (bar width, labels, decimals, legend, markers, colors). *Apply* rebuilds it in place and keeps the panel open; *OK* closes. With nothing selected the panel edits the defaults for new charts. *Restyle All* propagates palette/theme changes across the deck.

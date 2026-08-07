@@ -1,6 +1,9 @@
 .DS_Store
 Thumbs.db
 
+# Editor / AI-IDE local config
+.kiro/
+
 node_modules/
 __pycache__/
 *.py[cod]
@@ -22,3 +25,22 @@ apps/google-slides/node_modules/
 apps/google-slides/.test-build/
 apps/google-slides/dist-types/
 apps/google-slides/.clasp.json
+
+# --- Generated IconAid data (regenerate with scripts/build_iconaid_web.py etc.;
+#     too large / churny to track. The old shared/iconaid/catalog.json stays.) ---
+apps/powerpoint-iconaid/catalog.json
+apps/powerpoint/data/
+shared/iconaid/unified-catalog.json
+shared/iconaid/catalog-with-external.json
+shared/iconaid/iconaid-curated-data.json
+shared/iconaid/external-sources/
+shared/iconaid/rendered/
+shared/iconaid/contact-sheets/
+
+# --- PowerPoint build byproducts. Only dist/Slide Aid.ppam is tracked (for
+#     direct install); the make_dist.sh staging folder + zip are regenerated. ---
+apps/powerpoint/dist/*.pptm
+apps/powerpoint/dist/*.pptm.bak
+apps/powerpoint/dist/src/
+apps/powerpoint/dist/Slide Aid/
+apps/powerpoint/dist/Slide Aid.zip

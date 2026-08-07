@@ -82,6 +82,21 @@ export interface IconShapePrimitive {
 
 export type IconPrimitive = IconLinePrimitive | IconShapePrimitive;
 
+export interface IconPathElement {
+  kind: "path";
+  d: string;
+  filled: boolean;
+}
+
+export interface IconPolylineElement {
+  kind: "polyline";
+  points: [number, number][];
+  closed: boolean;
+  filled: boolean;
+}
+
+export type IconElement = IconPrimitive | IconPathElement | IconPolylineElement;
+
 export interface IconDefinition {
   id: string;
   name: string;
@@ -89,6 +104,7 @@ export interface IconDefinition {
   aliases: string[];
   tags: string[];
   primitives: IconPrimitive[];
+  elements: IconElement[];
 }
 
 function iconNumber(record: Record<string, unknown>, key: string): number {
@@ -97,6 +113,60 @@ function iconNumber(record: Record<string, unknown>, key: string): number {
     throw new Error(`Icon primitive ${key} must be between 0 and 24.`);
   }
   return value;
+}
+
+function normalizePrimitive(primitive: unknown): IconPrimitive {
+  if (!primitive || typeof primitive !== "object" || Array.isArray(primitive)) throw new Error("The icon contains an invalid primitive.");
+  const item = primitive as Record<string, unknown>;
+  if (item.kind === "line") {
+    return {
+      kind: "line",
+      x1: iconNumber(item, "x1"),
+      y1: iconNumber(item, "y1"),
+      x2: iconNumber(item, "x2"),
+      y2: iconNumber(item, "y2"),
+    };
+  }
+  if (item.kind === "rect" || item.kind === "ellipse") {
+    const width = iconNumber(item, "width");
+    const height = iconNumber(item, "height");
+    if (width <= 0 || height <= 0) throw new Error("Icon primitive dimensions must be positive.");
+    return {
+      kind: item.kind,
+      x: iconNumber(item, "x"),
+      y: iconNumber(item, "y"),
+      width,
+      height,
+      filled: item.filled === true,
+    };
+  }
+  throw new Error("The icon contains an unsupported primitive.");
+}
+
+function normalizeElement(element: unknown): IconElement {
+  if (!element || typeof element !== "object" || Array.isArray(element)) throw new Error("The icon contains an invalid element.");
+  const item = element as Record<string, unknown>;
+  if (item.kind === "path") {
+    if (typeof item.d !== "string" || !item.d.trim() || item.d.length > 400) throw new Error("The icon contains an invalid path.");
+    const numbers = item.d.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    if (!numbers.length || numbers.some((value) => !Number.isFinite(value) || value < 0 || value > 24)) {
+      throw new Error("Icon path coordinates must be between 0 and 24.");
+    }
+    return { kind: "path", d: item.d.trim(), filled: item.filled === true };
+  }
+  if (item.kind === "polyline") {
+    if (!Array.isArray(item.points) || item.points.length < 2) throw new Error("The icon contains an invalid polyline.");
+    const points = item.points.map((point) => {
+      if (!Array.isArray(point) || point.length !== 2) throw new Error("The icon contains an invalid polyline point.");
+      const [x, y] = point;
+      if (typeof x !== "number" || typeof y !== "number" || x < 0 || x > 24 || y < 0 || y > 24) {
+        throw new Error("Icon polyline coordinates must be between 0 and 24.");
+      }
+      return [x, y] as [number, number];
+    });
+    return { kind: "polyline", points, closed: item.closed === true, filled: item.filled === true };
+  }
+  return normalizePrimitive(element);
 }
 
 export function normalizeIconDefinition(value: unknown): IconDefinition {
@@ -125,32 +195,9 @@ export function normalizeIconDefinition(value: unknown): IconDefinition {
   if (!Array.isArray(record.primitives) || record.primitives.length < 2 || record.primitives.length > 64) {
     throw new Error("The icon must contain between 2 and 64 vector primitives.");
   }
-  const primitives = record.primitives.map((primitive): IconPrimitive => {
-    if (!primitive || typeof primitive !== "object" || Array.isArray(primitive)) throw new Error("The icon contains an invalid primitive.");
-    const item = primitive as Record<string, unknown>;
-    if (item.kind === "line") {
-      return {
-        kind: "line",
-        x1: iconNumber(item, "x1"),
-        y1: iconNumber(item, "y1"),
-        x2: iconNumber(item, "x2"),
-        y2: iconNumber(item, "y2"),
-      };
-    }
-    if (item.kind === "rect" || item.kind === "ellipse") {
-      const width = iconNumber(item, "width");
-      const height = iconNumber(item, "height");
-      if (width <= 0 || height <= 0) throw new Error("Icon primitive dimensions must be positive.");
-      return {
-        kind: item.kind,
-        x: iconNumber(item, "x"),
-        y: iconNumber(item, "y"),
-        width,
-        height,
-        filled: item.filled === true,
-      };
-    }
-    throw new Error("The icon contains an unsupported primitive.");
-  });
-  return { id, name, category, aliases, tags, primitives };
+  const primitives = record.primitives.map(normalizePrimitive);
+  const rawElements = Array.isArray(record.elements) && record.elements.length ? record.elements : record.primitives;
+  if (rawElements.length > 64) throw new Error("The icon contains too many vector elements.");
+  const elements = rawElements.map(normalizeElement);
+  return { id, name, category, aliases, tags, primitives, elements };
 }

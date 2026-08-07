@@ -59,11 +59,11 @@ def test_powerpoint_release_scripts_preserve_the_dist_addin() -> None:
     assert 'repoPath & "/dist/Slide Aid.ppam"' in helper
     assert 'BuildDir = Environ("HOME") & "/SlideAid/build"' in importer
     assert 'sourceDir = BuildDir() & "/src"' in importer
-    assert 'repo & vbLf & BuildPptmPath()' in importer
+    assert 'repo & vbLf & savedPath' in importer
     assert "/Users/" not in importer
     assert 'cp src/*.bas "$SOURCE_CACHE/"' in builder
     assert 'cp tools/import_helper.bas "$SOURCE_CACHE/modImportHelper.bas"' in builder
     assert 'ADDIN="dist/Slide Aid.ppam"' in packager
     assert 'rm -rf dist\n' not in packager
     assert "--norsrc" in packager
-    assert 'cp "$ADDIN" hammerspoon/slideaid.lua "$DIST/"' in packager
+    assert 'cp "$ADDIN" "$ICONDATA" "$MANIFEST" hammerspoon/slideaid.lua "$DIST/"' in packager

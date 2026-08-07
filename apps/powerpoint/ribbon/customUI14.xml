@@ -266,7 +266,11 @@
             <item id="palFin" label="Financial" image="sa_pal_financial"/>
             <item id="palVivid" label="Vivid" image="sa_pal_vivid"/>
           </gallery>
-          <menu id="caStyle" label="Customize" image="sa_ch_colors" itemSize="normal" screentip="Chart colors and layout parameters - edited visually on the slide." supertip="Edit Palettes inserts recolorable swatches (use PowerPoint's own color tools, incl. the eyedropper). Edit Settings inserts a parameter table. Apply from Selection reads whichever is selected.">
+          <button id="caStSettings" label="Chart Settings" image="sa_ch_settings" size="large" onAction="RB_Dispatch" tag="ChSettings:0" screentip="Adjust chart parameters in a native panel - sliders, toggles, colors." supertip="Select a chart and click here for a panel of its own settings (bar width, labels, decimals, legend, colors). Apply rebuilds it in place and keeps the panel open; OK closes. With nothing selected you edit the defaults used for new charts. If the SlideAidUI helper isn't installed it falls back to the on-slide settings table."/>
+          <button id="caStColors" label="Edit Colors" image="sa_ch_editcolors" size="large" onAction="RB_Dispatch" tag="ChColors2:0" screentip="Edit a chart family's color palette as swatches." supertip="Change, add or remove the colors for Bars, Lines or Pies in a native palette editor, then Restyle All applies them. Falls back to on-slide swatches if the helper isn't installed."/>
+          <button id="caRecol" label="Recolor Series" image="sa_ch_recolor" size="normal" onAction="RB_Dispatch" tag="ChRecolor:0" screentip="Recolor a whole series." supertip="Click one bar, segment or point inside a chart and pick a color - every element of that series changes across the chart. The recolor is remembered and survives Edit Data and Restyle."/>
+          <button id="caStyleAll" label="Restyle All" image="sa_ch_restyle" size="normal" onAction="RB_Dispatch" tag="ChStyleAll:0" screentip="Rebuild every Chart Aid chart with the current style." supertip="The deck-wide update after changing a color theme or palette. Data, position and size are kept; manual series recolors are kept too."/>
+          <menu id="caStyle" label="More" image="sa_ch_colors" itemSize="normal" screentip="Color-theme list and the manual (on-slide) style tools." supertip="The Color Themes list mirrors the gallery. The table/swatch tools are the manual fallback used when the native Chart Settings / Edit Colors panels aren't available.">
             <menu id="caStThemes" label="Color Themes (List)" itemSize="normal" screentip="The same themes as the gallery - fallback list with mini previews.">
               <button id="caThm1" label="Office" image="sa_palm_office" onAction="RB_Dispatch" tag="ChTheme:1"/>
               <button id="caThm2" label="Nordic Blue" image="sa_palm_nordic" onAction="RB_Dispatch" tag="ChTheme:2"/>
@@ -278,17 +282,15 @@
               <button id="caThm8" label="Financial" image="sa_palm_financial" onAction="RB_Dispatch" tag="ChTheme:8"/>
               <button id="caThm9" label="Vivid" image="sa_palm_vivid" onAction="RB_Dispatch" tag="ChTheme:9"/>
             </menu>
-            <button id="caStSetK" label="Settings for Selected Chart Type…" onAction="RB_Dispatch" tag="ChStyleSetK:0" screentip="Insert a parameter table that applies ONLY to the selected chart's type (e.g. waterfall bar width and colors)."/>
-            <button id="caStPal" label="Edit Palettes (Swatches)" onAction="RB_Dispatch" tag="ChStylePal:0" screentip="Insert one recolorable swatch row per chart family (bars / lines / pies). Recolor with PowerPoint's fill tools, then Apply from Selection."/>
-            <button id="caStSet" label="Edit Settings (Table)" onAction="RB_Dispatch" tag="ChStyleSet:0" screentip="Insert a table of all chart parameters (bar widths, gaps, label size, decimals, toggles) with current values. Edit and Apply from Selection."/>
+            <menuSeparator id="caStSepA"/>
+            <button id="caStSet" label="Settings Table (All)…" onAction="RB_Dispatch" tag="ChStyleSet:0" screentip="Manual fallback: insert a table of all chart parameters with current values, edit, then Apply from Selection."/>
+            <button id="caStSetK" label="Settings Table (Selected Type)…" onAction="RB_Dispatch" tag="ChStyleSetK:0" screentip="Manual fallback: parameter table that applies ONLY to the selected chart's type."/>
+            <button id="caStPal" label="Palette Swatches…" onAction="RB_Dispatch" tag="ChStylePal:0" screentip="Manual fallback: insert one recolorable swatch row per chart family, recolor, then Apply from Selection."/>
             <button id="caStApply" label="Apply from Selection" onAction="RB_Dispatch" tag="ChStyleApply:0" screentip="Read the selected swatch rows into their color groups and/or the selected settings table into the parameters."/>
-            <button id="caStAll" label="Restyle All Charts" onAction="RB_Dispatch" tag="ChStyleAll:0" screentip="Rebuild every Chart Aid chart in the presentation with the current palettes and settings - data, position and size are kept."/>
             <menuSeparator id="caStSep"/>
             <button id="caStReset" label="Reset to Defaults" onAction="RB_Dispatch" tag="ChStyleReset:0" screentip="Back to theme colors and default parameters."/>
-            <button id="caStFile" label="Advanced: Palette File…" onAction="RB_Dispatch" tag="ChColors:0" screentip="Edit the palette as a text file (hex or R,G,B per line)."/>
+            <button id="caStFile" label="Palette File…" onAction="RB_Dispatch" tag="ChColors:0" screentip="Edit the legacy global palette as a text file (hex or R,G,B per line)."/>
           </menu>
-          <button id="caStyleAll" label="Restyle All" image="sa_ch_restyle" size="normal" onAction="RB_Dispatch" tag="ChStyleAll:0" screentip="Rebuild every Chart Aid chart with the current style." supertip="The required second step after changing palettes or settings. Data, position and size are kept; manual series recolors are kept too."/>
-          <button id="caRecol" label="Recolor Series" image="sa_ch_recolor" size="normal" onAction="RB_Dispatch" tag="ChRecolor:0" screentip="Recolor a whole series." supertip="Click one bar, segment or point inside a chart and pick a color - every element of that series changes across the chart. The recolor is remembered and survives Edit Data and Restyle."/>
         </group>
 
         <group id="caAnno" label="Annotations">
@@ -305,6 +307,16 @@
           <button id="caCycle" label="Cycle State" image="sa_ch_cycle" size="normal" onAction="RB_Dispatch" tag="ChCycle:0" screentip="Cycle checkboxes and Harvey balls." supertip="Checkboxes step checked - crossed - empty; Harvey balls step 0 - 25 - 50 - 75 - 100%. Select one or more and click repeatedly."/>
         </group>
 
+      </tab>
+
+      <!-- The icon tools live on the built-in Insert tab so the VBA "Make
+           Editable" button sits alongside the web add-in's "Insert Icons"
+           button. A web add-in button cannot be placed on a VBA custom tab
+           (Chart Aid), so the Insert tab is the shared home for both. -->
+      <tab idMso="TabInsert">
+        <group id="caIcons" label="Edit Icons">
+          <button id="caIconEdit" label="Make Editable" image="sa_magic" size="large" onAction="RB_Dispatch" tag="IconMakeEditable:0" screentip="Turn inserted icons into editable vector shapes." supertip="Add icons with Insert Icons (on the Insert tab), then select them and click here to turn every inserted icon on the slide into an editable vector - recolor it, change its line weight, or reshape it like any PowerPoint shape."/>
+        </group>
       </tab>
     </tabs>
   </ribbon>
@@ -338,7 +350,7 @@
         <button id="cmRebuild" label="Rebuild Chart" onAction="RB_Dispatch" tag="ChRebuild:0"/>
         <button id="cmReOne" label="Restyle This Chart" onAction="RB_Dispatch" tag="ChReOne:0"/>
         <button id="cmVline" label="Value Line…" onAction="RB_Dispatch" tag="ChVLine:0"/>
-        <button id="cmSetK" label="Settings for This Chart Type…" onAction="RB_Dispatch" tag="ChStyleSetK:0"/>
+        <button id="cmSettings" label="Chart Settings…" onAction="RB_Dispatch" tag="ChSettings:0"/>
         <menuSeparator id="cmSep3"/>
         <button id="cmGAlCH" label="Center on Master" onAction="RB_Dispatch" tag="AlignM:CH"/>
         <button id="cmGAlCV" label="Middle on Master" onAction="RB_Dispatch" tag="AlignM:CV"/>

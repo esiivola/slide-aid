@@ -67,11 +67,13 @@ Ribbon groups appear left to right in this order.
 |---:|---|---|---|---|
 | 1 | Charts | Column; Bar; Stacked; Stacked Bar; 100%; Waterfall; Mekko; Line; Area; Pie; Doughnut; Scatter; Gantt | `sa_ch_col.png`, `sa_ch_bar.png`, `sa_ch_stk.png`, `sa_ch_sbr.png`, `sa_ch_pct.png`, `sa_ch_wf.png`, `sa_ch_mek.png`, `sa_ch_line.png`, `sa_ch_area.png`, `sa_ch_pie.png`, `sa_ch_don.png`, `sa_ch_scat.png`, `sa_ch_gantt.png` | `modChartBars.bas`, `modChartLines.bas`, `modChartGantt.bas` |
 | 2 | Data | Edit Data; Rebuild; Data Layouts; Sample Slides | `sa_ch_edit.png`, `sa_ch_rebuild.png`, `sa_ch_help.png`, `sa_ch_samples.png` | `modChartEdit.bas` |
-| 3 | Style | Color Themes; Customize; Restyle All; Recolor Series | `sa_ch_colors.png`, `sa_ch_restyle.png`, `sa_ch_recolor.png`; palette strips `sa_pal_*.png` | `modChartCore.bas`, `modChartEdit.bas` |
+| 3 | Style | Color Themes; Chart Settings; Edit Colors; Recolor Series; Restyle All; More | `sa_ch_colors.png`, `sa_ch_settings.png`, `sa_ch_editcolors.png`, `sa_ch_recolor.png`, `sa_ch_restyle.png`; palette strips `sa_pal_*.png` | `modChartStyle.bas`, `modChartEdit.bas`, `tools/SlideAidUI.applescript` |
 | 4 | Annotations | Difference; % Difference; CAGR; Value Line; Average Line | `sa_ch_diff.png`, `sa_ch_pctdiff.png`, `sa_ch_cagr.png`, `sa_ch_vline.png`, `sa_ch_avg.png` | `modChartAnno.bas` |
 | 5 | Elements | Harvey Ball; Checkbox; Cycle State | `sa_ch_harvey.png`, `sa_ch_check.png`, `sa_ch_cycle.png` | `modChartAnno.bas` |
 
 The nine Chart Aid palettes, in gallery order, are **Office**, **Nordic Blue**, **Fjord**, **Forest**, **Sunset**, **Berry**, **Greyscale**, **Financial**, and **Vivid**. A palette change is global; Restyle rebuilds charts without losing stored data or per-series overrides.
+
+**Chart Settings** and **Edit Colors** open native macOS panels (sliders, toggles, popups, color swatches) served by the `SlideAidUI` AppleScript helper. Chart Settings is scoped to the selected chart's type (or the global new-chart defaults when nothing is selected) and its **Apply** rebuilds that chart in place; Edit Colors edits a family's palette as swatches. Both write the same `chartstyle.txt` / `chartcolors_*.txt` store as the manual tools and **fall back** to the on-slide table/swatch flow under **More** if the helper isn't installed, so the add-in works standalone. The nine parameters, per-type overrides (`KIND.Key`), and palette files are unchanged; the panels are a nicer front end over the same store.
 
 Chart layouts and chart-specific semantics are maintained in [`CHARTS.md`](CHARTS.md). In particular, Waterfall supports `e`/`=` subtotal rows, Scatter uses `label | x | y`, Bubble adds a size column, and Gantt uses `activity | start | end` with equal start/end values rendered as milestones.
 

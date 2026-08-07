@@ -56,6 +56,36 @@ Private Function RepoDir() As String
     If Len(RepoDir) = 0 Then RepoDir = ConfiguredRepoDir()
 End Function
 
+' Gather every .bas path up front. CRITICAL: do not call VBComponents.Import
+' while iterating Dir(). VBA keeps a single global Dir() search state, and
+' Import disturbs it, so a fetch-then-import loop silently stops after the
+' first file (the classic "only 1 module imported" bug). Collect first, then
+' import from the returned list.
+Private Function CollectBasFiles(ByVal folder As String) As Collection
+    Dim names As New Collection
+    Dim f As String
+    f = Dir(folder & "/*.bas")
+    Do While Len(f) > 0
+        names.Add folder & "/" & f
+        f = Dir()
+    Loop
+    Set CollectBasFiles = names
+End Function
+
+Private Function GetBaseName(ByVal p As String) As String
+    Dim i As Long
+    i = InStrRev(p, "/")
+    If i > 0 Then GetBaseName = Mid$(p, i + 1) Else GetBaseName = p
+End Function
+
+' The dev helper / stub must never be re-imported into a presentation that
+' is already running them, or the duplicate module breaks compilation.
+Private Function IsHelperModule(ByVal p As String) As Boolean
+    Dim b As String
+    b = LCase$(GetBaseName(p))
+    IsHelperModule = (b = "modimporthelper.bas" Or b = "modstub.bas")
+End Function
+
 Public Sub ImportAllModules()
     ' Guard against double import
     Dim comp As Object
@@ -69,19 +99,43 @@ Public Sub ImportAllModules()
         Exit Sub
     End If
 
-    Dim f As String, n As Long
-    f = Dir(RepoDir() & "/src/*.bas")
-    Do While Len(f) > 0
-        ActivePresentation.VBProject.VBComponents.Import RepoDir() & "/src/" & f
-        n = n + 1
-        f = Dir()
-    Loop
+    ' Prefer this checkout's src/; fall back to the sandbox cache that
+    ' tools/build.sh populates (readable even when the repo folder is not).
+    Dim srcDir As String, files As Collection
+    srcDir = RepoDir() & "/src"
+    Set files = CollectBasFiles(srcDir)
+    If files.Count = 0 Then
+        srcDir = BuildDir() & "/src"
+        Set files = CollectBasFiles(srcDir)
+    End If
+
+    Dim basPath As Variant, n As Long, failed As String
+    For Each basPath In files
+        If Not IsHelperModule(CStr(basPath)) Then
+            On Error Resume Next
+            Err.Clear
+            ActivePresentation.VBProject.VBComponents.Import CStr(basPath)
+            If Err.Number = 0 Then
+                n = n + 1
+            Else
+                failed = failed & vbCr & "  " & GetBaseName(CStr(basPath)) & _
+                         " (" & Err.Description & ")"
+            End If
+            On Error GoTo 0
+        End If
+    Next basPath
+
     If n = 0 Then
-        MsgBox "Nothing imported - grant file access to the repo and run again.", _
+        MsgBox "Nothing imported from:" & vbCr & srcDir & vbCr & vbCr & _
+               "Grant file access to the repo (or run tools/build.sh first) and retry.", _
                vbExclamation, "Slide Aid"
+    ElseIf Len(failed) > 0 Then
+        MsgBox n & " modules imported, but some FAILED:" & failed & vbCr & vbCr & _
+               "Fix those and re-run in a fresh presentation.", vbExclamation, "Slide Aid"
     Else
-        MsgBox n & " modules imported. Next: Debug > Compile, then File > Save As -> " & _
-               "'Slide Aid' as PowerPoint Add-In (.ppam) into apps/powerpoint/dist.", _
+        MsgBox n & " modules imported from:" & vbCr & srcDir & vbCr & vbCr & _
+               "Next: Debug > Compile (VBE), then File > Save As -> a macro-enabled " & _
+               ".pptm, and run tools/inject_ribbon.py --make-ppam on it.", _
                vbInformation, "Slide Aid"
     End If
 End Sub
@@ -111,14 +165,17 @@ Public Sub BuildSlideAid()
     Dim p As Presentation
     On Error GoTo Fail
     Set p = Presentations.Add(WithWindow:=msoTrue)
-    Dim f As String, n As Long, sourceDir As String
+    ' A slideless presentation cannot be saved (SaveAs yields a 0-byte file
+    ' and reports failure). Presentations.Add creates zero slides, so add one.
+    If p.Slides.Count = 0 Then p.Slides.Add 1, ppLayoutBlank
+    Dim n As Long, sourceDir As String
     sourceDir = BuildDir() & "/src"
-    f = Dir(sourceDir & "/*.bas")
-    Do While Len(f) > 0
-        p.VBProject.VBComponents.Import sourceDir & "/" & f
+    Dim files As Collection, basPath As Variant
+    Set files = CollectBasFiles(sourceDir)
+    For Each basPath In files
+        p.VBProject.VBComponents.Import CStr(basPath)
         n = n + 1
-        f = Dir()
-    Loop
+    Next basPath
     If n = 0 Then
         p.Close
         MsgBox "No modules found in PowerPoint's SlideAid build cache. " & _
@@ -127,23 +184,41 @@ Public Sub BuildSlideAid()
         Exit Sub
     End If
 
-    ' 2. save as .pptm inside PowerPoint's writable sandbox
-    Dim i As Long, saved As Boolean
+    ' 2. save as .pptm. Programmatic SaveAs is unreliable in the Mac sandbox,
+    ' so try the container build folder then a no-space fallback, verify the
+    ' file is non-empty, and on total failure leave the presentation OPEN so
+    ' the modules can be saved via the native File > Save As dialog.
+    Dim i As Long, ti As Long, saved As Boolean, savedPath As String, lastErr As String
+    Dim targets(1 To 2) As String
     EnsureBuildDir
-    For i = 1 To 3
-        On Error Resume Next
-        Err.Clear
-        DoEvents
-        p.SaveAs BuildPptmPath(), ppSaveAsOpenXMLPresentationMacroEnabled
-        saved = (Err.Number = 0)
-        On Error GoTo Fail
+    targets(1) = BuildPptmPath()
+    targets(2) = Environ("HOME") & "/SlideAidBuild.pptm"
+    For ti = 1 To 2
+        For i = 1 To 3
+            On Error Resume Next
+            Err.Clear
+            If Len(Dir(targets(ti))) > 0 Then Kill targets(ti)   ' clear a 0-byte remnant
+            Err.Clear
+            DoEvents
+            p.SaveAs targets(ti), ppSaveAsOpenXMLPresentationMacroEnabled
+            If Err.Number = 0 And FileLen(targets(ti)) > 0 Then
+                saved = True
+                savedPath = targets(ti)
+            Else
+                lastErr = "#" & Err.Number & " " & Err.Description
+            End If
+            On Error GoTo Fail
+            If saved Then Exit For
+            LocalPause 0.7
+        Next i
         If saved Then Exit For
-        LocalPause 0.7
-    Next i
+    Next ti
     If Not saved Then
-        p.Close
-        MsgBox "SaveAs to PowerPoint's SlideAid build folder failed. " & _
-               "Run BuildSlideAid again; if it repeats, restart PowerPoint.", _
+        MsgBox "Automatic save failed (" & lastErr & ")." & vbCr & vbCr & _
+               "The new presentation with all " & n & " modules is still OPEN." & vbCr & _
+               "Save it manually: File > Save As > 'PowerPoint Macro-Enabled " & _
+               "Presentation (.pptm)', then run" & vbCr & _
+               "tools/inject_ribbon.py --make-ppam on that file.", _
                vbExclamation, "Slide Aid build"
         Exit Sub
     End If
@@ -152,7 +227,7 @@ Public Sub BuildSlideAid()
     ' 3. inject ribbon + icons, convert to .ppam
     Dim res As String
     On Error GoTo NoHelper
-    res = AppleScriptTask("SlideAidUI.scpt", "buildPpam", repo & vbLf & BuildPptmPath())
+    res = AppleScriptTask("SlideAidUI.scpt", "buildPpam", repo & vbLf & savedPath)
     On Error GoTo Fail
     If Left$(res, 2) <> "OK" Then
         MsgBox "The injector reported an error:" & vbCr & res, _
@@ -170,7 +245,7 @@ NoHelper:
            "SlideAidUI helper is missing its buildPpam handler." & vbCr & vbCr & _
            "Recompile it (see README), or finish manually:" & vbCr & _
            "python3 apps/powerpoint/tools/inject_ribbon.py --make-ppam """ & _
-           BuildPptmPath() & """", _
+           savedPath & """", _
            vbExclamation, "Slide Aid build"
     Exit Sub
 Fail:
@@ -210,13 +285,15 @@ Public Sub RefreshModules()
         proj.VBComponents.Remove comp
     Next comp
 
-    Dim f As String, n As Long
-    f = Dir(RepoDir() & "/src/*.bas")
-    Do While Len(f) > 0
-        proj.VBComponents.Import RepoDir() & "/src/" & f
-        n = n + 1
-        f = Dir()
-    Loop
+    Dim n As Long
+    Dim files As Collection, basPath As Variant
+    Set files = CollectBasFiles(RepoDir() & "/src")
+    For Each basPath In files
+        If Not IsHelperModule(CStr(basPath)) Then
+            proj.VBComponents.Import CStr(basPath)
+            n = n + 1
+        End If
+    Next basPath
     MsgBox n & " modules refreshed from src/ - test away.", _
            vbInformation, "Slide Aid dev"
 End Sub

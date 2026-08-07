@@ -16,8 +16,8 @@ Start with the visual guide:
 ## What It Does
 
 - **Slide Aid** handles everyday production work: align, size, dock, distribute, stack, grid, recolor, format-paint, clean up, reuse components, and manage text boxes.
-- **Chart Aid** builds editable shape-based charts from PowerPoint tables: column, bar, stacked, 100%, waterfall, Mekko, line, area, pie, doughnut, scatter, bubble, and Gantt.
-- **IconAid** is a visual task pane with 425 original business, technology, finance, operations, people, security, communication, and ESG icons. Search, filter, recolor, and click to insert editable grouped vectors in PowerPoint or Google Slides.
+- **Chart Aid** builds editable shape-based charts from PowerPoint tables: column, bar, stacked, 100%, waterfall, Mekko, line, area, pie, doughnut, scatter, bubble, and Gantt. Style them with native panels — **Chart Settings** (sliders, toggles, colors) and **Edit Colors** — plus one-click color themes and per-series recolor.
+- **Icons** is a visual task pane for original business, technology, finance, operations, people, security, communication, and ESG icons. The active schema-3 catalog is currently a reviewed consulting-style pilot set while the full catalog is being rebuilt. Search, filter, recolor, and click to insert; in PowerPoint an inserted icon becomes an editable vector via **Make Editable**, and in Google Slides it inserts as grouped vectors directly.
 - **Reusable libraries** store personal elements and saved formats in PowerPoint's sandbox-safe Slide Aid folder.
 - **Mac-native helpers** provide optional color picking and PowerPoint-scoped keyboard shortcuts through Hammerspoon.
 
@@ -68,16 +68,16 @@ python3 scripts/make_icons.py
 
 The generated PNGs live in `shared/icons/` and are part of the repo, so this step is normally not needed. If `apps/powerpoint/hammerspoon/slideaid.lua` changed, also re-copy it: `cp apps/powerpoint/hammerspoon/slideaid.lua ~/.hammerspoon/` (it reloads automatically on save).
 
-When the IconAid source catalog changes, regenerate its shared manifest and compact PowerPoint data modules:
+When the icon source catalog changes, regenerate its shared manifest and compact PowerPoint data modules:
 
 ```bash
 python3 scripts/build_icon_catalog.py
 python3 scripts/build_icon_catalog.py --check
 ```
 
-The IconAid artwork is original, MIT-licensed, and defined on a shared 24x24 primitive grid. PowerPoint uses the cross-platform Office.js task pane in `apps/powerpoint-iconaid/`; Google Slides uses the **Icons** sidebar tab. Both insert grouped native shapes rather than temporary preview slides or bitmap fallbacks.
+The icon artwork is original, MIT-licensed, and defined on a shared 24x24 primitive grid. PowerPoint uses the cross-platform Office.js task pane in `apps/powerpoint-iconaid/`; Google Slides uses the **Icons** sidebar tab. Both insert grouped native shapes rather than temporary preview slides or bitmap fallbacks.
 
-For local PowerPoint development, serve the repository over trusted HTTPS on port 3000 and sideload `apps/powerpoint-iconaid/manifest.xml`. The manifest adds an **IconAid** button to PowerPoint's Home tab; the PPAM no longer contains the retired VBA icon picker.
+For local PowerPoint development, serve the repository over trusted HTTPS on port 3000 and sideload `apps/powerpoint-iconaid/manifest.xml`. The manifest adds an **Insert Icons** button to PowerPoint's **Insert** tab (next to the VBA **Make Editable** button); the PPAM no longer contains the retired VBA icon picker.
 
 For heavy iteration there is a live-editing setup: keep a dev .pptm open with all modules (edit → ⌘S → test) and let a thin stub add-in (`apps/powerpoint/tools/stub_addin.bas`) own the ribbon, forwarding clicks to the dev file via `Application.Run`. See comments in that file.
 
@@ -90,20 +90,20 @@ cd apps/powerpoint
 ./tools/make_dist.sh          # -> dist/Slide Aid.zip
 ```
 
-The zip contains the add-in, the **pre-compiled** color-picker helper (recipients never run `osacompile`), the Hammerspoon shortcut config, and a double-clickable `install.command`. Recipients unzip, right-click `install.command` → Open, and answer one question (whether they want keyboard shortcuts via Hammerspoon — everything else is unconditional). The installer needs no admin rights: it copies the helper into PowerPoint's script folder, drops the .ppam into Office's own Add-Ins folder so it appears in the add-ins dialog automatically, and optionally sets up Hammerspoon (installing it via Homebrew when available, otherwise pointing to the download).
+The zip contains the add-in, the **pre-compiled** SlideAidUI helper (the native color panel plus Chart Aid's Chart Settings and Edit Colors dialogs — recipients never run `osacompile`), the Hammerspoon shortcut config, and a double-clickable `install.command`. Recipients unzip, right-click `install.command` → Open, and answer one question (whether they want keyboard shortcuts via Hammerspoon — everything else is unconditional). The installer needs no admin rights: it copies the helper into PowerPoint's script folder, drops the .ppam into Office's own Add-Ins folder so it appears in the add-ins dialog automatically, and optionally sets up Hammerspoon (installing it via Homebrew when available, otherwise pointing to the download).
 
 One step can't be automated (macOS sandboxing): the recipient must tick **Slide Aid** once in *Tools → PowerPoint Add-ins* and click *Enable Macros*. The installer prints this, and `INSTALL.md` inside the zip repeats it. `uninstall.command` reverses everything and asks before touching the user's palettes/element library. Re-running `make_dist.sh` + resharing the zip is also the update mechanism — the installer safely overwrites previous versions.
 
-## Native color picker (optional, recommended)
+## Native dialogs helper (optional, recommended)
 
-Chart Aid's *Recolor Series* can open the real macOS color panel (color wheel, sliders, swatches, eyedropper) instead of a text prompt. One-time install:
+The `SlideAidUI` AppleScript helper gives Chart Aid its native macOS UI: the **Chart Settings** panel (sliders, checkboxes, popups for chart parameters), the **Edit Colors** palette editor, and the color panel behind **Recolor Series** (color wheel, sliders, swatches, eyedropper). One-time install:
 
 ```bash
 mkdir -p ~/Library/Application\ Scripts/com.microsoft.Powerpoint
 osacompile -o ~/Library/Application\ Scripts/com.microsoft.Powerpoint/SlideAidUI.scpt apps/powerpoint/tools/SlideAidUI.applescript
 ```
 
-Without it, the tools fall back to hex/R,G,B text entry automatically. (Mechanism: AppleScript's `choose color` via `AppleScriptTask` — the one sanctioned way for sandboxed VBA to show a native dialog.)
+Without it, everything still works: Chart Settings and Edit Colors fall back to the on-slide table/swatch tools under **Style → More**, and color picking falls back to hex/R,G,B text entry. Recompile the helper whenever `SlideAidUI.applescript` changes. (Mechanism: ASObjC `NSAlert` panels and `choose color` via `AppleScriptTask` — the one sanctioned way for sandboxed VBA to show native dialogs.)
 
 ## Keyboard shortcuts (Hammerspoon)
 
@@ -130,7 +130,7 @@ apps/powerpoint/tools/        PowerPoint build, import, inject, install, and hel
 apps/powerpoint/hammerspoon/  PowerPoint-scoped keyboard shortcut config
 apps/google-slides/           TypeScript/Apps Script companion for Google Slides
 shared/icons/                 shared PNG button icons embedded by both builds
-shared/iconaid/               generated IconAid catalog and icon-specific MIT license
+shared/iconaid/               generated icon catalog and icon-specific MIT license
 shared/specs/                 shared product constants used to prevent parity drift
 docs/                         user documentation, chart layouts, UI reference, and generated visuals
 scripts/                      repo-level generators and validation scripts

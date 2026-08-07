@@ -148,8 +148,14 @@ test("IconAid definitions normalize supported vector primitives", () => {
       { kind: "line", x1: 1, y1: 2, x2: 3, y2: 4 },
       { kind: "ellipse", x: 5, y: 6, width: 7, height: 8, filled: true },
     ],
+    elements: [
+      { kind: "path", d: "M4 4 C8 2 16 2 20 4", filled: false },
+      { kind: "polyline", points: [[4, 10], [8, 12], [12, 10]], closed: false, filled: false },
+    ],
   });
   assert.deepEqual(icon.primitives[1], { kind: "ellipse", x: 5, y: 6, width: 7, height: 8, filled: true });
+  assert.deepEqual(icon.elements[0], { kind: "path", d: "M4 4 C8 2 16 2 20 4", filled: false });
+  assert.deepEqual(icon.elements[1], { kind: "polyline", points: [[4, 10], [8, 12], [12, 10]], closed: false, filled: false });
 });
 
 test("IconAid definitions reject unsafe or unsupported payloads", () => {
@@ -172,6 +178,15 @@ test("IconAid definitions reject unsafe or unsupported payloads", () => {
       { kind: "line", x1: 0, y1: 0, x2: 1, y2: 1 },
     ],
   }), /between 0 and 24/);
+  assert.throws(() => normalizeIconDefinition({
+    id: "bad-path",
+    name: "Bad Path",
+    category: "Technology",
+    aliases: ["bad path", "invalid path"],
+    tags: ["bad"],
+    primitives: [{ kind: "line", x1: 0, y1: 0, x2: 1, y2: 1 }, { kind: "line", x1: 1, y1: 1, x2: 2, y2: 2 }],
+    elements: [{ kind: "path", d: "M0 0 L25 1" }],
+  }), /path coordinates/);
 });
 
 test("IconAid inserts and groups native Google Slides vectors", () => {

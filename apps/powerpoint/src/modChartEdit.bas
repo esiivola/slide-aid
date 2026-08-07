@@ -92,6 +92,53 @@ Public Sub RestyleSelectedChart()
 End Sub
 
 ' ---------------------------------------------------------------
+' EDITING-CHART REBUILD: used by the native Chart Settings dialog. The
+' target is marked with a temporary SACH_EDITING tag (not the live
+' selection, which is unreliable across repeated modal dialogs). Each
+' Apply re-finds it by tag, rebuilds in place from its stored data, and
+' re-stamps the new group so the next Apply finds it again.
+' ---------------------------------------------------------------
+Public Sub RebuildEditingChart()
+    Dim target As Shape, s As Shape
+    For Each s In CurrentSlide().Shapes
+        If Len(s.Tags("SACH_EDITING")) > 0 Then Set target = s: Exit For
+    Next s
+    If target Is Nothing Then Exit Sub
+
+    Dim kind As String, dataS As String, ovr As String
+    Dim l As Single, t As Single, w As Single, h As Single
+    kind = target.Tags(TAG_TYPE)
+    dataS = target.Tags(TAG_DATA)
+    ovr = target.Tags(TAG_COLOVR)
+    If Len(kind) = 0 Or Len(dataS) = 0 Or Not KnownChartKind(kind) Then Exit Sub
+
+    RectFromOldChart target, l, t, w, h    ' original build rect, no drift
+    target.Delete
+
+    Dim d As ChartData
+    DeserializeData dataS, d
+    If BuildChartFromData(kind, d, l, t, w, h) Then
+        ApplyOverridesToNewChart ovr
+        On Error Resume Next                ' re-tag the new (selected) group
+        Dim g As Shape
+        Set g = ActiveWindow.Selection.ShapeRange(1)
+        If Not g Is Nothing Then g.Tags.Add "SACH_EDITING", "1"
+        On Error GoTo 0
+    End If
+End Sub
+
+' Neutralize the temp tag on all shapes of the current slide (Delete is
+' unreliable on Mac, so set it empty - the finder tests Len > 0).
+Public Sub ClearEditingTag()
+    On Error Resume Next
+    Dim s As Shape
+    For Each s In CurrentSlide().Shapes
+        If Len(s.Tags("SACH_EDITING")) > 0 Then s.Tags.Add "SACH_EDITING", ""
+    Next s
+    On Error GoTo 0
+End Sub
+
+' ---------------------------------------------------------------
 ' RESTYLE ALL: rebuild every Chart Aid chart in the presentation
 ' from its stored data, so palette and settings changes propagate
 ' with one click (charts keep their position and size).

@@ -691,6 +691,28 @@ def chart_recolor():
     arrow(d, (14, 8), (21, 8), w=1)
     save(img, "sa_ch_recolor")
 
+def chart_settings():
+    # three sliders with knobs - the native Chart Settings panel
+    img, d = canvas()
+    rows = [9, 16, 23]
+    knob = [21, 12, 25]
+    for i, yy in enumerate(rows):
+        d.line([x(5), x(yy), x(27), x(yy)], fill=GREY, width=S)
+        kx = knob[i]
+        d.ellipse([x(kx - 2.6), x(yy - 2.6), x(kx + 2.6), x(yy + 2.6)],
+                  fill=MASTER, outline=SHAPE_L, width=S)
+    save(img, "sa_ch_settings")
+
+def chart_editcolors():
+    # painter's palette with colour dabs - the native Edit Colors dialog
+    img, d = canvas()
+    d.ellipse([x(3), x(6), x(26), x(27)], fill=SHAPE_F, outline=SHAPE_L, width=S)
+    dabs = [((9, 12), MASTER), ((15, 10), (155, 187, 89, 255)),
+            ((19, 15), RED), ((11, 19), (255, 192, 0, 255))]
+    for (cx, cy), col in dabs:
+        d.ellipse([x(cx - 2.2), x(cy - 2.2), x(cx + 2.2), x(cy + 2.2)], fill=col)
+    save(img, "sa_ch_editcolors")
+
 # Color themes for Chart Aid (must match ThemeDef in modChartStyle.bas)
 THEMES = [
     ("office",    "Office",        ["4472C4","ED7D31","A5A5A5","FFC000","5B9BD5","70AD47"]),
@@ -734,7 +756,7 @@ def chart_samples():
 
 def charts():
     chart_colors(); chart_recolor(); chart_samples(); theme_images()
-    chart_rebuild(); chart_restyle()
+    chart_rebuild(); chart_restyle(); chart_settings(); chart_editcolors()
     chart_column(); chart_bar(); chart_stacked(False); chart_stacked(True)
     chart_sbar(); chart_waterfall(); chart_mekko(); chart_line(); chart_area()
     chart_pie(False); chart_pie(True); chart_scatter(); chart_gantt()

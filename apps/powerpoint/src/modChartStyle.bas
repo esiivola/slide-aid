@@ -26,6 +26,33 @@ Private curKind As String       ' chart type being built; makes every
                                 ' StyleNum/Str lookup check "<KIND>.Key"
                                 ' before the global "Key" automatically
 
+' ---- native Chart Settings dialog: live session state ----
+' One row per control shown in the native panel. dlgVal holds the value
+' in its STORED form (ratio for a %, hex or "theme" for a color, the raw
+' string otherwise); the spec builder/return parser convert at the edges.
+Private dlgN As Long
+Private dlgCtrl() As String     ' num | pct | check | popup | color
+Private dlgBase() As String     ' key without the "<KIND>." prefix
+Private dlgKeys() As String     ' key as WRITTEN ("COL.ClusterFill" or global)
+Private dlgLabel() As String
+Private dlgVal() As String
+Private dlgMin() As Double
+Private dlgMax() As Double
+Private dlgOpts() As String     ' pipe-joined popup options
+Private dlgScope As String      ' "GLOBAL" or a chart KIND
+Private dlgKind As String
+
+' ---- native Edit Colors dialog: per-family palette session state ----
+' Family index 1 = BARS, 2 = LINES, 3 = PIES. Families are lazy-loaded
+' and dirty-tracked so Cancel discards and only edited families are
+' written (an untouched Done never freezes a theme-following palette).
+Private colFam As String
+Private colSlot As String
+Private colHex(1 To 3, 1 To 60) As String
+Private colN(1 To 3) As Long
+Private colLoaded(1 To 3) As Boolean
+Private colDirty(1 To 3) As Boolean
+
 ' key, default, description - single source of truth
 Private Function KeyDefs() As Variant
     KeyDefs = Array( _
@@ -268,8 +295,9 @@ Public Sub EditPaletteSwatches()
     MsgBox "One swatch row per chart family (left to right = series 1, 2, 3...)." & vbCr & vbCr & _
            "Recolor with PowerPoint's fill tools - theme colors and the eyedropper " & _
            "work. Add, delete or reorder squares within a row." & vbCr & vbCr & _
-           "Then: select the swatches (any or all rows) > Style > Apply from " & _
-           "Selection, and Style > Restyle All Charts to update existing charts.", _
+           "Then: select the swatches (any or all rows) > Style > More > Apply " & _
+           "from Selection, and Style > Restyle All to update existing charts." & vbCr & vbCr & _
+           "(Tip: Style > Edit Colors does this in a native palette editor - no slide clutter.)", _
            vbInformation, "Chart Aid"
 End Sub
 
@@ -299,8 +327,9 @@ Public Sub InsertStyleTable()
 
     tbl.Select
     MsgBox "Edit the Value column, keep the table selected, then click " & _
-           "Style > Apply from Selection. Existing charts pick up the new " & _
-           "style when rebuilt (Edit Data). Delete the table when done.", _
+           "Style > More > Apply from Selection. Existing charts pick up the " & _
+           "new style when rebuilt (Edit Data). Delete the table when done." & vbCr & vbCr & _
+           "(Tip: Style > Chart Settings does this in a native panel - no magic numbers.)", _
            vbInformation, "Chart Aid"
 End Sub
 
@@ -404,7 +433,8 @@ Public Sub ApplyStyleFromSelection()
         End If
     Else
         MsgBox "Select palette swatches (2+ filled shapes) and/or a settings " & _
-               "table first - see Style > Edit Palette / Edit Settings.", _
+               "table first - see Style > More. (Or use Style > Chart Settings / " & _
+               "Edit Colors for the native panels.)", _
                vbExclamation, "Chart Aid"
     End If
 End Sub
@@ -428,17 +458,24 @@ Private Function ApplySettingsTable(tbl As Shape) As Boolean
     Next r
     If hits = 0 Then Exit Function
 
+    SaveStyleFile
+    ApplySettingsTable = True
+End Function
+
+' Rewrite chartstyle.txt from the in-memory sKeys/sVals (populated by
+' LoadStyle + UpsertStyle). Shared by 'Apply from Selection' and the
+' native Chart Settings dialog so neither clobbers unrelated keys.
+Public Sub SaveStyleFile()
     EnsureStore
     Dim f As Integer, i As Long
     f = FreeFile
     Open StylePath() For Output As #f
-    Print #f, "# Chart Aid settings - written by 'Apply from Selection'."
+    Print #f, "# Chart Aid settings - written by Chart Aid."
     For i = 1 To sN
         Print #f, sKeys(i) & "=" & sVals(i)
     Next i
     Close #f
-    ApplySettingsTable = True
-End Function
+End Sub
 
 ' "Key" or "KIND.Key" where Key is defined and KIND is a chart type.
 Private Function IsKnownKey(ByVal key As String) As Boolean
@@ -523,7 +560,8 @@ Public Sub InsertStyleTableForSelected()
 
     tbl.Select
     MsgBox "These values will apply to " & kind & " charts only. Edit, keep " & _
-           "the table selected, Style > Apply from Selection, then Restyle.", _
+           "the table selected, Style > More > Apply from Selection, then Restyle All." & vbCr & vbCr & _
+           "(Tip: Style > Chart Settings edits this chart type in a native panel.)", _
            vbInformation, "Chart Aid"
 End Sub
 
@@ -590,3 +628,562 @@ Public Sub ResetStyle()
     MsgBox "Style reset: theme colors and default parameters. " & _
            "Rebuild existing charts via Edit Data.", vbInformation, "Chart Aid"
 End Sub
+
+' =====================================================================
+' NATIVE CHART SETTINGS  (modChartStyle: main new UI)
+'
+' Select a chart -> a native macOS panel of sliders / checkboxes /
+' popups pre-filled with that chart type's parameters. Apply rebuilds
+' it in place and re-opens (nudge-and-see); OK writes and closes. With
+' nothing selected the panel edits the defaults for NEW charts.
+'
+' Falls back to the on-slide parameter table (InsertStyleTable /
+' InsertStyleTableForSelected) if the SlideAidUI helper isn't installed,
+' so the add-in still works standalone.
+' =====================================================================
+Public Sub ChartSettingsDialog()
+    Dim g As Shape
+    Set g = FindOldChart()
+    ClearEditingTag                       ' drop any stale edit marker
+
+    If g Is Nothing Then
+        dlgScope = "GLOBAL": dlgKind = ""
+    ElseIf Not KnownChartKind(g.Tags(TAG_TYPE)) Then
+        dlgScope = "GLOBAL": dlgKind = ""     ' unknown -> global defaults
+    Else
+        dlgKind = g.Tags(TAG_TYPE)
+        dlgScope = dlgKind
+        g.Tags.Add "SACH_EDITING", "1"
+    End If
+
+    BuildDlgControls dlgScope, dlgKind
+
+    Dim res As String, action As String
+    Do
+        On Error GoTo Fallback
+        res = AppleScriptTask("SlideAidUI.scpt", "chartSettings", BuildSettingsSpec())
+        On Error GoTo 0
+
+        action = ParseSettingsReturn(res)     ' updates dlgVal; returns token
+        Select Case action
+            Case "CANCEL"
+                Exit Do
+            Case "COLORS"
+                DoDialogColorPick                 ' one color, then re-open
+            Case "APPLY"
+                WriteDlgSettings
+                If dlgScope <> "GLOBAL" Then RebuildEditingChart
+            Case "OK"
+                WriteDlgSettings
+                If dlgScope = "GLOBAL" Then
+                    OfferRestyleAll "Defaults saved (used by new charts)."
+                Else
+                    RebuildEditingChart
+                End If
+                Exit Do
+            Case Else
+                Exit Do
+        End Select
+    Loop
+    ClearEditingTag
+    Exit Sub
+
+Fallback:
+    On Error GoTo 0
+    ClearEditingTag
+    If dlgScope = "GLOBAL" Then InsertStyleTable Else InsertStyleTableForSelected
+End Sub
+
+Private Sub OfferRestyleAll(ByVal msg As String)
+    If MsgBox(msg & vbCr & vbCr & _
+              "Restyle all existing charts in this presentation now?", _
+              vbYesNo + vbQuestion, "Chart Aid") = vbYes Then RestyleAllCharts False
+End Sub
+
+' ---- build the control set + current values for the active scope ----
+Private Sub BuildDlgControls(ByVal scope As String, ByVal kind As String)
+    Dim defs As Variant
+    If scope = "GLOBAL" Then defs = GlobalControlDefs() Else defs = KindControlDefs(kind)
+
+    dlgN = 0
+    ReDim dlgCtrl(1 To 40)
+    ReDim dlgBase(1 To 40)
+    ReDim dlgKeys(1 To 40)
+    ReDim dlgLabel(1 To 40)
+    ReDim dlgVal(1 To 40)
+    ReDim dlgMin(1 To 40)
+    ReDim dlgMax(1 To 40)
+    ReDim dlgOpts(1 To 40)
+
+    LoadStyle
+    If scope <> "GLOBAL" Then SetStyleKind kind
+
+    Dim i As Long, base As String, ctrl As String, dflt As String
+    For i = 0 To UBound(defs)
+        dlgN = dlgN + 1
+        ctrl = defs(i)(0): base = defs(i)(1)
+        dlgCtrl(dlgN) = ctrl
+        dlgBase(dlgN) = base
+        dlgLabel(dlgN) = defs(i)(2)
+        dlgMin(dlgN) = defs(i)(3)
+        dlgMax(dlgN) = defs(i)(4)
+        dlgOpts(dlgN) = defs(i)(5)
+        dflt = defs(i)(6)
+
+        If Left$(base, 2) = "__" Then
+            dlgKeys(dlgN) = base                       ' synthetic, never written
+        ElseIf scope = "GLOBAL" Then
+            dlgKeys(dlgN) = base
+        Else
+            dlgKeys(dlgN) = kind & "." & base
+        End If
+
+        Select Case base
+            Case "__GanttTheme"
+                dlgVal(dlgN) = IIf(LCase$(StyleStr("GanttBarColor", "theme")) = "theme", "1", "0")
+            Case "GanttBarColor"
+                Dim gv As String
+                gv = StyleStr("GanttBarColor", "theme")
+                If IsHex6(gv) Then dlgVal(dlgN) = gv Else dlgVal(dlgN) = RGBToHex6(ChartColorRGB(1))
+            Case Else
+                dlgVal(dlgN) = StyleStr(base, dflt)
+        End Select
+    Next i
+
+    If scope <> "GLOBAL" Then SetStyleKind ""
+    dlgScope = scope: dlgKind = kind
+End Sub
+
+' ---- serialize the controls to the helper's request format ----
+Private Function BuildSettingsSpec() As String
+    Dim title As String, info As String
+    If dlgScope = "GLOBAL" Then
+        title = "Chart defaults (new charts)"
+        info = "Applied to charts you build next. Select a chart to edit its own settings."
+    Else
+        title = KindDisplayName(dlgKind) & " chart settings"
+        info = "Apply rebuilds this chart in place and keeps the panel open. OK closes."
+    End If
+
+    Dim s As String, i As Long
+    s = "#" & vbTab & title & vbTab & info
+    For i = 1 To dlgN
+        s = s & vbLf & SpecLine(i)
+    Next i
+    BuildSettingsSpec = s
+End Function
+
+Private Function SpecLine(ByVal i As Long) As String
+    Dim k As String, lbl As String
+    k = dlgKeys(i): lbl = dlgLabel(i)
+    Select Case dlgCtrl(i)
+        Case "num"
+            SpecLine = "num" & vbTab & k & vbTab & lbl & vbTab & _
+                       CStr(CLng(Val(Replace(dlgVal(i), ",", ".")))) & vbTab & _
+                       CStr(CLng(dlgMin(i))) & vbTab & CStr(CLng(dlgMax(i)))
+        Case "pct"
+            SpecLine = "num" & vbTab & k & vbTab & lbl & vbTab & _
+                       CStr(CLng(Val(Replace(dlgVal(i), ",", ".")) * 100)) & vbTab & _
+                       CStr(CLng(dlgMin(i))) & vbTab & CStr(CLng(dlgMax(i)))
+        Case "check"
+            SpecLine = "check" & vbTab & k & vbTab & lbl & vbTab & IIf(dlgVal(i) = "1", "1", "0")
+        Case "popup"
+            SpecLine = "popup" & vbTab & k & vbTab & lbl & vbTab & dlgVal(i) & _
+                       vbTab & vbTab & vbTab & dlgOpts(i)
+        Case "color"
+            SpecLine = "swatch" & vbTab & k & vbTab & lbl & vbTab & ColorHexForDisplay(i)
+    End Select
+End Function
+
+Private Function ColorHexForDisplay(ByVal i As Long) As String
+    If IsHex6(dlgVal(i)) Then
+        ColorHexForDisplay = dlgVal(i)
+    Else
+        ColorHexForDisplay = RGBToHex6(ChartColorRGB(1))   ' "theme" -> a real swatch
+    End If
+End Function
+
+' ---- read the helper's reply back into dlgVal; return the action ----
+Private Function ParseSettingsReturn(ByVal res As String) As String
+    Dim lines() As String, j As Long, ln As String, p As Long, k As String, v As String
+    lines = Split(Replace(res, vbCr, vbLf), vbLf)
+    If UBound(lines) < 0 Then ParseSettingsReturn = "CANCEL": Exit Function
+    ParseSettingsReturn = Trim$(lines(0))
+    If ParseSettingsReturn = "CANCEL" Or Len(ParseSettingsReturn) = 0 Then _
+        ParseSettingsReturn = "CANCEL": Exit Function
+
+    For j = 1 To UBound(lines)
+        ln = lines(j)
+        p = InStr(ln, "=")
+        If p > 1 Then
+            k = Left$(ln, p - 1)
+            v = Mid$(ln, p + 1)
+            Dim i As Long
+            For i = 1 To dlgN
+                If dlgKeys(i) = k Then
+                    If dlgCtrl(i) = "pct" Then
+                        dlgVal(i) = RatioStr(Val(Replace(v, ",", ".")))
+                    Else
+                        dlgVal(i) = Trim$(v)
+                    End If
+                    Exit For
+                End If
+            Next i
+        End If
+    Next j
+End Function
+
+' ---- "Colors..." button: pick ONE color via the native panel ----
+Private Sub DoDialogColorPick()
+    Dim param As String, i As Long
+    param = "Which color to change?"
+    For i = 1 To dlgN
+        If dlgCtrl(i) = "color" Then _
+            param = param & vbLf & dlgLabel(i) & vbTab & ColorHexForDisplay(i)
+    Next i
+
+    Dim res As String
+    On Error Resume Next
+    res = AppleScriptTask("SlideAidUI.scpt", "chooseChartColor", param)
+    On Error GoTo 0
+    If Len(res) = 0 Then Exit Sub
+
+    Dim parts() As String
+    parts = Split(Replace(res, vbCr, ""), vbTab)
+    If UBound(parts) < 1 Then Exit Sub
+    Dim pickedLabel As String, pickedHex As String
+    pickedLabel = parts(0): pickedHex = Trim$(parts(1))
+    If Not IsHex6(pickedHex) Then Exit Sub
+
+    For i = 1 To dlgN
+        If dlgCtrl(i) = "color" And dlgLabel(i) = pickedLabel Then
+            dlgVal(i) = pickedHex
+            SetDlgVal "__GanttTheme", "0"      ' a custom pick overrides "theme"
+            Exit For
+        End If
+    Next i
+End Sub
+
+' ---- persist the edited values (merge; never clobber other keys) ----
+Private Sub WriteDlgSettings()
+    LoadStyle                                  ' current file -> sKeys/sVals
+    Dim themeOn As Boolean
+    themeOn = (GetDlgVal("__GanttTheme") = "1")
+
+    Dim i As Long, wv As String
+    For i = 1 To dlgN
+        If Left$(dlgKeys(i), 2) <> "__" Then
+            If dlgBase(i) = "GanttBarColor" And themeOn Then
+                wv = "theme"
+            Else
+                wv = dlgVal(i)
+            End If
+            UpsertStyle dlgKeys(i), wv
+        End If
+    Next i
+    SaveStyleFile
+End Sub
+
+' ---- tiny dlg-state helpers ----
+Private Function GetDlgVal(ByVal base As String) As String
+    Dim i As Long
+    For i = 1 To dlgN
+        If dlgBase(i) = base Then GetDlgVal = dlgVal(i): Exit Function
+    Next i
+End Function
+
+Private Sub SetDlgVal(ByVal base As String, ByVal v As String)
+    Dim i As Long
+    For i = 1 To dlgN
+        If dlgBase(i) = base Then dlgVal(i) = v: Exit Sub
+    Next i
+End Sub
+
+Private Function IsHex6(ByVal s As String) As Boolean
+    Dim ok As Boolean
+    ParseColorText s, ok
+    IsHex6 = ok
+End Function
+
+' ratio (0..1) -> a period-decimal string for chartstyle.txt
+Private Function RatioStr(ByVal pct As Double) As String
+    RatioStr = Replace(Format$(pct / 100, "0.00"), ",", ".")
+End Function
+
+Private Function KindDisplayName(ByVal kind As String) As String
+    Select Case kind
+        Case "COL": KindDisplayName = "Column"
+        Case "BAR": KindDisplayName = "Bar"
+        Case "STK": KindDisplayName = "Stacked column"
+        Case "SBR": KindDisplayName = "Stacked bar"
+        Case "PCT": KindDisplayName = "100% column"
+        Case "WF": KindDisplayName = "Waterfall"
+        Case "MEK": KindDisplayName = "Mekko"
+        Case "LINE": KindDisplayName = "Line"
+        Case "AREA": KindDisplayName = "Area"
+        Case "PIE": KindDisplayName = "Pie"
+        Case "DON": KindDisplayName = "Doughnut"
+        Case "SCAT", "BUB": KindDisplayName = "Scatter / bubble"
+        Case "GANTT": KindDisplayName = "Gantt"
+        Case Else: KindDisplayName = "Chart"
+    End Select
+End Function
+
+' ---- control definitions: {ctrl, base-key, label, min, max, opts, default} ----
+Private Function GlobalControlDefs() As Variant
+    GlobalControlDefs = Array( _
+        Array("num", "PlotWidthCm", "Default width (cm)", 4, 30, "", "12"), _
+        Array("num", "PlotHeightCm", "Default height (cm)", 3, 20, "", "8"), _
+        Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"), _
+        Array("popup", "Decimals", "Decimals", 0, 0, "auto|0|1|2", "auto"), _
+        Array("check", "ValueLabels", "Show value labels", 0, 0, "", "1"), _
+        Array("check", "TotalLabels", "Show totals on stacked columns", 0, 0, "", "1"), _
+        Array("check", "Legend", "Show legend (charts with 2+ series)", 0, 0, "", "1"))
+End Function
+
+' Curated to the parameters each builder actually reads (e.g. AREA reads
+' only the label size; LINE also uses markers / value labels / decimals).
+Private Function KindControlDefs(ByVal kind As String) As Variant
+    Select Case kind
+        Case "COL", "BAR"
+            KindControlDefs = Array( _
+                Array("pct", "ClusterFill", "Bar width (%)", 30, 100, "", "0.72"), _
+                Array("check", "ValueLabels", "Show value labels", 0, 0, "", "1"), _
+                Array("check", "Legend", "Show legend (2+ series)", 0, 0, "", "1"), _
+                Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"), _
+                Array("popup", "Decimals", "Decimals", 0, 0, "auto|0|1|2", "auto"))
+        Case "STK", "SBR", "PCT"
+            KindControlDefs = Array( _
+                Array("pct", "StackFill", "Bar width (%)", 30, 100, "", "0.65"), _
+                Array("check", "ValueLabels", "Show segment labels", 0, 0, "", "1"), _
+                Array("check", "TotalLabels", "Show totals", 0, 0, "", "1"), _
+                Array("check", "Legend", "Show legend (2+ series)", 0, 0, "", "1"), _
+                Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"), _
+                Array("popup", "Decimals", "Decimals", 0, 0, "auto|0|1|2", "auto"))
+        Case "WF"
+            KindControlDefs = Array( _
+                Array("pct", "WaterfallFill", "Bar width (%)", 30, 100, "", "0.62"), _
+                Array("color", "WaterfallUp", "Positive color", 0, 0, "", "9BBB59"), _
+                Array("color", "WaterfallDown", "Negative color", 0, 0, "", "C0504D"), _
+                Array("color", "WaterfallTotal", "Subtotal color", 0, 0, "", "BFBFBF"), _
+                Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"), _
+                Array("popup", "Decimals", "Decimals", 0, 0, "auto|0|1|2", "auto"))
+        Case "MEK"
+            KindControlDefs = Array( _
+                Array("num", "MekkoGapPt", "Column gap (pt)", 0, 20, "", "2"), _
+                Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"), _
+                Array("popup", "Decimals", "Decimals", 0, 0, "auto|0|1|2", "auto"))
+        Case "LINE"
+            KindControlDefs = Array( _
+                Array("num", "MarkerSizePt", "Marker size (pt)", 0, 12, "", "5"), _
+                Array("check", "ValueLabels", "Show value labels", 0, 0, "", "1"), _
+                Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"), _
+                Array("popup", "Decimals", "Decimals", 0, 0, "auto|0|1|2", "auto"))
+        Case "AREA"
+            KindControlDefs = Array( _
+                Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"))
+        Case "GANTT"
+            KindControlDefs = Array( _
+                Array("check", "__GanttTheme", "Use theme color for bars", 0, 0, "", "1"), _
+                Array("color", "GanttBarColor", "Bar color", 0, 0, "", "4472C4"), _
+                Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"))
+        Case Else                                  ' PIE, DON, SCAT, BUB
+            KindControlDefs = Array( _
+                Array("num", "LabelSizePt", "Label size (pt)", 5, 24, "", "9"), _
+                Array("popup", "Decimals", "Decimals", 0, 0, "auto|0|1|2", "auto"))
+    End Select
+End Function
+
+' =====================================================================
+' NATIVE EDIT COLORS  (replaces the drop-swatches-on-the-slide flow)
+'
+' A native palette editor: pick a chart family, then change / add /
+' remove colors as real swatches. Done writes the changed family
+' palette file(s) and offers Restyle All. Falls back to the on-slide
+' swatch rows (EditPaletteSwatches) if the helper isn't installed.
+' =====================================================================
+Public Sub EditColorsDialog()
+    Dim g As Shape, fam As String
+    Set g = FindOldChart()
+    If g Is Nothing Then
+        fam = "BARS"
+    ElseIf Not KnownChartKind(g.Tags(TAG_TYPE)) Then
+        fam = "BARS"
+    Else
+        fam = PaletteGroupOf(g.Tags(TAG_TYPE))
+    End If
+
+    Dim k As Long
+    For k = 1 To 3
+        colLoaded(k) = False: colDirty(k) = False: colN(k) = 0
+    Next k
+    colFam = fam
+    LoadColFamily FamIdx(fam)
+
+    Dim res As String, action As String
+    Do
+        On Error GoTo Fallback
+        res = AppleScriptTask("SlideAidUI.scpt", "editColors", BuildColorsSpec())
+        On Error GoTo 0
+
+        action = ParseColorsReturn(res)       ' may switch colFam; sets colSlot
+        Select Case action
+            Case "CANCEL": Exit Do
+            Case "SWITCH": LoadColFamily FamIdx(colFam)
+            Case "CHANGE": DoPaletteAction
+            Case "DONE": WriteDirtyFamilies: Exit Do
+            Case Else: Exit Do
+        End Select
+    Loop
+    Exit Sub
+
+Fallback:
+    On Error GoTo 0
+    EditPaletteSwatches
+End Sub
+
+Private Function BuildColorsSpec() As String
+    Dim idx As Long, i As Long, s As String
+    idx = FamIdx(colFam)
+    s = "#" & vbTab & ("Chart colors - " & FamLabel(colFam)) & vbTab & colFam & vbTab & "BARS|LINES|PIES"
+    For i = 1 To colN(idx)
+        s = s & vbLf & "swatch" & vbTab & CStr(i) & vbTab & colHex(idx, i)
+    Next i
+    BuildColorsSpec = s
+End Function
+
+Private Function ParseColorsReturn(ByVal res As String) As String
+    Dim lines() As String, j As Long, ln As String, p As Long, k As String, v As String
+    Dim tok As String, fam As String, slot As String
+    lines = Split(Replace(res, vbCr, vbLf), vbLf)
+    If UBound(lines) < 0 Then ParseColorsReturn = "CANCEL": Exit Function
+    tok = Trim$(lines(0))
+    If Len(tok) = 0 Or tok = "CANCEL" Then ParseColorsReturn = "CANCEL": Exit Function
+
+    fam = colFam: slot = ""
+    For j = 1 To UBound(lines)
+        ln = lines(j)
+        p = InStr(ln, "=")
+        If p > 1 Then
+            k = Left$(ln, p - 1): v = Mid$(ln, p + 1)
+            If k = "FAMILY" Then fam = Trim$(v)
+            If k = "SLOT" Then slot = Trim$(v)
+        End If
+    Next j
+    colSlot = slot
+
+    If fam <> colFam And (fam = "BARS" Or fam = "LINES" Or fam = "PIES") Then
+        colFam = fam
+        ParseColorsReturn = "SWITCH"
+    Else
+        ParseColorsReturn = tok
+    End If
+End Function
+
+Private Sub DoPaletteAction()
+    Dim idx As Long: idx = FamIdx(colFam)
+    Select Case colSlot
+        Case "+ Add a color"
+            If colN(idx) < 60 Then
+                colN(idx) = colN(idx) + 1
+                colHex(idx, colN(idx)) = RGBToHex6(AccentColorRGB(colN(idx)))
+                colDirty(idx) = True
+            End If
+        Case "- Remove last color"
+            If colN(idx) > 1 Then colN(idx) = colN(idx) - 1: colDirty(idx) = True
+        Case "* Reset to theme colors"
+            Dim i As Long
+            For i = 1 To 6
+                colHex(idx, i) = RGBToHex6(AccentColorRGB(i))
+            Next i
+            colN(idx) = 6: colDirty(idx) = True
+        Case Else
+            If Left$(colSlot, 6) = "Color " Then
+                Dim n As Long: n = CLng(Val(Mid$(colSlot, 7)))
+                If n >= 1 And n <= colN(idx) Then
+                    Dim ok As Boolean, seed As Long, newC As Long
+                    seed = ParseColorText(colHex(idx, n), ok)
+                    If Not ok Then seed = RGB(79, 129, 189)
+                    newC = NativePickColor(seed, ok)
+                    If ok Then colHex(idx, n) = RGBToHex6(newC): colDirty(idx) = True
+                End If
+            End If
+    End Select
+End Sub
+
+Private Sub WriteDirtyFamilies()
+    Dim k As Long, i As Long, f As Integer, any As Boolean
+    For k = 1 To 3
+        If colLoaded(k) And colDirty(k) And colN(k) >= 1 Then
+            EnsureStore
+            f = FreeFile
+            Open GroupPalettePath(FamName(k)) For Output As #f
+            Print #f, "# Chart Aid palette - written by Edit Colors."
+            For i = 1 To colN(k)
+                Print #f, colHex(k, i)
+            Next i
+            Close #f
+            any = True
+        End If
+    Next k
+    If any Then OfferRestyleAll "Palette updated."
+End Sub
+
+' Load a family's palette (hex strings). Seeds from the theme accents
+' when no palette file exists yet, so the editor always shows colors.
+Private Sub LoadColFamily(ByVal idx As Long)
+    If colLoaded(idx) Then Exit Sub
+    Dim path As String, f As Integer, ln As String, v As Long, ok As Boolean
+    colN(idx) = 0
+    path = GroupPalettePath(FamName(idx))
+    If Dir(path) <> "" Then
+        f = FreeFile
+        On Error GoTo Seed
+        Open path For Input As #f
+        On Error GoTo CloseIt
+        Do While Not EOF(f) And colN(idx) < 60
+            Line Input #f, ln
+            v = ParseColorText(ln, ok)
+            If ok Then
+                colN(idx) = colN(idx) + 1
+                colHex(idx, colN(idx)) = RGBToHex6(v)
+            End If
+        Loop
+CloseIt:
+        Close #f
+    End If
+Seed:
+    On Error GoTo 0
+    If colN(idx) = 0 Then
+        Dim i As Long
+        For i = 1 To 6
+            colHex(idx, i) = RGBToHex6(AccentColorRGB(i))
+        Next i
+        colN(idx) = 6
+    End If
+    colLoaded(idx) = True
+End Sub
+
+Private Function FamIdx(ByVal fam As String) As Long
+    Select Case fam
+        Case "LINES": FamIdx = 2
+        Case "PIES": FamIdx = 3
+        Case Else: FamIdx = 1        ' BARS
+    End Select
+End Function
+
+Private Function FamName(ByVal idx As Long) As String
+    Select Case idx
+        Case 2: FamName = "LINES"
+        Case 3: FamName = "PIES"
+        Case Else: FamName = "BARS"
+    End Select
+End Function
+
+Private Function FamLabel(ByVal fam As String) As String
+    Select Case fam
+        Case "LINES": FamLabel = "Lines (line, area, scatter, bubble)"
+        Case "PIES": FamLabel = "Pies (pie, doughnut)"
+        Case Else: FamLabel = "Bars (column, bar, stacked, Mekko, waterfall, Gantt)"
+    End Select
+End Function

@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import argparse
+import html
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent.parent
 CATALOG_PATH = ROOT / "shared" / "iconaid" / "catalog.json"
+CONTACT_SHEET_PATH = ROOT / "shared" / "iconaid" / "contact-sheets" / "pilot.svg"
+LATEST_BATCH_CONTACT_SHEET_PATH = ROOT / "shared" / "iconaid" / "contact-sheets" / "latest-batch.svg"
 VBA_PATH = ROOT / "apps" / "powerpoint" / "src" / "modIconAid.bas"
 
 
@@ -17,12 +21,27 @@ def line(x1: float, y1: float, x2: float, y2: float) -> dict[str, Any]:
     return {"kind": "line", "x1": x1, "y1": y1, "x2": x2, "y2": y2}
 
 
-def rect(x: float, y: float, width: float, height: float, *, filled: bool = False) -> dict[str, Any]:
-    return {"kind": "rect", "x": x, "y": y, "width": width, "height": height, "filled": filled}
+def rect(x: float, y: float, width: float, height: float, *, rx: float | None = None, filled: bool = False) -> dict[str, Any]:
+    item = {"kind": "rect", "x": x, "y": y, "width": width, "height": height, "filled": filled}
+    if rx is not None:
+        item["rx"] = rx
+    return item
 
 
 def ellipse(x: float, y: float, width: float, height: float, *, filled: bool = False) -> dict[str, Any]:
     return {"kind": "ellipse", "x": x, "y": y, "width": width, "height": height, "filled": filled}
+
+
+def circle(cx: float, cy: float, r: float, *, filled: bool = False) -> dict[str, Any]:
+    return {"kind": "ellipse", "x": cx - r, "y": cy - r, "width": r * 2, "height": r * 2, "filled": filled}
+
+
+def path(d: str, *, filled: bool = False) -> dict[str, Any]:
+    return {"kind": "path", "d": d, "filled": filled}
+
+
+def svg_polyline(*points: tuple[float, float], closed: bool = False, filled: bool = False) -> dict[str, Any]:
+    return {"kind": "polyline", "points": [[x, y] for x, y in points], "closed": closed, "filled": filled}
 
 
 def polyline(*points: tuple[float, float], closed: bool = False) -> list[dict[str, Any]]:
@@ -1590,7 +1609,1841 @@ for icon in ICONS:
         icon["aliases"] = ALIASES_BY_ID[icon["id"]]
     icon["tags"].extend(EXTRA_TAGS_BY_ID.get(icon["id"], []))
 
+LEGACY_ICONS = json.loads(json.dumps(ICONS))
+
+
+def pilot_icon(
+    icon_id: str,
+    name: str,
+    category: str,
+    aliases: list[str],
+    tags: list[str],
+    elements: list[dict[str, Any]],
+    primitives: list[dict[str, Any]],
+    *,
+    legacy_id: str | None = None,
+    notes: str = "",
+) -> dict[str, Any]:
+    return {
+        "id": icon_id,
+        "name": name,
+        "category": category,
+        "aliases": list(dict.fromkeys(aliases)),
+        "tags": list(dict.fromkeys(tags)),
+        "elements": elements,
+        "primitives": primitives,
+        "legacyId": legacy_id or icon_id,
+        "reviewStatus": "pilot",
+        "designNotes": notes,
+    }
+
+
+PILOT_ICONS: list[dict[str, Any]] = [
+    pilot_icon(
+        "strategy-target",
+        "Strategy Target",
+        "Business",
+        ["target", "north star", "strategic objective"],
+        ["strategy", "target", "goal", "objective", "focus", "priority", "kpi", "north star", "where to play"],
+        [
+            circle(11, 13, 7),
+            circle(11, 13, 3.5),
+            circle(11, 13, 0.9, filled=True),
+            line(14, 10, 21, 3),
+            svg_polyline((17, 3), (21, 3), (21, 7)),
+        ],
+        [
+            circle(11, 13, 7),
+            circle(11, 13, 3.5),
+            circle(11, 13, 0.9, filled=True),
+            line(14, 10, 21, 3),
+            line(17, 3, 21, 3),
+            line(21, 3, 21, 7),
+        ],
+        legacy_id="target",
+        notes="Concentric strategy focus with arrow kept clear of the safe area.",
+    ),
+    pilot_icon(
+        "analytics",
+        "Analytics",
+        "Business",
+        ["dashboard", "business intelligence", "insight engine"],
+        ["analytics", "data", "metrics", "dashboard", "insight", "kpi", "reporting", "performance", "business intelligence"],
+        [
+            line(4, 19, 20, 19),
+            line(4, 19, 4, 5),
+            path("M6 15 L9.5 12 L13 14 L18.5 7"),
+            circle(9.5, 12, 0.8, filled=True),
+            circle(13, 14, 0.8, filled=True),
+            rect(6, 9, 3, 6, filled=True),
+            rect(11, 7, 3, 8, filled=True),
+            rect(16, 5, 3, 10, filled=True),
+        ],
+        [
+            line(4, 19, 20, 19),
+            line(4, 19, 4, 5),
+            line(6, 15, 9.5, 12),
+            line(9.5, 12, 13, 14),
+            line(13, 14, 18.5, 7),
+            rect(6, 9, 3, 6, filled=True),
+            rect(11, 7, 3, 8, filled=True),
+            rect(16, 5, 3, 10, filled=True),
+        ],
+        notes="Combines bars and a measured trend line without crowding the chart frame.",
+    ),
+    pilot_icon(
+        "transformation",
+        "Transformation",
+        "Business",
+        ["business transformation", "change program", "turnaround"],
+        ["transformation", "change", "turnaround", "reinvention", "program", "journey", "operating model", "execution", "future state"],
+        [
+            rect(4, 4.5, 7, 7, rx=1.3),
+            rect(13, 12.5, 7, 7, rx=1.3),
+            path("M6.8 17 C9.2 12.8 12.6 10.1 18.2 7.2"),
+            svg_polyline((14.6, 6.4), (18.5, 7), (17.6, 10.8)),
+        ],
+        [
+            rect(4, 4.5, 7, 7, rx=1.3),
+            rect(13, 12.5, 7, 7, rx=1.3),
+            line(6.8, 17, 9.8, 12.8),
+            line(9.8, 12.8, 13.2, 10),
+            line(13.2, 10, 18.5, 7),
+            line(14.6, 6.4, 18.5, 7),
+            line(18.5, 7, 17.6, 10.8),
+        ],
+        legacy_id="automation",
+        notes="Single state-change arrow between before/after tiles; optimized for the 24 px read.",
+    ),
+    pilot_icon(
+        "growth",
+        "Growth",
+        "Finance",
+        ["revenue growth", "scale up", "expansion"],
+        ["growth", "increase", "revenue", "scale", "expansion", "performance", "upside", "value creation", "accelerate"],
+        [
+            line(4, 19, 20, 19),
+            rect(6, 14, 2.8, 5, filled=True),
+            rect(11, 11, 2.8, 8, filled=True),
+            rect(16, 8, 2.8, 11, filled=True),
+            path("M6 11 L10 9 L13 10 L19 4"),
+            svg_polyline((15.5, 4), (19, 4), (19, 7.5)),
+        ],
+        [
+            line(4, 19, 20, 19),
+            rect(6, 14, 2.8, 5, filled=True),
+            rect(11, 11, 2.8, 8, filled=True),
+            rect(16, 8, 2.8, 11, filled=True),
+            line(6, 11, 10, 9),
+            line(10, 9, 13, 10),
+            line(13, 10, 19, 4),
+            line(15.5, 4, 19, 4),
+            line(19, 4, 19, 7.5),
+        ],
+        legacy_id="trend-up",
+        notes="Uses filled bars as visual ballast and a single clean growth signal.",
+    ),
+    pilot_icon(
+        "cost-reduction",
+        "Cost Reduction",
+        "Finance",
+        ["cost out", "savings", "margin improvement"],
+        ["cost reduction", "savings", "margin", "efficiency", "spend", "expense", "productivity", "reduction", "bottom line"],
+        [
+            line(4, 19, 20, 19),
+            rect(6, 10, 2.8, 9, filled=True),
+            rect(11, 12.5, 2.8, 6.5, filled=True),
+            rect(16, 15, 2.8, 4, filled=True),
+            path("M6 6 L10 8.8 L13 8 L19 14"),
+            svg_polyline((18.6, 10.5), (19, 14), (15.5, 13.6)),
+        ],
+        [
+            line(4, 19, 20, 19),
+            rect(6, 10, 2.8, 9, filled=True),
+            rect(11, 12.5, 2.8, 6.5, filled=True),
+            rect(16, 15, 2.8, 4, filled=True),
+            line(6, 6, 10, 8.8),
+            line(10, 8.8, 13, 8),
+            line(13, 8, 19, 14),
+            line(18.6, 10.5, 19, 14),
+            line(19, 14, 15.5, 13.6),
+        ],
+        legacy_id="percent",
+        notes="Descending bars and trend arrow mirror growth while clearly signaling cost down.",
+    ),
+    pilot_icon(
+        "organization-team",
+        "Organization Team",
+        "People",
+        ["team", "organization", "workforce"],
+        ["organization", "team", "people", "workforce", "stakeholders", "operating model", "collaboration", "structure", "talent"],
+        [
+            circle(12, 7, 2.5),
+            circle(6.5, 10, 2),
+            circle(17.5, 10, 2),
+            path("M7 19 C7.5 15.8 9.4 14 12 14 C14.6 14 16.5 15.8 17 19"),
+            path("M3.5 18 C4 15.6 5.2 14.4 7 14.2"),
+            path("M20.5 18 C20 15.6 18.8 14.4 17 14.2"),
+        ],
+        [
+            circle(12, 7, 2.5),
+            circle(6.5, 10, 2),
+            circle(17.5, 10, 2),
+            line(7, 19, 8.2, 16),
+            line(8.2, 16, 10.2, 14.5),
+            line(10.2, 14.5, 13.8, 14.5),
+            line(13.8, 14.5, 15.8, 16),
+            line(15.8, 16, 17, 19),
+            line(3.5, 18, 7, 14.2),
+            line(20.5, 18, 17, 14.2),
+        ],
+        legacy_id="users",
+        notes="Shared head and shoulder rhythm establishes the people family.",
+    ),
+    pilot_icon(
+        "customer",
+        "Customer",
+        "People",
+        ["client", "consumer", "user need"],
+        ["customer", "client", "consumer", "user", "experience", "journey", "needs", "segment", "voice of customer"],
+        [
+            circle(10, 8, 3),
+            path("M4.5 20 C5.3 15.5 7.3 13.5 10 13.5 C12.7 13.5 14.7 15.5 15.5 20"),
+            path("M16.5 8.5 C16.5 6.8 18.8 6.5 19.5 8 C20.2 6.5 22.5 6.8 22.5 8.5 C22.5 10.8 19.5 12.5 19.5 12.5 C19.5 12.5 16.5 10.8 16.5 8.5"),
+        ],
+        [
+            circle(10, 8, 3),
+            line(4.5, 20, 6, 16.5),
+            line(6, 16.5, 8.5, 13.5),
+            line(8.5, 13.5, 11.5, 13.5),
+            line(11.5, 13.5, 14, 16.5),
+            line(14, 16.5, 15.5, 20),
+            line(17, 8.5, 19.5, 12.5),
+            line(19.5, 12.5, 22, 8.5),
+        ],
+        legacy_id="user",
+        notes="Customer is human-first; the small heart is part of the metaphor, not a status badge.",
+    ),
+    pilot_icon(
+        "market",
+        "Market",
+        "Business",
+        ["market scan", "market opportunity", "segment"],
+        ["market", "opportunity", "segment", "competitor", "industry", "demand", "growth pool", "go to market", "landscape"],
+        [
+            circle(12, 12, 8),
+            path("M4 12 H20"),
+            path("M12 4 C9.5 6.5 8.2 9.2 8.2 12 C8.2 14.8 9.5 17.5 12 20"),
+            path("M12 4 C14.5 6.5 15.8 9.2 15.8 12 C15.8 14.8 14.5 17.5 12 20"),
+            path("M6.3 7.2 H17.7"),
+            path("M6.3 16.8 H17.7"),
+        ],
+        [
+            circle(12, 12, 8),
+            line(4, 12, 20, 12),
+            line(12, 4, 8.2, 12),
+            line(8.2, 12, 12, 20),
+            line(12, 4, 15.8, 12),
+            line(15.8, 12, 12, 20),
+            line(6.3, 7.2, 17.7, 7.2),
+            line(6.3, 16.8, 17.7, 16.8),
+        ],
+        legacy_id="globe",
+        notes="Market uses globe geometry because the search context is external opportunity.",
+    ),
+    pilot_icon(
+        "cloud",
+        "Cloud",
+        "Technology",
+        ["cloud platform", "saas platform", "hosted infrastructure"],
+        ["cloud", "platform", "saas", "software as a service", "hosting", "infrastructure", "internet", "compute", "digital", "application"],
+        [
+            path("M7.2 17.5H17.8C20 17.5 21.5 16 21.5 14C21.5 12.1 20 10.7 18.1 10.6C17.5 7.8 15.1 5.8 12.2 5.8C9.7 5.8 7.6 7.3 6.7 9.6C4.3 9.8 2.5 11.5 2.5 13.7C2.5 15.9 4.5 17.5 7.2 17.5Z"),
+        ],
+        [
+            circle(7, 12.5, 3.5),
+            circle(12, 9.5, 4.5),
+            circle(17, 12.2, 3.7),
+            line(6, 17.5, 18, 17.5),
+        ],
+        notes="Single continuous cloud silhouette in preview; fallback remains editable grouped vectors.",
+    ),
+    pilot_icon(
+        "database",
+        "Database",
+        "Technology",
+        ["data store", "warehouse", "repository"],
+        ["database", "data", "storage", "warehouse", "records", "sql", "repository", "platform", "lakehouse"],
+        [
+            ellipse(5, 4, 14, 5),
+            path("M5 6.5 V17.5 C5 18.9 8.1 20 12 20 C15.9 20 19 18.9 19 17.5 V6.5"),
+            path("M5 11.8 C5 13.2 8.1 14.3 12 14.3 C15.9 14.3 19 13.2 19 11.8"),
+            path("M5 16 C5 17.4 8.1 18.5 12 18.5 C15.9 18.5 19 17.4 19 16"),
+        ],
+        [
+            ellipse(5, 4, 14, 5),
+            line(5, 6.5, 5, 17.5),
+            line(19, 6.5, 19, 17.5),
+            ellipse(5, 9.3, 14, 5),
+            ellipse(5, 13.5, 14, 5),
+        ],
+        notes="Classic cylinder with consistent vertical rhythm and reduced internal clutter.",
+    ),
+    pilot_icon(
+        "ai",
+        "Artificial Intelligence",
+        "Technology",
+        ["ai", "machine learning", "gen ai"],
+        ["ai", "artificial intelligence", "machine learning", "model", "neural network", "gen ai", "automation", "agent", "cognition"],
+        [
+            rect(5, 5, 14, 14, rx=3),
+            line(8, 3, 8, 5),
+            line(12, 3, 12, 5),
+            line(16, 3, 16, 5),
+            line(8, 19, 8, 21),
+            line(12, 19, 12, 21),
+            line(16, 19, 16, 21),
+            line(3, 8, 5, 8),
+            line(3, 16, 5, 16),
+            line(19, 8, 21, 8),
+            line(19, 16, 21, 16),
+            circle(12, 12, 1.3, filled=True),
+            circle(8.8, 9.2, 0.9, filled=True),
+            circle(15.5, 9.5, 0.9, filled=True),
+            circle(15.3, 15.5, 0.9, filled=True),
+            path("M8.8 9.2 L12 12 L15.5 9.5"),
+            path("M12 12 L15.3 15.5"),
+        ],
+        [
+            rect(5, 5, 14, 14, rx=3),
+            line(8, 3, 8, 5),
+            line(12, 3, 12, 5),
+            line(16, 3, 16, 5),
+            line(8, 19, 8, 21),
+            line(12, 19, 12, 21),
+            line(16, 19, 16, 21),
+            line(3, 8, 5, 8),
+            line(3, 16, 5, 16),
+            line(19, 8, 21, 8),
+            line(19, 16, 21, 16),
+            circle(12, 12, 1.3, filled=True),
+            circle(8.8, 9.2, 0.9, filled=True),
+            circle(15.5, 9.5, 0.9, filled=True),
+            circle(15.3, 15.5, 0.9, filled=True),
+            line(8.8, 9.2, 12, 12),
+            line(12, 12, 15.5, 9.5),
+            line(12, 12, 15.3, 15.5),
+        ],
+        legacy_id="ai-brain",
+        notes="Chip plus sparse model graph; avoids the ambiguous cloud-upload read.",
+    ),
+    pilot_icon(
+        "cybersecurity",
+        "Cybersecurity",
+        "Security",
+        ["security", "cyber security", "protection"],
+        ["cybersecurity", "security", "protection", "shield", "lock", "privacy", "control", "resilience", "threat"],
+        [
+            path("M12 3 L19 5.7 V11.4 C19 15.5 16.2 18.8 12 21 C7.8 18.8 5 15.5 5 11.4 V5.7 Z"),
+            rect(8.5, 10.5, 7, 5.8),
+            path("M10 10.5 V8.6 C10 7.2 10.9 6.3 12 6.3 C13.1 6.3 14 7.2 14 8.6 V10.5"),
+            line(12, 13, 12, 14.8),
+        ],
+        [
+            *polyline((12, 3), (19, 5.7), (19, 11.4), (16.2, 18.8), (12, 21), (7.8, 18.8), (5, 11.4), (5, 5.7), closed=True),
+            rect(8.5, 10.5, 7, 5.8),
+            line(10, 10.5, 10, 8.6),
+            line(10, 8.6, 12, 6.3),
+            line(12, 6.3, 14, 8.6),
+            line(14, 8.6, 14, 10.5),
+            line(12, 13, 12, 14.8),
+        ],
+        legacy_id="lock",
+        notes="Security family anchor: shield as container, lock as internal detail.",
+    ),
+    pilot_icon(
+        "process",
+        "Process",
+        "Operations",
+        ["workflow", "operating process", "value stream"],
+        ["process", "workflow", "steps", "flow", "procedure", "pipeline", "operations", "value chain", "standard work"],
+        [
+            rect(4, 5, 16, 14, rx=2),
+            line(7, 9, 17, 9),
+            line(7, 15, 17, 15),
+            circle(7, 12, 1.4, filled=True),
+            circle(12, 12, 1.4, filled=True),
+            circle(17, 12, 1.4, filled=True),
+            path("M8.4 12 H10.6"),
+            path("M13.4 12 H15.6"),
+        ],
+        [
+            rect(4, 5, 16, 14, rx=2),
+            line(7, 9, 17, 9),
+            line(7, 15, 17, 15),
+            circle(7, 12, 1.4, filled=True),
+            circle(12, 12, 1.4, filled=True),
+            circle(17, 12, 1.4, filled=True),
+            line(8.4, 12, 10.6, 12),
+            line(13.4, 12, 15.6, 12),
+        ],
+        notes="Value-stream card with three clear stages, distinct from transformation arrows.",
+    ),
+    pilot_icon(
+        "supply-chain",
+        "Supply Chain",
+        "Operations",
+        ["value chain", "logistics network", "supplier network"],
+        ["supply chain", "logistics", "supplier", "distribution", "procurement", "network", "flow", "operations", "value chain"],
+        [
+            rect(3, 4, 5, 5),
+            rect(16, 4, 5, 5),
+            rect(9.5, 15, 5, 5),
+            path("M8 6.5 H16"),
+            path("M6 9 L10.5 15"),
+            path("M18 9 L13.5 15"),
+            circle(12, 12, 0.8, filled=True),
+        ],
+        [
+            rect(3, 4, 5, 5),
+            rect(16, 4, 5, 5),
+            rect(9.5, 15, 5, 5),
+            line(8, 6.5, 16, 6.5),
+            line(6, 9, 10.5, 15),
+            line(18, 9, 13.5, 15),
+            circle(12, 12, 0.8, filled=True),
+        ],
+        notes="Network is compact and aligned, with no miniature status overlay.",
+    ),
+    pilot_icon(
+        "factory",
+        "Factory",
+        "Operations",
+        ["manufacturing plant", "production site", "industrial operations"],
+        ["factory", "manufacturing", "production", "operations", "plant", "industry", "output", "facility", "industrial"],
+        [
+            svg_polyline((3, 20), (3, 11), (8, 14), (8, 10), (13, 13), (13, 9), (18, 12), (18, 20)),
+            rect(18, 5, 3, 15),
+            line(3, 20, 21, 20),
+            rect(6, 16, 3, 4),
+            rect(12, 16, 3, 4),
+            line(19.5, 7, 19.5, 9),
+        ],
+        [
+            *polyline((3, 20), (3, 11), (8, 14), (8, 10), (13, 13), (13, 9), (18, 12), (18, 20)),
+            rect(18, 5, 3, 15),
+            line(3, 20, 21, 20),
+            rect(6, 16, 3, 4),
+            rect(12, 16, 3, 4),
+            line(19.5, 7, 19.5, 9),
+        ],
+        notes="Industrial roofline kept as a recognizable consulting shorthand.",
+    ),
+    pilot_icon(
+        "finance",
+        "Finance",
+        "Finance",
+        ["financial performance", "capital", "money"],
+        ["finance", "financial", "capital", "revenue", "profit", "cash", "value", "investment", "performance"],
+        [
+            circle(12, 12, 8),
+            line(12, 7, 12, 17),
+            path("M15.2 8.8 C14.3 7.8 12.4 7.4 10.8 8.1 C9.2 8.8 9.3 10.7 11.1 11.2 L13.2 11.8 C15.2 12.4 15.3 15 13.2 15.8 C11.5 16.4 9.6 15.8 8.8 14.7"),
+        ],
+        [
+            circle(12, 12, 8),
+            line(12, 7, 12, 17),
+            line(15.2, 8.8, 10.8, 8.1),
+            line(10.8, 8.1, 9.3, 10.7),
+            line(9.3, 10.7, 13.2, 11.8),
+            line(13.2, 11.8, 15.3, 15),
+            line(15.3, 15, 13.2, 15.8),
+            line(13.2, 15.8, 8.8, 14.7),
+        ],
+        legacy_id="currency",
+        notes="Financial icon anchors the family with a controlled currency mark.",
+    ),
+    pilot_icon(
+        "risk",
+        "Risk",
+        "Security",
+        ["warning", "risk exposure", "issue"],
+        ["risk", "warning", "exposure", "issue", "threat", "control", "governance", "compliance", "attention"],
+        [
+            svg_polyline((12, 3), (21, 20), (3, 20), closed=True),
+            line(12, 8.5, 12, 14),
+            circle(12, 17, 0.8, filled=True),
+        ],
+        [
+            *polyline((12, 3), (21, 20), (3, 20), closed=True),
+            line(12, 8.5, 12, 14),
+            circle(12, 17, 0.8, filled=True),
+        ],
+        notes="Simple risk triangle with consistent interior spacing.",
+    ),
+    pilot_icon(
+        "sustainability",
+        "Sustainability",
+        "ESG",
+        ["leaf", "green growth", "environment"],
+        ["sustainability", "esg", "climate", "environment", "green", "leaf", "decarbonization", "nature", "circular"],
+        [
+            path("M4.5 18.5 C5 11 10.3 5.8 20 4 C18.8 13.7 13.5 19 6 19"),
+            path("M6 18.5 C9.8 14.5 13.5 10.7 18 6.5"),
+            path("M10 14.5 H14.5"),
+            path("M13.5 11.2 V8.2"),
+        ],
+        [
+            *polyline((4.5, 18.5), (5, 11), (10.3, 5.8), (20, 4), (18.8, 13.7), (13.5, 19), (6, 19)),
+            line(6, 18.5, 18, 6.5),
+            line(10, 14.5, 14.5, 14.5),
+            line(13.5, 11.2, 13.5, 8.2),
+        ],
+        notes="Leaf uses one continuous organic outline in preview, grounded by sparse veins.",
+    ),
+    pilot_icon(
+        "document",
+        "Document",
+        "Business",
+        ["file", "report", "memo"],
+        ["document", "file", "report", "paper", "memo", "record", "attachment", "content", "deliverable"],
+        [
+            path("M6 3 H14 L19 8 V21 H6 Z"),
+            svg_polyline((14, 3), (14, 8), (19, 8)),
+            line(9, 12, 16, 12),
+            line(9, 15.5, 16, 15.5),
+            line(9, 19, 13.5, 19),
+        ],
+        [
+            rect(6, 3, 13, 18),
+            line(14, 3, 19, 8),
+            line(14, 3, 14, 8),
+            line(14, 8, 19, 8),
+            line(9, 12, 16, 12),
+            line(9, 15.5, 16, 15.5),
+            line(9, 19, 13.5, 19),
+        ],
+        notes="Folded document corner sets a reusable file-family proportion.",
+    ),
+    pilot_icon(
+        "communication",
+        "Communication",
+        "Communication",
+        ["conversation", "message", "stakeholder communication"],
+        ["communication", "message", "conversation", "chat", "stakeholder", "announcement", "feedback", "dialogue", "alignment"],
+        [
+            path("M4 6 H18 V15 H10 L6 19 V15 H4 Z"),
+            circle(8, 10.5, 0.7, filled=True),
+            circle(11, 10.5, 0.7, filled=True),
+            circle(14, 10.5, 0.7, filled=True),
+        ],
+        [
+            rect(4, 6, 14, 9),
+            line(10, 15, 6, 19),
+            line(6, 19, 6, 15),
+            circle(8, 10.5, 0.7, filled=True),
+            circle(11, 10.5, 0.7, filled=True),
+            circle(14, 10.5, 0.7, filled=True),
+        ],
+        legacy_id="chat",
+        notes="Single speech bubble with large negative space for thumbnail legibility.",
+    ),
+    pilot_icon(
+        "roadmap",
+        "Roadmap",
+        "Business",
+        ["strategic roadmap", "initiative plan", "delivery roadmap"],
+        ["roadmap", "strategy", "plan", "timeline", "milestone", "initiative", "delivery", "transformation", "program"],
+        [
+            path("M4 18 H20"),
+            line(6, 18, 6, 9),
+            line(12, 18, 12, 5),
+            line(18, 18, 18, 11),
+            circle(6, 9, 1.8, filled=True),
+            circle(12, 5, 1.8, filled=True),
+            circle(18, 11, 1.8, filled=True),
+        ],
+        [
+            line(4, 18, 20, 18),
+            line(6, 18, 6, 9),
+            line(12, 18, 12, 5),
+            line(18, 18, 18, 11),
+            circle(6, 9, 1.8, filled=True),
+            circle(12, 5, 1.8, filled=True),
+            circle(18, 11, 1.8, filled=True),
+        ],
+        legacy_id="roadmap",
+        notes="Timeline with three clear commitments; no tiny labels or route clutter.",
+    ),
+    pilot_icon(
+        "portfolio",
+        "Portfolio",
+        "Business",
+        ["initiative portfolio", "project portfolio", "business portfolio"],
+        ["portfolio", "initiatives", "projects", "programs", "prioritization", "investment", "pipeline", "governance", "portfolio management"],
+        [
+            rect(4, 5, 6.5, 5.5, rx=1),
+            rect(13.5, 5, 6.5, 5.5, rx=1),
+            rect(4, 13.5, 6.5, 5.5, rx=1),
+            rect(13.5, 13.5, 6.5, 5.5, rx=1),
+            path("M7 3 H17"),
+            line(7, 3, 7, 5),
+            line(17, 3, 17, 5),
+        ],
+        [
+            rect(4, 5, 6.5, 5.5, rx=1),
+            rect(13.5, 5, 6.5, 5.5, rx=1),
+            rect(4, 13.5, 6.5, 5.5, rx=1),
+            rect(13.5, 13.5, 6.5, 5.5, rx=1),
+            line(7, 3, 17, 3),
+            line(7, 3, 7, 5),
+            line(17, 3, 17, 5),
+        ],
+        legacy_id="portfolio",
+        notes="Four balanced initiative cards under a single portfolio spine.",
+    ),
+    pilot_icon(
+        "matrix",
+        "Two by Two Matrix",
+        "Business",
+        ["2x2 matrix", "quadrant chart", "prioritization matrix"],
+        ["matrix", "2x2", "quadrant", "prioritization", "framework", "analysis", "positioning", "decision", "consulting framework"],
+        [
+            rect(4, 4, 16, 16, rx=1.4),
+            line(12, 4, 12, 20),
+            line(4, 12, 20, 12),
+            circle(16, 8, 1.2, filled=True),
+            circle(8, 16, 1.2, filled=True),
+        ],
+        [
+            rect(4, 4, 16, 16, rx=1.4),
+            line(12, 4, 12, 20),
+            line(4, 12, 20, 12),
+            circle(16, 8, 1.2, filled=True),
+            circle(8, 16, 1.2, filled=True),
+        ],
+        legacy_id="matrix",
+        notes="Canonical consulting quadrant with only two points to avoid chart noise.",
+    ),
+    pilot_icon(
+        "decision-tree",
+        "Decision Tree",
+        "Business",
+        ["decision logic", "choice tree", "branching analysis"],
+        ["decision tree", "decision", "choice", "options", "branch", "logic", "scenario", "analysis", "decision path"],
+        [
+            circle(6, 12, 2.6),
+            rect(16, 4, 5, 4, rx=1),
+            rect(16, 10, 5, 4, rx=1),
+            rect(16, 16, 5, 4, rx=1),
+            path("M8.6 12 H12 V6 H16"),
+            path("M12 12 H16"),
+            path("M12 12 V18 H16"),
+        ],
+        [
+            circle(6, 12, 2.6),
+            rect(16, 4, 5, 4, rx=1),
+            rect(16, 10, 5, 4, rx=1),
+            rect(16, 16, 5, 4, rx=1),
+            line(8.6, 12, 12, 12),
+            line(12, 12, 12, 6),
+            line(12, 6, 16, 6),
+            line(12, 12, 16, 12),
+            line(12, 12, 12, 18),
+            line(12, 18, 16, 18),
+        ],
+        legacy_id="decision-tree",
+        notes="Decision root and three options, with branch rhythm matching supply-chain connectors.",
+    ),
+    pilot_icon(
+        "milestone",
+        "Milestone",
+        "Business",
+        ["project milestone", "stage gate", "checkpoint"],
+        ["milestone", "checkpoint", "stage gate", "project", "timeline", "delivery", "progress", "deadline", "initiative"],
+        [
+            line(4, 18, 20, 18),
+            circle(6, 18, 1.1, filled=True),
+            circle(18, 18, 1.1, filled=True),
+            svg_polyline((9, 9.5), (12, 6), (15, 9.5), (12, 13), closed=True),
+            line(12, 13, 12, 18),
+        ],
+        [
+            line(4, 18, 20, 18),
+            circle(6, 18, 1.1, filled=True),
+            circle(18, 18, 1.1, filled=True),
+            *polyline((9, 9.5), (12, 6), (15, 9.5), (12, 13), closed=True),
+            line(12, 13, 12, 18),
+        ],
+        legacy_id="milestone",
+        notes="Stage-gate diamond on a quiet timeline; recognizable without a flag.",
+    ),
+    pilot_icon(
+        "performance-gauge",
+        "Performance Gauge",
+        "Business",
+        ["speedometer", "kpi gauge", "performance meter"],
+        ["performance", "gauge", "speedometer", "kpi", "score", "measurement", "dashboard", "progress", "performance management"],
+        [
+            path("M4.5 16.5 C5 10.5 8.2 6.2 12 6.2 C15.8 6.2 19 10.5 19.5 16.5"),
+            line(5, 17, 19, 17),
+            line(12, 17, 16.5, 10.5),
+            circle(12, 17, 1.3, filled=True),
+            line(7.5, 14.3, 9, 15),
+            line(12, 9, 12, 10.8),
+            line(16.5, 14.3, 15, 15),
+        ],
+        [
+            *polyline((4.5, 16.5), (5.5, 12), (8, 8), (12, 6.2), (16, 8), (18.5, 12), (19.5, 16.5)),
+            line(5, 17, 19, 17),
+            line(12, 17, 16.5, 10.5),
+            circle(12, 17, 1.3, filled=True),
+            line(7.5, 14.3, 9, 15),
+            line(12, 9, 12, 10.8),
+            line(16.5, 14.3, 15, 15),
+        ],
+        legacy_id="speedometer",
+        notes="Open gauge avoids enclosing the mark in a heavy circle at thumbnail size.",
+    ),
+    pilot_icon(
+        "market-outlook",
+        "Market Outlook",
+        "Business",
+        ["market scan", "future outlook", "opportunity horizon"],
+        ["market outlook", "outlook", "market scan", "future", "vision", "research", "opportunity", "horizon", "forecast"],
+        [
+            circle(10, 10, 5.6),
+            path("M5 11.5 H15"),
+            path("M7 9.5 C8.5 8.3 11.5 8.3 13 9.5"),
+            line(14.2, 14.2, 20, 20),
+            line(17.2, 20, 20, 20),
+            line(20, 17.2, 20, 20),
+        ],
+        [
+            circle(10, 10, 5.6),
+            line(5, 11.5, 15, 11.5),
+            line(7, 9.5, 10, 8.6),
+            line(10, 8.6, 13, 9.5),
+            line(14.2, 14.2, 20, 20),
+            line(17.2, 20, 20, 20),
+            line(20, 17.2, 20, 20),
+        ],
+        legacy_id="binoculars",
+        notes="Horizon inside a search lens reads as market outlook without binocular detail.",
+    ),
+    pilot_icon(
+        "ambition",
+        "Ambition",
+        "Business",
+        ["aspiration", "summit", "bold goal"],
+        ["ambition", "aspiration", "summit", "challenge", "goal", "vision", "achievement", "north star", "target state"],
+        [
+            svg_polyline((3, 20), (9, 9), (13, 14), (17, 5), (21, 20)),
+            line(3, 20, 21, 20),
+            svg_polyline((14.5, 9.5), (17, 5), (19.5, 9.5)),
+            line(8.2, 10.6, 10, 12.2),
+        ],
+        [
+            *polyline((3, 20), (9, 9), (13, 14), (17, 5), (21, 20)),
+            line(3, 20, 21, 20),
+            *polyline((14.5, 9.5), (17, 5), (19.5, 9.5)),
+            line(8.2, 10.6, 10, 12.2),
+        ],
+        legacy_id="mountain",
+        notes="Mountain target-state metaphor with one summit accent and stable baseline.",
+    ),
+    pilot_icon(
+        "value",
+        "Value",
+        "Business",
+        ["premium value", "value proposition", "differentiation"],
+        ["value", "diamond", "premium", "proposition", "benefit", "differentiation", "quality", "customer", "value creation"],
+        [
+            svg_polyline((4, 8), (8, 4), (16, 4), (20, 8), (12, 20), closed=True),
+            line(4, 8, 20, 8),
+            path("M8 4 L10 8 L12 20"),
+            path("M16 4 L14 8 L12 20"),
+        ],
+        [
+            *polyline((4, 8), (8, 4), (16, 4), (20, 8), (12, 20), closed=True),
+            line(4, 8, 20, 8),
+            line(8, 4, 10, 8),
+            line(10, 8, 12, 20),
+            line(16, 4, 14, 8),
+            line(14, 8, 12, 20),
+        ],
+        legacy_id="diamond",
+        notes="Simplified value diamond with enough facets to read at presentation size.",
+    ),
+    pilot_icon(
+        "priority",
+        "Priority",
+        "Business",
+        ["top priority", "critical focus", "important initiative"],
+        ["priority", "important", "top", "focus", "critical", "highlight", "initiative", "must win", "star"],
+        [
+            path("M12 4 L14.1 9 L19.5 9.4 L15.4 12.9 L16.7 18.2 L12 15.3 L7.3 18.2 L8.6 12.9 L4.5 9.4 L9.9 9 Z"),
+        ],
+        [
+            *polyline((12, 4), (14.1, 9), (19.5, 9.4), (15.4, 12.9), (16.7, 18.2), (12, 15.3), (7.3, 18.2), (8.6, 12.9), (4.5, 9.4), (9.9, 9), closed=True),
+        ],
+        legacy_id="star",
+        notes="Priority remains a star, but with softened proportions and larger negative space.",
+    ),
+    pilot_icon(
+        "capital",
+        "Capital",
+        "Finance",
+        ["financial capital", "funding base", "cash reserves"],
+        ["capital", "funding", "reserves", "money", "finance", "liquidity", "cash", "equity", "balance sheet"],
+        [
+            ellipse(5, 5, 10, 4),
+            path("M5 7 V15 C5 16.2 7.2 17.1 10 17.1 C12.8 17.1 15 16.2 15 15 V7"),
+            path("M5 11 C5 12.2 7.2 13.1 10 13.1 C12.8 13.1 15 12.2 15 11"),
+            ellipse(10, 13, 10, 4),
+            path("M10 15 V19 C10 20.2 12.2 21.1 15 21.1 C17.8 21.1 20 20.2 20 19 V15"),
+        ],
+        [
+            ellipse(5, 5, 10, 4),
+            line(5, 7, 5, 15),
+            line(15, 7, 15, 15),
+            ellipse(5, 9, 10, 4),
+            ellipse(5, 13, 10, 4),
+            ellipse(10, 13, 10, 4),
+            line(10, 15, 10, 19),
+            line(20, 15, 20, 19),
+        ],
+        legacy_id="coin-stack",
+        notes="Two offset coin stacks signal capital depth without many thin rings.",
+    ),
+    pilot_icon(
+        "cash-flow",
+        "Cash Flow",
+        "Finance",
+        ["money flow", "funds flow", "working capital movement"],
+        ["cash flow", "money", "inflow", "outflow", "liquidity", "finance", "working capital", "treasury", "funds flow"],
+        [
+            circle(12, 12, 3.6),
+            line(12, 9.8, 12, 14.2),
+            line(10.3, 12, 13.7, 12),
+            path("M3.5 8 H8"),
+            svg_polyline((5.8, 5.8), (3.5, 8), (5.8, 10.2)),
+            path("M16 16 H20.5"),
+            svg_polyline((18.2, 13.8), (20.5, 16), (18.2, 18.2)),
+        ],
+        [
+            circle(12, 12, 3.6),
+            line(12, 9.8, 12, 14.2),
+            line(10.3, 12, 13.7, 12),
+            line(3.5, 8, 8, 8),
+            line(5.8, 5.8, 3.5, 8),
+            line(3.5, 8, 5.8, 10.2),
+            line(16, 16, 20.5, 16),
+            line(18.2, 13.8, 20.5, 16),
+            line(20.5, 16, 18.2, 18.2),
+        ],
+        legacy_id="cash-flow",
+        notes="Central cash mark with clear inflow/outflow arrows, kept below complexity limit.",
+    ),
+    pilot_icon(
+        "budget",
+        "Budget",
+        "Finance",
+        ["budget plan", "spending plan", "financial plan"],
+        ["budget", "plan", "spending", "cost", "finance", "allocation", "forecast", "control", "planning"],
+        [
+            rect(5, 3.5, 14, 17, rx=1.5),
+            line(8, 8, 16, 8),
+            line(8, 12, 13, 12),
+            line(8, 16, 12, 16),
+            circle(15.5, 15.5, 2.2),
+            line(15.5, 14.2, 15.5, 16.8),
+            line(14.2, 15.5, 16.8, 15.5),
+        ],
+        [
+            rect(5, 3.5, 14, 17, rx=1.5),
+            line(8, 8, 16, 8),
+            line(8, 12, 13, 12),
+            line(8, 16, 12, 16),
+            circle(15.5, 15.5, 2.2),
+            line(15.5, 14.2, 15.5, 16.8),
+            line(14.2, 15.5, 16.8, 15.5),
+        ],
+        legacy_id="budget",
+        notes="Budget sheet with allocation control mark; belongs to the document family.",
+    ),
+    pilot_icon(
+        "forecast",
+        "Financial Forecast",
+        "Finance",
+        ["financial projection", "forecast model", "outlook model"],
+        ["forecast", "projection", "outlook", "finance", "model", "estimate", "planning", "future", "financial forecast"],
+        [
+            line(4, 19, 20, 19),
+            line(4, 19, 4, 5),
+            path("M6 15 L9.5 12.5 L12.5 14 L17.5 8"),
+            svg_polyline((14.5, 8), (17.5, 8), (17.5, 11)),
+            path("M7 7 C10 5.6 13.5 5.6 17 7"),
+        ],
+        [
+            line(4, 19, 20, 19),
+            line(4, 19, 4, 5),
+            line(6, 15, 9.5, 12.5),
+            line(9.5, 12.5, 12.5, 14),
+            line(12.5, 14, 17.5, 8),
+            line(14.5, 8, 17.5, 8),
+            line(17.5, 8, 17.5, 11),
+            line(7, 7, 10, 6),
+            line(10, 6, 13.5, 6),
+            line(13.5, 6, 17, 7),
+        ],
+        legacy_id="forecast",
+        notes="Forecast is a trend plus uncertainty arc, separated from plain growth.",
+    ),
+    pilot_icon(
+        "profit-loss",
+        "Profit and Loss",
+        "Finance",
+        ["p and l", "income statement", "profit loss statement"],
+        ["profit", "loss", "income statement", "p&l", "revenue", "expense", "earnings", "finance", "margin"],
+        [
+            rect(5, 3.5, 14, 17, rx=1.4),
+            line(8, 8, 16, 8),
+            line(8, 12, 16, 12),
+            line(8, 16, 12, 16),
+            line(15, 14, 15, 18),
+            line(13, 16, 17, 16),
+            line(8, 6.2, 8, 9.8),
+        ],
+        [
+            rect(5, 3.5, 14, 17, rx=1.4),
+            line(8, 8, 16, 8),
+            line(8, 12, 16, 12),
+            line(8, 16, 12, 16),
+            line(15, 14, 15, 18),
+            line(13, 16, 17, 16),
+            line(8, 6.2, 8, 9.8),
+        ],
+        legacy_id="profit-loss",
+        notes="Statement page with plus/minus cues instead of text labels.",
+    ),
+    pilot_icon(
+        "investment",
+        "Investment",
+        "Finance",
+        ["capital investment", "investing", "growth capital"],
+        ["investment", "capital", "funding", "return", "growth", "portfolio", "finance", "asset", "investing"],
+        [
+            circle(7.5, 15.5, 3.4),
+            line(7.5, 13.4, 7.5, 17.6),
+            line(5.6, 15.5, 9.4, 15.5),
+            path("M11.5 15 L15.2 11.5 L17.8 12.8 L21 7"),
+            svg_polyline((17.8, 7), (21, 7), (21, 10.2)),
+        ],
+        [
+            circle(7.5, 15.5, 3.4),
+            line(7.5, 13.4, 7.5, 17.6),
+            line(5.6, 15.5, 9.4, 15.5),
+            line(11.5, 15, 15.2, 11.5),
+            line(15.2, 11.5, 17.8, 12.8),
+            line(17.8, 12.8, 21, 7),
+            line(17.8, 7, 21, 7),
+            line(21, 7, 21, 10.2),
+        ],
+        legacy_id="investment",
+        notes="Coin plus return path, visually related to growth but finance-specific.",
+    ),
+    pilot_icon(
+        "tax",
+        "Tax",
+        "Finance",
+        ["tax rate", "taxation", "fiscal charge"],
+        ["tax", "taxation", "fiscal", "rate", "government", "finance", "compliance", "payment", "tax rate"],
+        [
+            rect(5, 4, 14, 16, rx=1.4),
+            circle(8.5, 8.5, 1.3),
+            circle(15.5, 15.5, 1.3),
+            line(9, 16, 15, 8),
+            line(8, 12, 16, 12),
+        ],
+        [
+            rect(5, 4, 14, 16, rx=1.4),
+            circle(8.5, 8.5, 1.3),
+            circle(15.5, 15.5, 1.3),
+            line(9, 16, 15, 8),
+            line(8, 12, 16, 12),
+        ],
+        legacy_id="tax",
+        notes="Tax keeps the percent cue but anchors it in a document frame.",
+    ),
+    pilot_icon(
+        "treasury-security",
+        "Treasury Security",
+        "Finance",
+        ["financial security", "safe funds", "treasury protection"],
+        ["treasury", "security", "safe", "vault", "finance", "assets", "cash", "protection", "financial security"],
+        [
+            rect(4, 5, 16, 14, rx=2),
+            circle(12, 12, 4),
+            line(12, 8, 12, 12),
+            line(12, 12, 14.5, 13.5),
+            rect(2, 9, 2, 6, rx=0.6),
+            rect(20, 9, 2, 6, rx=0.6),
+        ],
+        [
+            rect(4, 5, 16, 14, rx=2),
+            circle(12, 12, 4),
+            line(12, 8, 12, 12),
+            line(12, 12, 14.5, 13.5),
+            rect(2, 9, 2, 6, rx=0.6),
+            rect(20, 9, 2, 6, rx=0.6),
+        ],
+        legacy_id="safe",
+        notes="Vault face for protected funds, distinct from cyber lock/shield.",
+    ),
+    pilot_icon(
+        "pricing",
+        "Pricing",
+        "Finance",
+        ["price tag", "pricing strategy", "price point"],
+        ["pricing", "price", "price tag", "monetization", "revenue", "offer", "commercial", "finance", "price point"],
+        [
+            path("M4 6 H13 L20 13 L13 20 L4 11 Z"),
+            circle(8.5, 9.5, 1.1, filled=True),
+            line(12, 10, 15, 13),
+            line(12, 16, 16, 12),
+        ],
+        [
+            *polyline((4, 6), (13, 6), (20, 13), (13, 20), (4, 11), closed=True),
+            circle(8.5, 9.5, 1.1, filled=True),
+            line(12, 10, 15, 13),
+            line(12, 16, 16, 12),
+        ],
+        legacy_id="wallet",
+        notes="Commercial price tag with a sparse value mark, no currency dependency.",
+    ),
+    pilot_icon(
+        "margin",
+        "Margin",
+        "Finance",
+        ["profit margin", "margin improvement", "spread"],
+        ["margin", "profit margin", "spread", "profitability", "cost", "price", "finance", "performance", "margin improvement"],
+        [
+            line(4, 19, 20, 19),
+            line(4, 19, 4, 5),
+            path("M6 15 L18 8"),
+            path("M6 10 L18 5"),
+            svg_polyline((15.5, 5), (18, 5), (18, 7.5)),
+            svg_polyline((15.5, 8), (18, 8), (18, 10.5)),
+        ],
+        [
+            line(4, 19, 20, 19),
+            line(4, 19, 4, 5),
+            line(6, 15, 18, 8),
+            line(6, 10, 18, 5),
+            line(15.5, 5, 18, 5),
+            line(18, 5, 18, 7.5),
+            line(15.5, 8, 18, 8),
+            line(18, 8, 18, 10.5),
+        ],
+        legacy_id="growth",
+        notes="Two diverging performance lines make margin distinct from single-line growth.",
+    ),
+    pilot_icon(
+        "saas",
+        "Software as a Service",
+        "Technology",
+        ["saas", "cloud software", "subscription software"],
+        ["saas", "software as a service", "cloud", "subscription", "application", "platform", "digital", "technology", "software"],
+        [
+            path("M6.5 11.5H17.5C19.2 11.5 20.5 12.8 20.5 14.5C20.5 16.2 19.2 17.5 17.5 17.5H6.5C4.8 17.5 3.5 16.2 3.5 14.5C3.5 13 4.6 11.8 6.1 11.5C6.7 9 8.8 7.2 11.5 7.2C14.2 7.2 16.3 9 16.9 11.5"),
+            rect(8.5, 13.2, 7, 5, rx=1),
+            line(10.2, 15.7, 13.8, 15.7),
+        ],
+        [
+            circle(7, 14.5, 3),
+            circle(11.5, 11.7, 4.5),
+            circle(17, 14.5, 3),
+            line(6.5, 17.5, 17.5, 17.5),
+            rect(8.5, 13.2, 7, 5, rx=1),
+            line(10.2, 15.7, 13.8, 15.7),
+        ],
+        legacy_id="saas",
+        notes="Cloud plus app tile distinguishes SaaS from generic cloud infrastructure.",
+    ),
+    pilot_icon(
+        "microservices",
+        "Microservices",
+        "Technology",
+        ["service architecture", "distributed services", "microservice mesh"],
+        ["microservices", "services", "architecture", "distributed", "api", "cloud native", "components", "software", "service mesh"],
+        [
+            rect(4, 5, 5, 4.5, rx=1),
+            rect(15, 5, 5, 4.5, rx=1),
+            rect(4, 14.5, 5, 4.5, rx=1),
+            rect(15, 14.5, 5, 4.5, rx=1),
+            circle(12, 12, 1.6, filled=True),
+            line(9, 7.2, 12, 12),
+            line(15, 7.2, 12, 12),
+            line(9, 16.8, 12, 12),
+            line(15, 16.8, 12, 12),
+        ],
+        [
+            rect(4, 5, 5, 4.5, rx=1),
+            rect(15, 5, 5, 4.5, rx=1),
+            rect(4, 14.5, 5, 4.5, rx=1),
+            rect(15, 14.5, 5, 4.5, rx=1),
+            circle(12, 12, 1.6, filled=True),
+            line(9, 7.2, 12, 12),
+            line(15, 7.2, 12, 12),
+            line(9, 16.8, 12, 12),
+            line(15, 16.8, 12, 12),
+        ],
+        legacy_id="microservices",
+        notes="Four services around a hub; avoids dense container-grid detail.",
+    ),
+    pilot_icon(
+        "data-pipeline",
+        "Data Pipeline",
+        "Technology",
+        ["etl", "data flow", "integration pipeline"],
+        ["data pipeline", "etl", "data flow", "integration", "processing", "analytics", "transform", "data engineering", "pipeline"],
+        [
+            ellipse(3.5, 6, 5, 4),
+            ellipse(15.5, 14, 5, 4),
+            rect(9.5, 8.5, 5, 5, rx=1),
+            path("M8.5 8 L9.5 11"),
+            path("M14.5 11 L15.5 16"),
+            svg_polyline((7.4, 10.2), (9.5, 11), (7.8, 12.4)),
+            svg_polyline((13.8, 14.6), (15.5, 16), (13.2, 16.8)),
+        ],
+        [
+            ellipse(3.5, 6, 5, 4),
+            ellipse(15.5, 14, 5, 4),
+            rect(9.5, 8.5, 5, 5, rx=1),
+            line(8.5, 8, 9.5, 11),
+            line(14.5, 11, 15.5, 16),
+            line(7.4, 10.2, 9.5, 11),
+            line(9.5, 11, 7.8, 12.4),
+            line(13.8, 14.6, 15.5, 16),
+            line(15.5, 16, 13.2, 16.8),
+        ],
+        legacy_id="data-pipeline",
+        notes="Input, transform, output flow with one clear processing stage.",
+    ),
+    pilot_icon(
+        "ai-agent",
+        "AI Agent",
+        "Technology",
+        ["ai agent", "automation agent", "digital assistant"],
+        ["ai agent", "agent", "automation", "assistant", "model", "ai", "artificial intelligence", "workflow", "autonomous"],
+        [
+            rect(5, 5, 14, 12, rx=2.2),
+            line(12, 3, 12, 5),
+            circle(12, 2.5, 0.9, filled=True),
+            circle(9, 10, 1, filled=True),
+            circle(15, 10, 1, filled=True),
+            path("M9 14 C10.5 15 13.5 15 15 14"),
+            line(8, 19, 16, 19),
+            line(12, 17, 12, 19),
+        ],
+        [
+            rect(5, 5, 14, 12, rx=2.2),
+            line(12, 3, 12, 5),
+            circle(12, 2.5, 0.9, filled=True),
+            circle(9, 10, 1, filled=True),
+            circle(15, 10, 1, filled=True),
+            line(9, 14, 11, 14.8),
+            line(11, 14.8, 13, 14.8),
+            line(13, 14.8, 15, 14),
+            line(8, 19, 16, 19),
+            line(12, 17, 12, 19),
+        ],
+        legacy_id="robot",
+        notes="Agent uses a restrained assistant face, not a detailed robot mascot.",
+    ),
+    pilot_icon(
+        "model",
+        "Model",
+        "Technology",
+        ["machine learning model", "predictive model", "algorithm"],
+        ["model", "machine learning", "algorithm", "predictive model", "ai", "training", "features", "inference", "neural network"],
+        [
+            circle(6, 12, 1.5, filled=True),
+            circle(12, 7, 1.5, filled=True),
+            circle(12, 17, 1.5, filled=True),
+            circle(18, 12, 1.5, filled=True),
+            line(7.5, 12, 10.5, 7),
+            line(7.5, 12, 10.5, 17),
+            line(13.5, 7, 16.5, 12),
+            line(13.5, 17, 16.5, 12),
+            circle(12, 12, 0.9, filled=True),
+        ],
+        [
+            circle(6, 12, 1.5, filled=True),
+            circle(12, 7, 1.5, filled=True),
+            circle(12, 17, 1.5, filled=True),
+            circle(18, 12, 1.5, filled=True),
+            line(7.5, 12, 10.5, 7),
+            line(7.5, 12, 10.5, 17),
+            line(13.5, 7, 16.5, 12),
+            line(13.5, 17, 16.5, 12),
+            circle(12, 12, 0.9, filled=True),
+        ],
+        legacy_id="ai-brain",
+        notes="Abstract model graph separates ML model from the chip-based AI icon.",
+    ),
+    pilot_icon(
+        "code-branch",
+        "Code Branch",
+        "Technology",
+        ["git branch", "version control", "source branch"],
+        ["code branch", "git", "branch", "version control", "source", "code", "development", "merge", "repository"],
+        [
+            circle(6, 6, 2),
+            circle(18, 6, 2),
+            circle(12, 18, 2),
+            path("M6 8 V11 C6 13 8 13.5 10 15 L12 16"),
+            path("M18 8 V11 C18 13 16 13.5 14 15 L12 16"),
+        ],
+        [
+            circle(6, 6, 2),
+            circle(18, 6, 2),
+            circle(12, 18, 2),
+            line(6, 8, 6, 11),
+            line(6, 11, 10, 15),
+            line(10, 15, 12, 16),
+            line(18, 8, 18, 11),
+            line(18, 11, 14, 15),
+            line(14, 15, 12, 16),
+        ],
+        legacy_id="git-branch",
+        notes="Merge branch geometry with three stable nodes.",
+    ),
+    pilot_icon(
+        "web-app",
+        "Web Application",
+        "Technology",
+        ["browser app", "web app", "digital product"],
+        ["web app", "web application", "browser", "software", "digital", "frontend", "product", "application", "website"],
+        [
+            rect(3.5, 4, 17, 16, rx=1.4),
+            line(3.5, 8, 20.5, 8),
+            circle(6, 6, 0.7, filled=True),
+            circle(8.5, 6, 0.7, filled=True),
+            rect(7, 11, 10, 5.5, rx=1),
+            line(9, 14, 15, 14),
+        ],
+        [
+            rect(3.5, 4, 17, 16, rx=1.4),
+            line(3.5, 8, 20.5, 8),
+            circle(6, 6, 0.7, filled=True),
+            circle(8.5, 6, 0.7, filled=True),
+            rect(7, 11, 10, 5.5, rx=1),
+            line(9, 14, 15, 14),
+        ],
+        legacy_id="web-application",
+        notes="Browser frame with one content module, not a miniature webpage.",
+    ),
+    pilot_icon(
+        "sensor",
+        "Sensor",
+        "Technology",
+        ["smart sensor", "telemetry device", "measurement sensor"],
+        ["sensor", "telemetry", "measurement", "iot", "device", "signal", "monitoring", "technology", "data capture"],
+        [
+            circle(12, 12, 3.2),
+            circle(12, 12, 0.9, filled=True),
+            path("M7.2 7.2 C9.8 4.8 14.2 4.8 16.8 7.2"),
+            path("M7.2 16.8 C9.8 19.2 14.2 19.2 16.8 16.8"),
+            line(12, 4, 12, 7),
+            line(12, 17, 12, 20),
+            line(4, 12, 7, 12),
+            line(17, 12, 20, 12),
+        ],
+        [
+            circle(12, 12, 3.2),
+            circle(12, 12, 0.9, filled=True),
+            line(7.2, 7.2, 9.8, 5.8),
+            line(9.8, 5.8, 14.2, 5.8),
+            line(14.2, 5.8, 16.8, 7.2),
+            line(7.2, 16.8, 9.8, 18.2),
+            line(9.8, 18.2, 14.2, 18.2),
+            line(14.2, 18.2, 16.8, 16.8),
+            line(12, 4, 12, 7),
+            line(12, 17, 12, 20),
+            line(4, 12, 7, 12),
+            line(17, 12, 20, 12),
+        ],
+        legacy_id="sensor",
+        notes="Sensor node with restrained signal arcs and cardinal ports.",
+    ),
+    pilot_icon(
+        "digital-twin",
+        "Digital Twin",
+        "Technology",
+        ["virtual replica", "digital replica", "simulation twin"],
+        ["digital twin", "virtual", "replica", "simulation", "model", "asset", "industry 4.0", "technology", "mirror"],
+        [
+            rect(4, 5, 6.5, 13.5, rx=1),
+            rect(13.5, 5, 6.5, 13.5, rx=1),
+            line(10.5, 8.5, 13.5, 8.5),
+            line(10.5, 12, 13.5, 12),
+            line(10.5, 15.5, 13.5, 15.5),
+            circle(7.25, 10, 1, filled=True),
+            circle(16.75, 14, 1, filled=True),
+        ],
+        [
+            rect(4, 5, 6.5, 13.5, rx=1),
+            rect(13.5, 5, 6.5, 13.5, rx=1),
+            line(10.5, 8.5, 13.5, 8.5),
+            line(10.5, 12, 13.5, 12),
+            line(10.5, 15.5, 13.5, 15.5),
+            circle(7.25, 10, 1, filled=True),
+            circle(16.75, 14, 1, filled=True),
+        ],
+        legacy_id="digital-twin",
+        notes="Paired asset panels with sync connectors and asymmetric state dots.",
+    ),
+    pilot_icon(
+        "integration",
+        "Integration",
+        "Technology",
+        ["api integration", "system integration", "connected systems"],
+        ["integration", "api", "connection", "endpoint", "system", "interface", "platform", "technology", "connected systems"],
+        [
+            rect(4, 8, 5, 8, rx=1),
+            rect(15, 8, 5, 8, rx=1),
+            line(9, 12, 15, 12),
+            svg_polyline((12.6, 9.8), (15, 12), (12.6, 14.2)),
+            circle(6.5, 12, 0.8, filled=True),
+            circle(17.5, 12, 0.8, filled=True),
+        ],
+        [
+            rect(4, 8, 5, 8, rx=1),
+            rect(15, 8, 5, 8, rx=1),
+            line(9, 12, 15, 12),
+            line(12.6, 9.8, 15, 12),
+            line(15, 12, 12.6, 14.2),
+            circle(6.5, 12, 0.8, filled=True),
+            circle(17.5, 12, 0.8, filled=True),
+        ],
+        legacy_id="api",
+        notes="Two systems with one clear interface direction; no chain-link ambiguity.",
+    ),
+    pilot_icon(
+        "firewall",
+        "Firewall",
+        "Security",
+        ["network security", "security wall", "perimeter defense"],
+        ["firewall", "network security", "perimeter", "cyber security", "protection", "access", "control", "defense", "security"],
+        [
+            rect(4, 5, 16, 14, rx=1.2),
+            line(4, 10, 20, 10),
+            line(4, 15, 20, 15),
+            line(9, 5, 9, 10),
+            line(15, 10, 15, 15),
+            line(9, 15, 9, 19),
+            path("M12 7.5 L16 12 L12 16.5 L8 12 Z"),
+        ],
+        [
+            rect(4, 5, 16, 14, rx=1.2),
+            line(4, 10, 20, 10),
+            line(4, 15, 20, 15),
+            line(9, 5, 9, 10),
+            line(15, 10, 15, 15),
+            line(9, 15, 9, 19),
+            *polyline((12, 7.5), (16, 12), (12, 16.5), (8, 12), closed=True),
+        ],
+        legacy_id="firewall",
+        notes="Brick rhythm plus central policy gate reads as perimeter defense.",
+    ),
+    pilot_icon(
+        "key",
+        "Key",
+        "Security",
+        ["access key", "credential key", "permission key"],
+        ["key", "access", "credentials", "permission", "authentication", "security", "password", "identity", "authorization"],
+        [
+            circle(7.5, 8.5, 3.5),
+            line(10, 11, 20, 21),
+            line(15.5, 16.5, 18, 14),
+            line(18, 19, 20.5, 16.5),
+        ],
+        [
+            circle(7.5, 8.5, 3.5),
+            line(10, 11, 20, 21),
+            line(15.5, 16.5, 18, 14),
+            line(18, 19, 20.5, 16.5),
+        ],
+        legacy_id="key",
+        notes="Large key bow and simple bit, avoiding small decorative cuts.",
+    ),
+    pilot_icon(
+        "certificate",
+        "Certificate",
+        "Security",
+        ["compliance certificate", "verified certificate", "accreditation"],
+        ["certificate", "compliance", "accreditation", "verified", "audit", "qualification", "standard", "governance", "security"],
+        [
+            rect(5, 3.5, 14, 15, rx=1.3),
+            line(8, 8, 16, 8),
+            line(8, 11.5, 14, 11.5),
+            circle(12, 16, 2.5),
+            path("M10.8 18.2 L9.8 21"),
+            path("M13.2 18.2 L14.2 21"),
+        ],
+        [
+            rect(5, 3.5, 14, 15, rx=1.3),
+            line(8, 8, 16, 8),
+            line(8, 11.5, 14, 11.5),
+            circle(12, 16, 2.5),
+            line(10.8, 18.2, 9.8, 21),
+            line(13.2, 18.2, 14.2, 21),
+        ],
+        legacy_id="certificate",
+        notes="Document plus seal defines the certificate family without text labels.",
+    ),
+    pilot_icon(
+        "compliance",
+        "Compliance",
+        "Security",
+        ["regulatory compliance", "control compliance", "policy check"],
+        ["compliance", "policy", "control", "check", "governance", "regulation", "audit", "security", "standard"],
+        [
+            rect(5, 4, 14, 16, rx=1.4),
+            line(8, 8, 15, 8),
+            line(8, 12, 13, 12),
+            path("M8 16 L10.5 18.5 L16 13"),
+        ],
+        [
+            rect(5, 4, 14, 16, rx=1.4),
+            line(8, 8, 15, 8),
+            line(8, 12, 13, 12),
+            line(8, 16, 10.5, 18.5),
+            line(10.5, 18.5, 16, 13),
+        ],
+        legacy_id="checklist",
+        notes="Policy document with one large check; stronger than tiny status badges.",
+    ),
+    pilot_icon(
+        "access-control",
+        "Access Control",
+        "Security",
+        ["access control", "identity permission", "role access"],
+        ["access control", "access", "identity", "permission", "authorization", "role", "security", "credentials", "user access"],
+        [
+            circle(8, 8, 2.6),
+            path("M4.5 17 C5 13.8 6.4 12.5 8 12.5 C9.6 12.5 11 13.8 11.5 17"),
+            rect(13.5, 10, 6, 5.5, rx=1),
+            path("M15 10 V8.7 C15 7.6 15.8 6.8 16.5 6.8 C17.2 6.8 18 7.6 18 8.7 V10"),
+            line(16.5, 12.2, 16.5, 13.8),
+        ],
+        [
+            circle(8, 8, 2.6),
+            line(4.5, 17, 5.5, 14.5),
+            line(5.5, 14.5, 8, 12.5),
+            line(8, 12.5, 10.5, 14.5),
+            line(10.5, 14.5, 11.5, 17),
+            rect(13.5, 10, 6, 5.5, rx=1),
+            line(15, 10, 15, 8.7),
+            line(15, 8.7, 16.5, 6.8),
+            line(16.5, 6.8, 18, 8.7),
+            line(18, 8.7, 18, 10),
+            line(16.5, 12.2, 16.5, 13.8),
+        ],
+        legacy_id="identity",
+        notes="Person plus lock communicates permissions without using a shield.",
+    ),
+    pilot_icon(
+        "resilience",
+        "Resilience",
+        "Security",
+        ["cyber resilience", "business resilience", "recovery"],
+        ["resilience", "recovery", "continuity", "security", "restore", "protection", "incident response", "stability", "risk"],
+        [
+            path("M12 4 C7.6 4 4 7.6 4 12 C4 16.4 7.6 20 12 20 C15.5 20 18.5 17.8 19.6 14.7"),
+            svg_polyline((17.2, 14.8), (19.8, 14.2), (20.5, 16.8)),
+            path("M12 20 C16.4 20 20 16.4 20 12 C20 7.6 16.4 4 12 4 C8.5 4 5.5 6.2 4.4 9.3"),
+            svg_polyline((6.8, 9.2), (4.2, 9.8), (3.5, 7.2)),
+            circle(12, 12, 1.4, filled=True),
+        ],
+        [
+            line(12, 4, 8, 5),
+            line(8, 5, 4.5, 9.3),
+            line(4.5, 9.3, 4, 12),
+            line(4, 12, 5.2, 15.8),
+            line(5.2, 15.8, 8.5, 19),
+            line(8.5, 19, 12, 20),
+            line(12, 20, 15.5, 19),
+            line(15.5, 19, 19.6, 14.7),
+            line(17.2, 14.8, 19.8, 14.2),
+            line(19.8, 14.2, 20.5, 16.8),
+            line(6.8, 9.2, 4.2, 9.8),
+            line(4.2, 9.8, 3.5, 7.2),
+            circle(12, 12, 1.4, filled=True),
+        ],
+        legacy_id="risk",
+        notes="Recovery loop and stable center communicate resilience without alert symbols.",
+    ),
+    pilot_icon(
+        "incident",
+        "Incident",
+        "Security",
+        ["security incident", "issue alert", "breach event"],
+        ["incident", "alert", "issue", "breach", "security", "warning", "response", "threat", "event"],
+        [
+            svg_polyline((12, 3.5), (20, 18.5), (4, 18.5), closed=True),
+            line(12, 8, 12, 13.5),
+            circle(12, 16, 0.9, filled=True),
+            path("M17.5 6.5 L20.5 3.5"),
+            path("M19.5 9 L22 8"),
+        ],
+        [
+            *polyline((12, 3.5), (20, 18.5), (4, 18.5), closed=True),
+            line(12, 8, 12, 13.5),
+            circle(12, 16, 0.9, filled=True),
+            line(17.5, 6.5, 20.5, 3.5),
+            line(19.5, 9, 22, 8),
+        ],
+        legacy_id="risk",
+        notes="Incident uses risk-triangle language plus limited signal marks.",
+    ),
+    pilot_icon(
+        "privacy",
+        "Privacy",
+        "Security",
+        ["data privacy", "confidential data", "privacy protection"],
+        ["privacy", "data privacy", "confidential", "personal data", "protection", "security", "private", "policy", "control"],
+        [
+            path("M12 4 L19 6.5 V11.5 C19 15.5 16.2 18.7 12 20.8 C7.8 18.7 5 15.5 5 11.5 V6.5 Z"),
+            circle(12, 11.2, 2.3),
+            path("M7.5 11.2 C9 8.7 10.4 7.7 12 7.7 C13.6 7.7 15 8.7 16.5 11.2 C15 13.7 13.6 14.7 12 14.7 C10.4 14.7 9 13.7 7.5 11.2 Z"),
+        ],
+        [
+            *polyline((12, 4), (19, 6.5), (19, 11.5), (16.2, 18.7), (12, 20.8), (7.8, 18.7), (5, 11.5), (5, 6.5), closed=True),
+            circle(12, 11.2, 2.3),
+            *polyline((7.5, 11.2), (10.4, 7.7), (12, 7.7), (15, 8.7), (16.5, 11.2), (13.6, 14.7), (12, 14.7), (9, 13.7), closed=True),
+        ],
+        legacy_id="shield",
+        notes="Shield plus eye creates privacy without a generic lock.",
+    ),
+    pilot_icon(
+        "audit",
+        "Audit",
+        "Security",
+        ["security audit", "control audit", "assurance review"],
+        ["audit", "review", "assurance", "control", "inspection", "compliance", "security", "governance", "check"],
+        [
+            rect(5, 3.5, 12, 17, rx=1.3),
+            line(8, 8, 14, 8),
+            line(8, 12, 13, 12),
+            line(8, 16, 11, 16),
+            circle(16, 16, 3),
+            line(18.2, 18.2, 21, 21),
+        ],
+        [
+            rect(5, 3.5, 12, 17, rx=1.3),
+            line(8, 8, 14, 8),
+            line(8, 12, 13, 12),
+            line(8, 16, 11, 16),
+            circle(16, 16, 3),
+            line(18.2, 18.2, 21, 21),
+        ],
+        legacy_id="certificate",
+        notes="Checklist document plus magnifier anchors the audit/review family.",
+    ),
+    pilot_icon(
+        "security-control",
+        "Security Control",
+        "Security",
+        ["security control", "control framework", "policy control"],
+        ["security control", "control", "policy", "framework", "governance", "security", "standard", "risk control", "guardrail"],
+        [
+            rect(4, 5, 16, 14, rx=2),
+            line(7, 8.5, 17, 8.5),
+            line(7, 12, 17, 12),
+            line(7, 15.5, 17, 15.5),
+            circle(10, 8.5, 1.2, filled=True),
+            circle(14, 12, 1.2, filled=True),
+            circle(11.5, 15.5, 1.2, filled=True),
+        ],
+        [
+            rect(4, 5, 16, 14, rx=2),
+            line(7, 8.5, 17, 8.5),
+            line(7, 12, 17, 12),
+            line(7, 15.5, 17, 15.5),
+            circle(10, 8.5, 1.2, filled=True),
+            circle(14, 12, 1.2, filled=True),
+            circle(11.5, 15.5, 1.2, filled=True),
+        ],
+        legacy_id="shield",
+        notes="Three deliberate control rails avoid status-badge language and stay clear at 24 px.",
+    ),
+    pilot_icon(
+        "route",
+        "Route",
+        "Operations",
+        ["delivery route", "logistics route", "journey path"],
+        ["route", "path", "journey", "delivery", "logistics", "transport", "network", "sequence", "operations"],
+        [
+            circle(5, 18, 2.2),
+            path("M7.2 18 C10.5 17.5 11.3 14.2 9.2 12 C7.4 10 8.8 7.2 12 7.2 H16.8"),
+            path("M16.5 4.3 H20 V10 H16.5 Z"),
+            line(16.5, 4.3, 16.5, 11.2),
+        ],
+        [
+            circle(5, 18, 2.2),
+            line(7.2, 18, 10, 17),
+            line(10, 17, 11, 14),
+            line(11, 14, 9.2, 12),
+            line(9.2, 12, 9.2, 8.8),
+            line(9.2, 8.8, 12, 7.2),
+            line(12, 7.2, 16.8, 7.2),
+            *polyline((16.5, 4.3), (20, 4.3), (20, 10), (16.5, 10), closed=True),
+            line(16.5, 4.3, 16.5, 11.2),
+        ],
+        legacy_id="route",
+        notes="Route uses a single bent journey line and destination flag, avoiding map clutter.",
+    ),
+    pilot_icon(
+        "location",
+        "Location",
+        "Operations",
+        ["site location", "market location", "facility site"],
+        ["location", "site", "place", "map pin", "facility", "market", "geography", "destination", "operations"],
+        [
+            path("M12 3.5 C8.2 3.5 5.5 6.3 5.5 9.8 C5.5 14 9.7 17.8 12 20.8 C14.3 17.8 18.5 14 18.5 9.8 C18.5 6.3 15.8 3.5 12 3.5 Z"),
+            circle(12, 9.6, 2.3),
+            path("M8 21 H16"),
+        ],
+        [
+            *polyline((12, 3.5), (7.2, 5.2), (5.5, 9.8), (7.4, 14.8), (12, 20.8), (16.6, 14.8), (18.5, 9.8), (16.8, 5.2), closed=True),
+            circle(12, 9.6, 2.3),
+            line(8, 21, 16, 21),
+        ],
+        legacy_id="location",
+        notes="Large pin and quiet baseline keep the site metaphor recognizable at thumbnail size.",
+    ),
+    pilot_icon(
+        "logistics",
+        "Logistics",
+        "Operations",
+        ["freight logistics", "transport network", "distribution logistics"],
+        ["logistics", "freight", "transport", "shipping", "distribution", "delivery", "truck", "supply chain", "operations"],
+        [
+            rect(2.5, 8, 10.5, 7, rx=1),
+            path("M13 10 H17 L20 13 V15 H13 Z"),
+            line(17, 10, 17, 13),
+            circle(7, 17, 2.1),
+            circle(16.5, 17, 2.1),
+            line(3.5, 5.5, 9.5, 5.5),
+            line(5, 3.5, 12, 3.5),
+        ],
+        [
+            rect(2.5, 8, 10.5, 7, rx=1),
+            *polyline((13, 10), (17, 10), (20, 13), (20, 15), (13, 15), closed=True),
+            line(17, 10, 17, 13),
+            circle(7, 17, 2.1),
+            circle(16.5, 17, 2.1),
+            line(3.5, 5.5, 9.5, 5.5),
+            line(5, 3.5, 12, 3.5),
+        ],
+        legacy_id="truck",
+        notes="Truck is simplified to a logistics mark with measured motion lines, not a vehicle illustration.",
+    ),
+    pilot_icon(
+        "warehouse",
+        "Warehouse",
+        "Operations",
+        ["distribution center", "fulfillment center", "storage facility"],
+        ["warehouse", "distribution center", "fulfillment", "storage", "inventory", "facility", "logistics", "supply chain", "operations"],
+        [
+            svg_polyline((3, 9), (12, 4), (21, 9)),
+            rect(4.5, 9, 15, 10.5, rx=1.2),
+            rect(8.2, 12.5, 7.6, 7, rx=0.8),
+            line(8.2, 15.5, 15.8, 15.5),
+            line(12, 12.5, 12, 19.5),
+        ],
+        [
+            *polyline((3, 9), (12, 4), (21, 9)),
+            rect(4.5, 9, 15, 10.5, rx=1.2),
+            rect(8.2, 12.5, 7.6, 7, rx=0.8),
+            line(8.2, 15.5, 15.8, 15.5),
+            line(12, 12.5, 12, 19.5),
+        ],
+        legacy_id="warehouse",
+        notes="Warehouse uses a clear roofline and one centered bay to avoid repetitive small doors.",
+    ),
+    pilot_icon(
+        "quality",
+        "Quality",
+        "Operations",
+        ["quality assurance", "quality control", "inspection standard"],
+        ["quality", "assurance", "quality control", "inspection", "standard", "excellence", "control", "check", "operations"],
+        [
+            path("M12 3.8 L14.2 6.2 L17.5 5.8 L18 9.1 L20.2 12 L18 14.9 L17.5 18.2 L14.2 17.8 L12 20.2 L9.8 17.8 L6.5 18.2 L6 14.9 L3.8 12 L6 9.1 L6.5 5.8 L9.8 6.2 Z"),
+            path("M8 12.1 L10.7 14.8 L16.2 9.3"),
+        ],
+        [
+            *polyline((12, 3.8), (14.2, 6.2), (17.5, 5.8), (18, 9.1), (20.2, 12), (18, 14.9), (17.5, 18.2), (14.2, 17.8), (12, 20.2), (9.8, 17.8), (6.5, 18.2), (6, 14.9), (3.8, 12), (6, 9.1), (6.5, 5.8), (9.8, 6.2), closed=True),
+            line(8, 12.1, 10.7, 14.8),
+            line(10.7, 14.8, 16.2, 9.3),
+        ],
+        legacy_id="quality",
+        notes="Seal plus one large check separates quality from compliance documents.",
+    ),
+    pilot_icon(
+        "maintenance",
+        "Maintenance",
+        "Operations",
+        ["asset maintenance", "repair service", "maintenance work"],
+        ["maintenance", "repair", "service", "wrench", "asset", "uptime", "reliability", "operations", "engineering"],
+        [
+            path("M18.3 3.8 C19.4 4.1 20.3 4.7 21 5.6 L17.6 9 L15 6.4 Z"),
+            path("M15 6.4 L6 15.4 C4.7 16.7 4.7 18.8 6 20.1 C7.3 21.4 9.4 21.4 10.7 20.1 L19.6 11.2"),
+            path("M15 6.4 C13.8 8.2 13.9 10.4 15.4 11.9 C16.5 13 18.1 13.3 19.6 12.7"),
+            circle(8.2, 17.9, 1.1),
+        ],
+        [
+            *polyline((18.3, 3.8), (21, 5.6), (17.6, 9), (15, 6.4), closed=True),
+            line(15, 6.4, 6, 15.4),
+            line(6, 15.4, 6, 20.1),
+            line(6, 20.1, 10.7, 20.1),
+            line(10.7, 20.1, 19.6, 11.2),
+            line(15, 6.4, 15.4, 11.9),
+            line(15.4, 11.9, 19.6, 12.7),
+            circle(8.2, 17.9, 1.1),
+        ],
+        legacy_id="wrench",
+        notes="Single diagonal tool silhouette is more legible than crossed tool variants.",
+    ),
+    pilot_icon(
+        "inventory",
+        "Inventory",
+        "Operations",
+        ["stock management", "stored goods", "inventory control"],
+        ["inventory", "stock", "goods", "materials", "storage", "warehouse", "supply chain", "control", "operations"],
+        [
+            rect(5, 5, 6, 6, rx=0.8),
+            rect(13, 5, 6, 6, rx=0.8),
+            rect(5, 13, 6, 6, rx=0.8),
+            rect(13, 13, 6, 6, rx=0.8),
+            line(8, 5, 8, 8),
+            line(16, 5, 16, 8),
+            line(8, 13, 8, 16),
+            line(16, 13, 16, 16),
+        ],
+        [
+            rect(5, 5, 6, 6, rx=0.8),
+            rect(13, 5, 6, 6, rx=0.8),
+            rect(5, 13, 6, 6, rx=0.8),
+            rect(13, 13, 6, 6, rx=0.8),
+            line(8, 5, 8, 8),
+            line(16, 5, 16, 8),
+            line(8, 13, 8, 16),
+            line(16, 13, 16, 16),
+        ],
+        legacy_id="inventory",
+        notes="Four controlled units communicate stock without a dense cube stack.",
+    ),
+    pilot_icon(
+        "procurement",
+        "Procurement",
+        "Operations",
+        ["strategic sourcing", "source to pay", "supplier purchasing"],
+        ["procurement", "sourcing", "purchasing", "supplier", "buying", "purchase order", "cost", "vendor", "operations"],
+        [
+            rect(4.5, 4, 11, 16, rx=1.3),
+            line(7.5, 8, 13, 8),
+            line(7.5, 11.5, 12, 11.5),
+            line(7.5, 15, 10.5, 15),
+            path("M14.5 14.5 L17 17 L21 10.5"),
+            line(15.5, 4, 20, 4),
+            line(20, 4, 20, 8.5),
+        ],
+        [
+            rect(4.5, 4, 11, 16, rx=1.3),
+            line(7.5, 8, 13, 8),
+            line(7.5, 11.5, 12, 11.5),
+            line(7.5, 15, 10.5, 15),
+            line(14.5, 14.5, 17, 17),
+            line(17, 17, 21, 10.5),
+            line(15.5, 4, 20, 4),
+            line(20, 4, 20, 8.5),
+        ],
+        legacy_id="procurement",
+        notes="Purchase order with external supplier corner and large approval gesture.",
+    ),
+    pilot_icon(
+        "service-operations",
+        "Service Operations",
+        "Operations",
+        ["service operations", "service desk", "customer operations"],
+        ["service operations", "service", "support", "desk", "customer operations", "workflow", "sla", "delivery", "operations"],
+        [
+            path("M5 12 C5 8.1 8.1 5 12 5 C15.9 5 19 8.1 19 12"),
+            path("M5 12 V15 C5 16 5.8 16.8 6.8 16.8 H8.5 V12 H5 Z"),
+            path("M19 12 V15 C19 16 18.2 16.8 17.2 16.8 H15.5 V12 H19 Z"),
+            path("M15.5 17 C14.7 18.4 13.5 19 12 19 H10"),
+            circle(12, 10.5, 2.2),
+        ],
+        [
+            line(5, 12, 6.5, 8),
+            line(6.5, 8, 12, 5),
+            line(12, 5, 17.5, 8),
+            line(17.5, 8, 19, 12),
+            *polyline((5, 12), (5, 16.8), (8.5, 16.8), (8.5, 12), closed=True),
+            *polyline((15.5, 12), (15.5, 16.8), (19, 16.8), (19, 12), closed=True),
+            line(15.5, 17, 13.5, 19),
+            line(13.5, 19, 10, 19),
+            circle(12, 10.5, 2.2),
+        ],
+        legacy_id="wrench",
+        notes="Headset-based service mark stays human but avoids cartoon facial features.",
+    ),
+    pilot_icon(
+        "capacity",
+        "Capacity",
+        "Operations",
+        ["capacity planning", "throughput capacity", "resource capacity"],
+        ["capacity", "throughput", "utilization", "planning", "operations", "resource", "constraint", "volume", "performance"],
+        [
+            rect(4, 5, 16, 14, rx=1.6),
+            line(8, 16, 8, 12),
+            line(12, 16, 12, 9),
+            line(16, 16, 16, 7),
+            path("M6.5 16 H17.5"),
+            path("M14.8 7 H17.2 V9.4"),
+        ],
+        [
+            rect(4, 5, 16, 14, rx=1.6),
+            line(8, 16, 8, 12),
+            line(12, 16, 12, 9),
+            line(16, 16, 16, 7),
+            line(6.5, 16, 17.5, 16),
+            line(14.8, 7, 17.2, 7),
+            line(17.2, 7, 17.2, 9.4),
+        ],
+        legacy_id="process",
+        notes="Capacity uses constrained bars in a frame, distinct from finance and growth charts.",
+    ),
+]
+
+
+ACTIVE_ICONS = PILOT_ICONS
+LATEST_BATCH_IDS = {
+    "route", "location", "logistics", "warehouse", "quality",
+    "maintenance", "inventory", "procurement", "service-operations", "capacity",
+}
+
 BENCHMARKS = [
+    {
+        "name": "Lucide",
+        "license": "ISC; selected Feather-derived icons remain MIT",
+        "url": "https://lucide.dev/",
+        "takeaways": ["24x24 grid", "2px customizable stroke", "strict consistency rules", "readable outline metaphors"],
+    },
     {
         "name": "Tabler Icons",
         "license": "MIT",
@@ -1621,13 +3474,76 @@ BENCHMARKS = [
         "url": "https://heroicons.com/",
         "takeaways": ["careful optical balance", "clean 24x24 outline set", "strong small-set consistency"],
     },
+    {
+        "name": "IBM Carbon Icons",
+        "license": "Apache-2.0",
+        "url": "https://carbondesignsystem.com/elements/icons/usage/",
+        "takeaways": ["16/20/24/32 icon sizes", "monochrome solid-color usage", "grid alignment", "contrast discipline"],
+    },
+    {
+        "name": "Microsoft Fluent UI System Icons",
+        "license": "MIT",
+        "url": "https://github.com/microsoft/fluentui-system-icons",
+        "takeaways": ["familiar metaphors", "modern rounded forms", "multiple sizes and weights", "direction metadata"],
+    },
+    {
+        "name": "Font Awesome Free",
+        "license": "Icons CC-BY-4.0, fonts SIL OFL 1.1, code MIT",
+        "url": "https://github.com/FortAwesome/Font-Awesome",
+        "takeaways": ["broad practical coverage", "strong naming and aliases", "attribution required for SVG icons", "avoid brand icons except literal brands"],
+    },
+    {
+        "name": "Streamline",
+        "license": "Proprietary; reference only",
+        "url": "https://home.streamlinehq.com/",
+        "takeaways": ["large coherent families", "multiple redrawn weights", "high craft threshold", "do not copy or vendor without a deliberate license"],
+    },
+    {
+        "name": "Consulting Report Iconography",
+        "license": "Proprietary report artwork; visual language reference only",
+        "url": "https://www.mckinsey.com/capabilities/strategy-and-corporate-finance/our-insights/seeing-your-way-to-better-strategy",
+        "takeaways": ["quiet exhibit-first symbols", "limited accent color", "framework-compatible geometry", "avoid generic badge overlays"],
+    },
 ]
 
 
 def validate_catalog(icons: list[dict[str, Any]]) -> None:
     seen: set[str] = set()
-    allowed = {"line", "rect", "ellipse"}
+    primitive_kinds = {"line", "rect", "ellipse"}
+    element_kinds = {"line", "rect", "ellipse", "path", "polyline"}
     coordinate_keys = {"x", "y", "x1", "y1", "x2", "y2", "width", "height"}
+
+    def validate_number(icon_id: str, key: str, value: Any) -> None:
+        if not isinstance(value, (int, float)) or value < 0 or value > 24:
+            raise ValueError(f"Icon {icon_id} has invalid {key}: {value!r}")
+
+    def validate_item(icon_id: str, item: dict[str, Any], *, allow_rich: bool) -> None:
+        allowed = element_kinds if allow_rich else primitive_kinds
+        if item.get("kind") not in allowed:
+            noun = "element" if allow_rich else "primitive"
+            raise ValueError(f"Icon {icon_id} has unsupported {noun} {item.get('kind')!r}")
+        if item["kind"] == "path":
+            numbers = [float(value) for value in re.findall(r"-?\d+(?:\.\d+)?", item.get("d", ""))]
+            if not numbers:
+                raise ValueError(f"Icon {icon_id} has an empty path")
+            for value in numbers:
+                validate_number(icon_id, "path coordinate", value)
+            return
+        if item["kind"] == "polyline":
+            points = item.get("points")
+            if not isinstance(points, list) or len(points) < 2:
+                raise ValueError(f"Icon {icon_id} has an invalid polyline")
+            for point in points:
+                if not isinstance(point, list) or len(point) != 2:
+                    raise ValueError(f"Icon {icon_id} has an invalid polyline point")
+                validate_number(icon_id, "x", point[0])
+                validate_number(icon_id, "y", point[1])
+            return
+        for key in coordinate_keys & item.keys():
+            validate_number(icon_id, key, item[key])
+        if item.get("width", 1) <= 0 or item.get("height", 1) <= 0:
+            raise ValueError(f"Icon {icon_id} has a non-positive primitive size")
+
     for icon in icons:
         icon_id = icon.get("id")
         if not isinstance(icon_id, str) or not icon_id.replace("-", "").isalnum():
@@ -1645,26 +3561,29 @@ def validate_catalog(icons: list[dict[str, Any]]) -> None:
         if not isinstance(primitives, list) or len(primitives) < 2:
             raise ValueError(f"Icon {icon_id} must contain at least two primitives")
         for primitive in primitives:
-            if primitive.get("kind") not in allowed:
-                raise ValueError(f"Icon {icon_id} has unsupported primitive {primitive.get('kind')!r}")
-            for key in coordinate_keys & primitive.keys():
-                value = primitive[key]
-                if not isinstance(value, (int, float)) or value < 0 or value > 24:
-                    raise ValueError(f"Icon {icon_id} has invalid {key}: {value!r}")
-            if primitive.get("width", 1) <= 0 or primitive.get("height", 1) <= 0:
-                raise ValueError(f"Icon {icon_id} has a non-positive primitive size")
+            validate_item(icon_id, primitive, allow_rich=False)
+        elements = icon.get("elements", primitives)
+        if not isinstance(elements, list) or len(elements) < 1:
+            raise ValueError(f"Icon {icon_id} must contain vector elements")
+        for element in elements:
+            validate_item(icon_id, element, allow_rich=True)
 
 
 def catalog_json() -> str:
-    validate_catalog(ICONS)
+    validate_catalog(ACTIVE_ICONS)
     catalog = {
-        "schema": 2,
+        "schema": 3,
         "viewBox": 24,
-        "style": {"name": "IconAid Outline", "stroke": 1.5, "lineCap": "round", "lineJoin": "round"},
-        "provenance": "Original SlideAid geometry informed by the catalog benchmark; no third-party paths are copied.",
+        "style": {"name": "IconAid Consulting Outline", "stroke": 1.6, "lineCap": "round", "lineJoin": "round", "safeArea": 2},
+        "provenance": "Original Slide Aid pilot geometry informed by benchmark analysis; no third-party SVG paths are copied.",
         "license": "MIT; see shared/iconaid/LICENSE",
         "benchmarks": BENCHMARKS,
-        "icons": ICONS,
+        "reviewPolicy": {
+            "status": "pilot",
+            "mechanicalVariants": "disabled",
+            "rule": "Do not scale base icons and add generic badges as finished artwork.",
+        },
+        "icons": ACTIVE_ICONS,
     }
     return json.dumps(catalog, indent=2, sort_keys=True) + "\n"
 
@@ -1693,6 +3612,119 @@ def primitive_data(icon: dict[str, Any]) -> str:
 def icon_record(icon: dict[str, Any]) -> str:
     search_text = " ".join([icon["name"], icon["category"], *icon["aliases"], *icon["tags"]])
     return "|".join([icon["name"], icon["category"], search_text, primitive_data(icon)])
+
+
+def svg_attributes(item: dict[str, Any], color: str) -> str:
+    attrs = {
+        "fill": color if item.get("filled") else "none",
+        "stroke": color,
+        "stroke-width": "1.6",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+    }
+    return " ".join(f'{name}="{html.escape(value)}"' for name, value in attrs.items())
+
+
+def svg_element(item: dict[str, Any], color: str) -> str:
+    attrs = svg_attributes(item, color)
+    if item["kind"] == "line":
+        return f'<line x1="{item["x1"]:g}" y1="{item["y1"]:g}" x2="{item["x2"]:g}" y2="{item["y2"]:g}" {attrs}/>'
+    if item["kind"] == "rect":
+        rx = f' rx="{item["rx"]:g}"' if "rx" in item else ""
+        return f'<rect x="{item["x"]:g}" y="{item["y"]:g}" width="{item["width"]:g}" height="{item["height"]:g}"{rx} {attrs}/>'
+    if item["kind"] == "ellipse":
+        cx = item["x"] + item["width"] / 2
+        cy = item["y"] + item["height"] / 2
+        return f'<ellipse cx="{cx:g}" cy="{cy:g}" rx="{item["width"] / 2:g}" ry="{item["height"] / 2:g}" {attrs}/>'
+    if item["kind"] == "polyline":
+        points = " ".join(f"{x:g},{y:g}" for x, y in item["points"])
+        tag = "polygon" if item.get("closed") else "polyline"
+        fill = color if item.get("filled") else "none"
+        return f'<{tag} points="{points}" fill="{fill}" stroke="{color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
+    if item["kind"] == "path":
+        return f'<path d="{html.escape(item["d"])}" {attrs}/>'
+    raise ValueError(f"Unsupported SVG element: {item['kind']}")
+
+
+def svg_icon(icon: dict[str, Any], color: str, x: float, y: float, size: float, *, use_legacy: bool = False) -> str:
+    elements = icon["primitives"] if use_legacy else icon.get("elements", icon["primitives"])
+    body = "\n".join(svg_element(item, color) for item in elements)
+    scale = size / 24
+    return f'<g transform="translate({x:g} {y:g}) scale({scale:g})">{body}</g>'
+
+
+def contact_sheet_svg(
+    icons: list[dict[str, Any]] | None = None,
+    *,
+    title: str = "IconAid consulting icon pilot contact sheet",
+    subtitle: str = "Current legacy geometry vs original redesigned pilot, including Redesign 72pt dark and color checks. Benchmark names are references only.",
+) -> str:
+    icons = icons or ACTIVE_ICONS
+    validate_catalog(icons)
+    legacy_by_id = {icon["id"]: icon for icon in LEGACY_ICONS}
+    row_height = 118
+    column_count = 2
+    column_width = 524
+    gutter = 24
+    rows_per_column = (len(icons) + column_count - 1) // column_count
+    content_width = 24 + column_count * column_width + (column_count - 1) * gutter + 24
+    content_height = 96 + rows_per_column * row_height
+    width = height = max(content_width, content_height)
+    rows = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="{0}" height="{1}" viewBox="0 0 {0} {1}">'.format(width, height),
+        '<rect width="100%" height="100%" fill="#ffffff"/>',
+        '<style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;fill:#17202a} .muted{fill:#64748b} .rule{stroke:#d7dde7;stroke-width:1} .cell{fill:#f8fafc;stroke:#d7dde7;stroke-width:1}</style>',
+        f'<text x="24" y="32" font-size="20" font-weight="700">{html.escape(title)}</text>',
+        f'<text x="24" y="56" font-size="12" class="muted">{html.escape(subtitle)}</text>',
+    ]
+    for column in range(column_count):
+        x = 24 + column * (column_width + gutter)
+        rows.extend(
+            [
+                f'<text x="{x:g}" y="84" font-size="11" font-weight="700">Icon</text>',
+                f'<text x="{x + 144:g}" y="84" font-size="11" font-weight="700">Current</text>',
+                f'<text x="{x + 218:g}" y="84" font-size="11" font-weight="700">24px</text>',
+                f'<text x="{x + 276:g}" y="84" font-size="11" font-weight="700">48px</text>',
+                f'<text x="{x + 346:g}" y="84" font-size="11" font-weight="700">72pt dark</text>',
+                f'<text x="{x + 436:g}" y="84" font-size="11" font-weight="700">72pt color</text>',
+            ]
+        )
+    cues_line = "Benchmark cues: Lucide, Tabler, Carbon, Fluent, consulting reports"
+    for index, icon in enumerate(icons):
+        column = index // rows_per_column
+        row = index % rows_per_column
+        x = 24 + column * (column_width + gutter)
+        y = 96 + row * row_height
+        legacy = legacy_by_id.get(icon.get("legacyId", icon["id"]), icon)
+        rows.extend(
+            [
+                f'<line x1="{x:g}" y1="{y:g}" x2="{x + column_width:g}" y2="{y:g}" class="rule"/>',
+                f'<text x="{x:g}" y="{y + 24:g}" font-size="13" font-weight="700">{html.escape(icon["name"])}</text>',
+                f'<text x="{x:g}" y="{y + 43:g}" font-size="10" class="muted">{html.escape(icon["category"])} / {html.escape(icon["id"])}</text>',
+                f'<text x="{x:g}" y="{y + 99:g}" font-size="8.5" class="muted">{html.escape(cues_line)}</text>',
+                f'<rect x="{x + 144:g}" y="{y + 18:g}" width="56" height="56" rx="4" class="cell"/>',
+                svg_icon(legacy, "#1f2937", x + 152, y + 26, 40, use_legacy=True),
+                f'<rect x="{x + 222:g}" y="{y + 34:g}" width="24" height="24" rx="3" class="cell"/>',
+                svg_icon(icon, "#1f2937", x + 222, y + 34, 24),
+                f'<rect x="{x + 276:g}" y="{y + 22:g}" width="48" height="48" rx="3" class="cell"/>',
+                svg_icon(icon, "#1f2937", x + 276, y + 22, 48),
+                f'<rect x="{x + 348:g}" y="{y + 12:g}" width="68" height="68" rx="4" fill="#111827"/>',
+                svg_icon(icon, "#f8fafc", x + 350, y + 14, 64),
+                f'<rect x="{x + 436:g}" y="{y + 12:g}" width="68" height="68" rx="4" fill="#f8fafc" stroke="#d7dde7"/>',
+                svg_icon(icon, "#1f497d", x + 438, y + 14, 64),
+            ]
+        )
+    rows.append("</svg>")
+    return "\n".join(rows) + "\n"
+
+
+def latest_batch_contact_sheet_svg() -> str:
+    icons = [icon for icon in ACTIVE_ICONS if icon["id"] in LATEST_BATCH_IDS]
+    return contact_sheet_svg(
+        icons,
+        title="IconAid operations batch contact sheet",
+        subtitle="Operations family expansion. Current legacy geometry vs original redesigned icons at 24 px, 48 px, 72 pt dark, and 72 pt color.",
+    )
 
 
 def render_vba_controller(chunk_count: int) -> str:
@@ -1936,6 +3968,23 @@ def render_vba_chunk(chunk_index: int, start_index: int, icons: list[dict[str, A
     return "\n".join(lines)
 
 
+def render_retired_vba_chunk(chunk_index: int) -> str:
+    function_name = f"IA_Data{chunk_index:02d}"
+    return "\n".join(
+        [
+            f'Attribute VB_Name = "modIconAidData{chunk_index:02d}"',
+            "' Generated by scripts/build_icon_catalog.py. Do not edit by hand.",
+            "Option Explicit",
+            "",
+            "' Retired placeholder: IconAid now uses the Office.js task pane catalog.",
+            f"Public Function {function_name}(ByVal index As Long) As String",
+            '    IA_Data{0:02d} = vbNullString'.format(chunk_index),
+            "End Function",
+            "",
+        ]
+    )
+
+
 def render_vba_taskpane_bridge() -> str:
     return "\n".join(
         [
@@ -1954,16 +4003,24 @@ def render_vba_taskpane_bridge() -> str:
 
 
 def outputs() -> dict[Path, str]:
-    validate_catalog(ICONS)
+    validate_catalog(ACTIVE_ICONS)
     chunk_size = 60
-    chunks = [ICONS[start : start + chunk_size] for start in range(0, len(ICONS), chunk_size)]
+    chunks = [ACTIVE_ICONS[start : start + chunk_size] for start in range(0, len(ACTIVE_ICONS), chunk_size)]
+    existing_chunk_count = max(
+        [len(chunks), *[int(path.stem[-2:]) for path in VBA_PATH.parent.glob("modIconAidData[0-9][0-9].bas")]],
+    )
     generated = {
         CATALOG_PATH: catalog_json(),
+        CONTACT_SHEET_PATH: contact_sheet_svg(),
+        LATEST_BATCH_CONTACT_SHEET_PATH: latest_batch_contact_sheet_svg(),
         VBA_PATH: render_vba_taskpane_bridge(),
     }
     for chunk_index, chunk in enumerate(chunks, 1):
         path = VBA_PATH.with_name(f"modIconAidData{chunk_index:02d}.bas")
         generated[path] = render_vba_chunk(chunk_index, (chunk_index - 1) * chunk_size + 1, chunk)
+    for chunk_index in range(len(chunks) + 1, existing_chunk_count + 1):
+        path = VBA_PATH.with_name(f"modIconAidData{chunk_index:02d}.bas")
+        generated[path] = render_retired_vba_chunk(chunk_index)
     return generated
 
 

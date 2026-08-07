@@ -5,7 +5,8 @@
 # click -> Open -> Open once.
 #
 # Installs:
-#   1. SlideAidUI.scpt   -> native macOS color picker for PowerPoint
+#   1. SlideAidUI.scpt   -> native macOS dialogs for Chart Aid (settings,
+#                           colors, color picker)
 #   2. Slide Aid.ppam    -> the add-in, into Office's Add-Ins folder
 #   3. slideaid.lua      -> keyboard shortcuts via Hammerspoon (asked)
 # =====================================================================
@@ -25,18 +26,18 @@ if [ ! -d "/Applications/Microsoft PowerPoint.app" ]; then
   warn "Install PowerPoint first, then run this installer again."
   exit 1
 fi
-for f in "SlideAidUI.scpt" "Slide Aid.ppam" "slideaid.lua"; do
+for f in "SlideAidUI.scpt" "Slide Aid.ppam" "slideaid.lua" "icons.dat" "manifest.xml"; do
   if [ ! -f "$f" ]; then
     warn "Missing '$f' next to this installer - unzip the whole folder first."
     exit 1
   fi
 done
 
-# --- 1. color picker helper -------------------------------------------
+# --- 1. native dialogs helper -----------------------------------------
 SCRIPTS_DIR="$HOME/Library/Application Scripts/com.microsoft.Powerpoint"
 mkdir -p "$SCRIPTS_DIR"
 cp -f "SlideAidUI.scpt" "$SCRIPTS_DIR/"
-ok "Color picker helper installed (native macOS color wheel in PowerPoint)"
+ok "Native dialogs helper installed (Chart Aid settings, colors, and the color picker)"
 
 # --- 2. the add-in -----------------------------------------------------
 OFFICE_UC="$HOME/Library/Group Containers/UBF8T346G9.Office"
@@ -54,6 +55,24 @@ cp -f "Slide Aid.ppam" "$ADDINS/"
 # strip the download-quarantine flag so Office doesn't hard-block macros
 xattr -d com.apple.quarantine "$ADDINS/Slide Aid.ppam" 2>/dev/null || true
 ok "Add-in copied to Office's Add-Ins folder"
+
+# --- 2b. icon library (used by Chart Aid > Make Editable) --------------
+# PowerPoint's sandbox maps VBA's Environ("HOME") to this container dir, so
+# the add-in reads the library from SlideAid/icons.dat when converting the
+# sidebar's inserted pictures into editable freeforms.
+ICON_STORE="$HOME/Library/Containers/com.microsoft.Powerpoint/Data/SlideAid"
+mkdir -p "$ICON_STORE"
+cp -f "icons.dat" "$ICON_STORE/icons.dat"
+ok "Icon library installed (for Chart Aid > Make Editable)"
+
+# --- 2c. Icons sidebar (Office task pane) - sideload the manifest ----
+# Dropping the manifest in PowerPoint's 'wef' folder registers the add-in.
+# Its content loads from GitHub Pages, so the sidebar needs internet. It
+# adds an "Insert Icons" button on PowerPoint's Insert tab.
+WEF="$HOME/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef"
+mkdir -p "$WEF"
+cp -f "manifest.xml" "$WEF/iconaid-manifest.xml"
+ok "Icons sidebar registered (Insert tab > Insert Icons; needs internet)"
 
 # --- 3. keyboard shortcuts (optional) ----------------------------------
 echo
