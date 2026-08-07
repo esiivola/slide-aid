@@ -1,8 +1,8 @@
-/* Slide Aid — IconAid task pane.
+/* Slide Aid — Icons sidebar (task pane).
  * Browses the full icon catalog (catalog.json): a virtualized, live-filtered
  * grid of SVG previews showing ALL matches. Clicking an icon inserts it into
- * the slide; the companion PowerPoint add-in's "Make Editable" button turns the
- * inserted pictures into editable freeforms. */
+ * the slide as a picture; the companion PowerPoint add-in's "Make Editable"
+ * button (Insert tab) turns the inserted pictures into editable vectors. */
 (function () {
   "use strict";
 
@@ -246,7 +246,7 @@
         return ctx.sync();
       });
     }).then(function () {
-      status("Inserted “" + icon.n + "”. Click ‘Make Editable’ (Insert tab) to convert.", "success");
+      status("Inserted “" + icon.n + "”. To recolor or edit it, select it and click Make Editable on the Insert tab.", "success");
     }).catch(function (e) {
       status("Insert failed: " + (e.message || e), "error");
     });
@@ -297,5 +297,13 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", function () { initUI(); load(); });
+  if (typeof document !== "undefined") {
+    document.addEventListener("DOMContentLoaded", function () { initUI(); load(); });
+  }
+
+  // Exposed for Node-based unit tests only; a no-op in the browser (module is
+  // undefined there), so it never changes the shipped sidebar behavior.
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { isFilled: isFilled, pathAttrs: pathAttrs, svgFor: svgFor, queryGroups: queryGroups, matches: matches };
+  }
 })();
