@@ -141,6 +141,62 @@ export function distribute(boxes: readonly Box[], axis: Axis): Box[] {
   });
 }
 
+export type SwapAnchor = "C" | "TL" | "TR" | "BL" | "BR";
+
+/**
+ * Rotates positions along the selection: each object takes the next one's place
+ * and the last takes the first's. PowerPoint follows click order; Slides has
+ * none, so left-to-right (then top-to-bottom) spatial order stands in.
+ *
+ * `anchor` decides which point is matched for differently sized objects, and
+ * `withSizes` swaps the sizes too instead of only the positions.
+ */
+export function swapPositions(boxes: readonly Box[], anchor: SwapAnchor = "C", withSizes = false): Box[] {
+  if (boxes.length < 2) throw new Error("Swap needs at least two objects.");
+  const ordered = sortSpatially(boxes, "H");
+  const anchorOf = (box: Box): { x: number; y: number } => {
+    if (anchor === "C") return { x: centerX(box), y: centerY(box) };
+    return {
+      x: anchor === "TR" || anchor === "BR" ? right(box) : box.left,
+      y: anchor === "BL" || anchor === "BR" ? bottom(box) : box.top,
+    };
+  };
+  const targets = ordered.map((box) => ({ point: anchorOf(box), width: box.width, height: box.height }));
+  return ordered.map((source, index) => {
+    const target = targets[(index + 1) % targets.length]!;
+    const width = withSizes ? target.width : source.width;
+    const height = withSizes ? target.height : source.height;
+    if (anchor === "C") return { ...source, width, height, left: target.point.x - width / 2, top: target.point.y - height / 2 };
+    return {
+      ...source,
+      width,
+      height,
+      left: anchor === "TR" || anchor === "BR" ? target.point.x - width : target.point.x,
+      top: anchor === "BL" || anchor === "BR" ? target.point.y - height : target.point.y,
+    };
+  });
+}
+
+/** Column count for one-click Matrix: the near-square grid PowerPoint picks. */
+export function squareColumns(count: number): number {
+  return Math.max(1, Math.ceil(Math.sqrt(Math.max(1, count))));
+}
+
+/**
+ * Process chain: give every object the reference's vertical position and height,
+ * then close the horizontal gaps in spatial order. Rotation is matched too,
+ * which is the part that makes a row of angled block arrows line up.
+ */
+export function processChain(boxes: readonly Box[], reference: Box): Box[] {
+  const ordered = sortSpatially(boxes, "H");
+  let x = ordered.length ? ordered[0]!.left : 0;
+  return ordered.map((source) => {
+    const box: Box = { ...source, top: reference.top, height: reference.height, left: x, rotation: reference.rotation ?? source.rotation };
+    x += box.width;
+    return box;
+  });
+}
+
 export function matrix(boxes: readonly Box[], columns: number, horizontalGap = 0, verticalGap = 0): Box[] {
   if (!Number.isInteger(columns) || columns < 1) throw new Error("Columns must be a positive integer.");
   const ordered = sortSpatially(boxes, "H");

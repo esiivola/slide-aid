@@ -7,217 +7,493 @@
     :root { --blue:#1f4e79; --line:#d8dce0; --muted:#687078; --bg:#f7f8fa; }
     * { box-sizing:border-box; }
     body { margin:0; color:#202124; font:13px/1.35 Arial,sans-serif; background:#fff; }
-    header { padding:12px 14px 9px; border-bottom:1px solid var(--line); }
-    h1 { margin:0 0 3px; font-size:18px; color:var(--blue); }
+    header { padding:10px 12px 8px; border-bottom:1px solid var(--line); }
+    h1 { margin:0 0 3px; font-size:17px; color:var(--blue); }
     .subtitle { color:var(--muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .tabs { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--line); background:var(--bg); }
-    .tab { padding:8px 2px; border:0; border-bottom:2px solid transparent; background:transparent; font-size:11px; cursor:pointer; }
-    .tab.active { color:var(--blue); border-bottom-color:var(--blue); font-weight:bold; background:#fff; }
+    /* Two top-level sections mirror PowerPoint's two ribbon tabs; the extra two
+       hold the Slides-only tools that have no ribbon equivalent. */
+    .sections { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--line); background:var(--bg); }
+    .section-tab { padding:8px 2px; border:0; border-bottom:2px solid transparent; background:transparent; font-size:11px; cursor:pointer; color:#3c4043; }
+    .section-tab.active { color:var(--blue); border-bottom-color:var(--blue); font-weight:bold; background:#fff; }
     main { padding:10px; }
     .panel { display:none; }
     .panel.active { display:block; }
-    .section { margin:0 0 13px; }
-    .section-title { margin:0 0 6px; color:#4b5156; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:.35px; }
+    .group { margin:0 0 14px; }
+    .group-title { margin:0 0 6px; color:#4b5156; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:.35px; }
     .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
     .grid.two { grid-template-columns:repeat(2,1fr); }
-    button.action { min-height:40px; padding:5px 3px; border:1px solid var(--line); border-radius:4px; background:#fff; cursor:pointer; color:#202124; }
+    .grid.four { grid-template-columns:repeat(4,1fr); gap:4px; }
+    button.action { min-height:40px; padding:5px 3px; border:1px solid var(--line); border-radius:4px; background:#fff; cursor:pointer; color:#202124; font-size:11px; }
     button.action:hover { background:#eef4fb; border-color:#9ab7d0; }
     button.action img { display:block; width:20px; height:20px; object-fit:contain; margin:0 auto 2px; }
+    button.action.compact { min-height:30px; }
     button.primary { border-color:var(--blue); background:var(--blue); color:#fff; }
     .row { display:flex; gap:6px; align-items:center; margin:5px 0; }
-    .row > label { min-width:72px; color:#4b5156; }
-    select,input[type=number],input[type=color],input[type=search],input:not([type]) { min-width:0; height:29px; border:1px solid var(--line); border-radius:3px; background:#fff; }
-    select,input[type=number],input[type=search],input:not([type]) { flex:1; padding:3px 5px; }
-    input[type=color] { width:42px; padding:2px; }
-    .reference { padding:8px; border:1px solid var(--line); border-radius:4px; background:var(--bg); }
-    .reference strong { display:block; margin-bottom:3px; }
-    .small-buttons { display:flex; gap:5px; margin-top:7px; }
-    .small-buttons button { flex:1; padding:6px; border:1px solid var(--line); border-radius:3px; background:#fff; cursor:pointer; }
-    #status { position:sticky; bottom:0; padding:8px 10px; border-top:1px solid var(--line); background:#fff; color:var(--muted); min-height:34px; }
+    .row > label { min-width:74px; color:#4b5156; font-size:11px; }
+    select,input[type=number],input[type=color],input[type=search],input[type=text],input:not([type]),textarea { min-width:0; border:1px solid var(--line); border-radius:3px; background:#fff; font:inherit; }
+    select,input[type=number],input[type=search],input[type=text],input:not([type]) { flex:1; height:29px; padding:3px 5px; }
+    textarea { flex:1; padding:4px 5px; resize:vertical; }
+    input[type=color] { width:42px; height:29px; padding:2px; }
+    .reference { padding:7px 8px; border:1px solid var(--line); border-radius:4px; background:var(--bg); font-size:11px; }
+    .reference strong { display:block; margin-bottom:2px; font-size:12px; }
+    .small-buttons { display:flex; gap:5px; margin-top:6px; }
+    .small-buttons button { flex:1; padding:5px; border:1px solid var(--line); border-radius:3px; background:#fff; cursor:pointer; font-size:11px; }
+    #status { position:sticky; bottom:0; padding:8px 10px; border-top:1px solid var(--line); background:#fff; color:var(--muted); min-height:34px; font-size:11px; }
     #status.error { color:#b3261e; }
     #status.success { color:#137333; }
     .busy { opacity:.55; pointer-events:none; }
     .note { color:var(--muted); font-size:11px; margin-top:5px; }
-    .search { width:100%; margin-top:8px; padding:7px 9px; border:1px solid var(--line); border-radius:4px; }
-    .inspector { margin-top:8px; padding:7px; border-radius:4px; background:var(--bg); color:var(--muted); font-size:11px; }
+    .search { width:100%; margin-top:7px; padding:6px 8px; border:1px solid var(--line); border-radius:4px; }
+    .inspector { margin-top:7px; padding:6px 7px; border-radius:4px; background:var(--bg); color:var(--muted); font-size:11px; }
     .inspector strong { color:#202124; }
-    .swatches { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; }
-    .swatch { height:34px; border:1px solid var(--line); border-radius:4px; cursor:pointer; font-size:9px; padding-top:18px; text-shadow:0 0 2px #fff; }
+    .swatches { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
+    .swatch { height:30px; border:1px solid var(--line); border-radius:4px; cursor:pointer; font-size:9px; padding-top:16px; text-shadow:0 0 2px #fff; }
     .list { display:flex; flex-direction:column; gap:5px; }
-    .list-item { padding:7px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+    .list-item { padding:7px; border:1px solid var(--line); border-radius:4px; background:#fff; font-size:11px; }
+    .list-item strong { font-size:12px; }
     .list-item .meta { color:var(--muted); font-size:10px; }
     .list-item .actions { display:flex; gap:4px; margin-top:5px; }
-    .list-item button { padding:4px 7px; }
+    .list-item button { padding:4px 7px; font-size:11px; border:1px solid var(--line); border-radius:3px; background:#fff; cursor:pointer; }
     .preview { display:grid; gap:3px; width:100%; height:70px; padding:5px; border:1px solid var(--line); background:var(--bg); }
     .preview span { background:#9dc3e6; border:1px solid #5b9bd5; }
-    .hidden-by-search { display:none !important; }
-    #searchResults { margin-top:6px; max-height:160px; overflow:auto; }
-    #searchResults button { width:100%; text-align:left; padding:6px; background:#fff; border:1px solid var(--line); }
+    #searchResults { margin-top:6px; max-height:150px; overflow:auto; }
+    #searchResults button { width:100%; text-align:left; padding:5px; background:#fff; border:1px solid var(--line); border-radius:3px; cursor:pointer; font-size:11px; }
     .icon-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; max-height:430px; overflow:auto; padding:1px; }
     .icon-button { height:88px; padding:7px 3px 5px; border:1px solid var(--line); border-radius:4px; background:#fff; cursor:pointer; color:var(--blue); }
     .icon-button:hover { background:#eef4fb; border-color:#9ab7d0; }
     .icon-button svg { display:block; width:48px; height:48px; margin:0 auto 4px; }
     .icon-button span { display:block; color:#202124; font-size:10px; line-height:1.15; overflow-wrap:anywhere; }
     .icon-more { grid-column:1/-1; min-height:34px; border:1px solid var(--line); background:var(--bg); cursor:pointer; }
+    /* Chart Settings / Edit Colors render in place of the ribbon's native panels. */
+    .settings-row { display:flex; gap:6px; align-items:center; margin:6px 0; }
+    .settings-row label { flex:1; color:#3c4043; font-size:11px; }
+    .settings-row input[type=range] { flex:1; }
+    .settings-row .value { width:38px; text-align:right; color:var(--muted); font-size:11px; }
+    .settings-row input[type=number],.settings-row select { flex:0 0 82px; height:27px; }
+    .palette-editor { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin:6px 0; }
+    .palette-editor input[type=color] { width:100%; }
+    details.help { margin-top:6px; }
+    details.help summary { cursor:pointer; color:var(--blue); font-size:11px; }
+    details.help pre { margin:4px 0 0; padding:6px; background:var(--bg); border-radius:3px; font:11px/1.35 monospace; white-space:pre-wrap; }
   </style>
 </head>
 <body>
-  <header><h1>Slide Aid</h1><div class="subtitle" id="deck">Loading presentation…</div>
+  <header>
+    <h1>Slide Aid</h1><div class="subtitle" id="deck">Loading presentation…</div>
     <input class="search" id="commandSearch" placeholder="Search commands…" oninput="filterCommands()">
     <div class="list" id="searchResults" hidden></div>
-    <div class="inspector"><strong id="inspectorTitle">No objects selected</strong><div id="inspectorDetails">Select objects, then refresh.</div><button onclick="refresh()">Refresh selection</button></div>
+    <div class="reference" style="margin-top:7px">
+      <strong id="referenceLabel">No reference pinned</strong>
+      <span id="selectionCount">0 objects selected</span>
+      <div class="small-buttons">
+        <button onclick="setReference()" title="Pin the selected object as the reference. This replaces PowerPoint's 'last selected object is the Master' rule, which Google Slides cannot express.">Set reference</button>
+        <button onclick="clearReference()">Clear</button>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <label>Reference</label>
+        <select id="referenceMode" title="What reference-based tools measure against: the pinned object, the slide, or the bounding box of the selection.">
+          <option value="PINNED">Pinned object</option>
+          <option value="SLIDE">Slide</option>
+          <option value="BOUNDS">Selection bounds</option>
+        </select>
+      </div>
+    </div>
+    <div class="inspector"><strong id="inspectorTitle">No objects selected</strong><div id="inspectorDetails">Select objects, then refresh.</div><button onclick="refresh()" style="margin-top:4px">Refresh selection</button></div>
   </header>
-  <nav class="tabs">
-    <button class="tab active" data-panel="position">Position</button>
-    <button class="tab" data-panel="size">Size & text</button>
-    <button class="tab" data-panel="color">Color</button>
-    <button class="tab" data-panel="charts">Charts</button>
-    <button class="tab" data-panel="layouts">Layouts</button>
-    <button class="tab" data-panel="library">Library</button>
-    <button class="tab" data-panel="icons">Icons</button>
-    <button class="tab" data-panel="qa">Deck QA</button>
+
+  <nav class="sections">
+    <button class="section-tab active" data-panel="slideaid">Slide Aid</button>
+    <button class="section-tab" data-panel="chartaid">Chart Aid</button>
+    <button class="section-tab" data-panel="icons">Icons</button>
+    <button class="section-tab" data-panel="deck">Deck</button>
   </nav>
+
   <main id="content">
-    <section class="panel active" id="position">
-      <div class="section">
-        <div class="section-title">Reference</div>
-        <div class="reference"><strong id="referenceLabel">No reference pinned</strong><span id="selectionCount">0 objects selected</span>
-          <div class="small-buttons"><button onclick="setReference()">Set reference</button><button onclick="clearReference()">Clear</button></div>
-        </div>
-        <div class="row"><label>Align to</label><select id="referenceMode"><option value="PINNED">Pinned object</option><option value="SLIDE">Slide</option><option value="BOUNDS">Selection bounds</option></select></div>
-      </div>
-      <div class="section"><div class="section-title">Align</div><div class="grid">
-        <button class="action" onclick="command('align','L')"><img src="{{ICON:sa_align_left}}">Left</button>
-        <button class="action" onclick="command('align','CH')"><img src="{{ICON:sa_align_center}}">Center</button>
-        <button class="action" onclick="command('align','R')"><img src="{{ICON:sa_align_right}}">Right</button>
-        <button class="action" onclick="command('align','T')"><img src="{{ICON:sa_align_top}}">Top</button>
-        <button class="action" onclick="command('align','CV')"><img src="{{ICON:sa_align_middle}}">Middle</button>
-        <button class="action" onclick="command('align','B')"><img src="{{ICON:sa_align_bottom}}">Bottom</button>
-      </div></div>
-      <div class="section"><div class="section-title">Dock / stretch / fill gap</div><div class="grid">
-        <button class="action" onclick="command('dock','L')"><img src="{{ICON:sa_dock}}">Dock L</button><button class="action" onclick="command('dock','T')">Dock ↑</button><button class="action" onclick="command('dock','R')">Dock R</button>
-        <button class="action" onclick="command('stretch','L')"><img src="{{ICON:sa_stretch}}">Stretch L</button><button class="action" onclick="command('stretch','R')">Stretch R</button><button class="action" onclick="command('fillGap','R')"><img src="{{ICON:sa_fill}}">Fill →</button>
-      </div></div>
-      <div class="section"><div class="section-title">Arrange</div>
-        <div class="row"><label>Gap (cm)</label><input id="gap" type="number" value="0.2" step="0.1"></div>
-        <div class="row"><label>Columns</label><input id="columns" type="number" value="3" min="1" step="1"></div>
+    <!-- ============================ SLIDE AID ============================ -->
+    <section class="panel active" id="slideaid">
+      <div class="group">
+        <div class="group-title">Wizards</div>
         <div class="grid">
-          <button class="action" onclick="command('stack','H')"><img src="{{ICON:sa_stack}}">Stack H</button><button class="action" onclick="command('stack','V')">Stack V</button><button class="action" onclick="command('matrix')"><img src="{{ICON:sa_matrix}}">Matrix</button>
-          <button class="action" onclick="command('spacing','H')"><img src="{{ICON:sa_spacing}}">Space H</button><button class="action" onclick="command('spacing','V')">Space V</button><button class="action" onclick="command('distribute','H')"><img src="{{ICON:sa_dist_h}}">Distribute H</button>
+          <button class="action" onclick="showPanel('deck','library')"><img src="{{ICON:sa_elements}}">My Elements</button>
+          <button class="action" onclick="toggleFormats()"><img src="{{ICON:sa_formats}}">My Formats</button>
+          <button class="action" onclick="toggleAgenda()"><img src="{{ICON:sa_agenda}}">Agenda</button>
+          <button class="action" onclick="call('paintSlideAidFormat')" title="Copy the reference's complete format to the other objects: fill, line, font, alignment - the whole look."><img src="{{ICON:sa_painter}}">Format Painter</button>
+          <button class="action" onclick="call('selectSlideAidSimilar','T')" title="Select all shapes on this slide of the same type as the reference."><img src="{{ICON:sa_similar}}">Same Shape Type</button>
+          <button class="action" onclick="call('selectSlideAidSimilar','F')" title="Select all shapes on this slide with the same fill color as the reference.">Same Fill Color</button>
+        </div>
+        <div class="grid" style="margin-top:5px">
+          <button class="action compact" onclick="call('selectSlideAidSimilar','TF')">Same Type + Fill</button>
+        </div>
+        <div id="formatsBox" hidden>
+          <div class="row"><label>Format name</label><input id="formatName" placeholder="Blue KPI card"><button onclick="call('saveSlideAidFormat',$('formatName').value)">Save</button></div>
+          <div class="list" id="formatList"><div class="note">No formats saved in this deck.</div></div>
+        </div>
+        <div id="agendaBox" hidden>
+          <div class="row" style="align-items:flex-start"><label>Agenda items</label><textarea id="agendaItems" rows="5" placeholder="One item per line"></textarea></div>
+          <div class="grid two">
+            <button class="action compact" onclick="buildAgenda()">Generate agenda</button>
+            <button class="action compact" onclick="call('removeSlideAidAgenda')">Remove generated</button>
+          </div>
+          <div class="note">Google Slides has no section concept, so agenda items are typed rather than read from sections.</div>
         </div>
       </div>
-      <div class="section"><div class="section-title">Place on slide</div><div class="grid">
-        <button class="action" onclick="command('place','LH')">Left half</button><button class="action" onclick="command('place','RH')">Right half</button><button class="action" onclick="command('place','FULL')"><img src="{{ICON:sa_place}}">Full</button>
-        <button class="action" onclick="command('place','Q1')">Top-left</button><button class="action" onclick="command('place','Q2')">Top-right</button><button class="action" onclick="command('golden')"><img src="{{ICON:sa_golden}}">Golden</button>
-      </div></div>
+
+      <div class="group">
+        <div class="group-title">Position</div>
+        <div class="grid">
+          <button class="action" onclick="command('align','L')"><img src="{{ICON:sa_align_left}}">Left</button>
+          <button class="action" onclick="command('align','R')"><img src="{{ICON:sa_align_right}}">Right</button>
+          <button class="action" onclick="command('align','T')"><img src="{{ICON:sa_align_top}}">Top</button>
+          <button class="action" onclick="command('align','B')"><img src="{{ICON:sa_align_bottom}}">Bottom</button>
+          <button class="action" onclick="command('align','CH')"><img src="{{ICON:sa_align_center}}">Center</button>
+          <button class="action" onclick="command('align','CV')"><img src="{{ICON:sa_align_middle}}">Middle</button>
+        </div>
+        <div class="note">To align to the slide instead, set Reference to <strong>Slide</strong> above.</div>
+        <div class="grid two" style="margin-top:6px">
+          <button class="action" onclick="command('distribute','H')" title="Make horizontal gaps equal; the outermost objects keep their positions."><img src="{{ICON:sa_dist_h}}">Distribute H</button>
+          <button class="action" onclick="command('distribute','V')"><img src="{{ICON:sa_dist_v}}">Distribute V</button>
+        </div>
+        <div class="row"><label>Swap at</label>
+          <select id="swapAnchor" title="Which point is matched when the objects are different sizes."><option value="C">Centers</option><option value="TL">Top-left</option><option value="TR">Top-right</option><option value="BL">Bottom-left</option><option value="BR">Bottom-right</option></select>
+          <label style="min-width:auto"><input type="checkbox" id="swapSizes"> Sizes</label>
+        </div>
+        <div class="grid two">
+          <button class="action" onclick="swap()" title="Each object takes the next one's place. PowerPoint follows click order; Slides uses left-to-right order."><img src="{{ICON:sa_swap}}">Swap</button>
+          <button class="action" onclick="command('golden')" title="Position objects inside the reference so the bottom margin is twice the top margin."><img src="{{ICON:sa_golden}}">Golden Canon</button>
+        </div>
+        <div class="group-title" style="margin-top:9px">Dock</div>
+        <div class="grid four">
+          <button class="action compact" onclick="command('dock','L')"><img src="{{ICON:sa_dock}}">Left</button>
+          <button class="action compact" onclick="command('dock','R')">Right</button>
+          <button class="action compact" onclick="command('dock','T')">Up</button>
+          <button class="action compact" onclick="command('dock','B')">Down</button>
+        </div>
+        <div class="group-title" style="margin-top:9px">Arrange</div>
+        <div class="row"><label>Gap (cm)</label><input id="gap" type="number" value="0.2" step="0.1"><label style="min-width:auto">Columns</label><input id="columns" type="number" value="3" min="1" step="1" style="flex:0 0 60px"></div>
+        <div class="grid">
+          <button class="action" onclick="command('stack','H')" title="Stack the objects so they touch, in spatial order. Use the Gap field for fixed spacing; negative values overlap."><img src="{{ICON:sa_stack}}">Stack H</button>
+          <button class="action" onclick="command('stack','V')">Stack V</button>
+          <button class="action" onclick="command('spacing','H')" title="Set an exact gap between objects in their current order."><img src="{{ICON:sa_spacing}}">Spacing H</button>
+          <button class="action" onclick="command('spacing','V')">Spacing V</button>
+          <button class="action" onclick="matrixAuto()" title="Near-square grid filled row by row - no column count needed."><img src="{{ICON:sa_matrix}}">Matrix</button>
+          <button class="action" onclick="command('matrix')" title="Grid using the Columns and Gap values above."><img src="{{ICON:sa_matrix_custom}}">Matrix…</button>
+        </div>
+        <div class="group-title" style="margin-top:9px">Place on Slide</div>
+        <div class="row"><label>Region</label>
+          <select id="placeRegion">
+            <option value="LH">Left Half</option><option value="RH">Right Half</option><option value="TH">Top Half</option><option value="BH">Bottom Half</option>
+            <option value="L3">Left Third</option><option value="C3">Center Third</option><option value="R3">Right Third</option>
+            <option value="Q1">Top-Left Quadrant</option><option value="Q2">Top-Right Quadrant</option><option value="Q3">Bottom-Left Quadrant</option><option value="Q4">Bottom-Right Quadrant</option>
+            <option value="FULL">Full Slide</option>
+          </select>
+          <button onclick="command('place',$('placeRegion').value)" title="One object fills the region; several move there as a block.">Place</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Size</div>
+        <div class="grid">
+          <button class="action" onclick="command('size','W')" title="Give all objects the reference's width, keeping their centers."><img src="{{ICON:sa_width}}">Width</button>
+          <button class="action" onclick="command('size','H')"><img src="{{ICON:sa_height}}">Height</button>
+          <button class="action" onclick="command('size','WH')"><img src="{{ICON:sa_size}}">Width + Height</button>
+        </div>
+        <div class="row"><label>Scale (%)</label><input id="scale" type="number" value="120" min="1"><label style="min-width:auto"><input type="checkbox" id="scaleFonts" checked> Fonts</label></div>
+        <div class="row"><label>Rows / Cols</label><input id="rows" type="number" value="2" min="1"><input id="dupeColumns" type="number" value="2" min="1"></div>
+        <div class="grid">
+          <button class="action" onclick="command('scale')" title="Scale positions, size and font sizes about the center of the selection."><img src="{{ICON:sa_magic}}">Magic Resizer</button>
+          <button class="action" onclick="duplicate('slice')" title="Cut one shape into a rows-by-columns grid inside its original footprint."><img src="{{ICON:sa_slice}}">Slice</button>
+          <button class="action" onclick="duplicate('multiply')" title="Create a rows-by-columns grid of full-size copies."><img src="{{ICON:sa_multiply}}">Multiply</button>
+        </div>
+        <div class="group-title" style="margin-top:9px">Stretch</div>
+        <div class="grid four">
+          <button class="action compact" onclick="command('stretch','L')" title="Extend the chosen edge to the reference's matching edge; the opposite edge stays put."><img src="{{ICON:sa_stretch}}">Left</button>
+          <button class="action compact" onclick="command('stretch','R')">Right</button>
+          <button class="action compact" onclick="command('stretch','T')">Top</button>
+          <button class="action compact" onclick="command('stretch','B')">Bottom</button>
+        </div>
+        <div class="group-title" style="margin-top:9px">Fill Gap</div>
+        <div class="grid four">
+          <button class="action compact" onclick="command('fillGap','L')" title="Extend each object toward the reference until the gap closes."><img src="{{ICON:sa_fill}}">Left</button>
+          <button class="action compact" onclick="command('fillGap','R')">Right</button>
+          <button class="action compact" onclick="command('fillGap','T')">Up</button>
+          <button class="action compact" onclick="command('fillGap','B')">Down</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Shape</div>
+        <div class="grid">
+          <button class="action" onclick="command('procChain')" title="Give every object the reference's vertical position, height and angle, then close the horizontal gaps."><img src="{{ICON:sa_chain}}">Process Chain</button>
+          <button class="action" onclick="command('angles')" title="Copy the reference's rotation to all objects."><img src="{{ICON:sa_angles}}">Align Angles</button>
+          <button class="action" onclick="snapTable()" title="Move objects into the table cell they sit over. Select the table too."><img src="{{ICON:sa_table}}">Snap to Table</button>
+        </div>
+        <div class="row"><label>Cell align</label>
+          <select id="snapMode"><option value="C">Center in Cell</option><option value="L">Left in Cell</option><option value="R">Right in Cell</option></select>
+          <input id="snapMargin" type="number" value="0.15" step="0.05" style="flex:0 0 66px" title="Margin in cm for left/right alignment.">
+        </div>
+        <div class="note">Block-arrow metrics and absolute corner radii need shape adjustment handles, which the Slides API does not expose.</div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Color</div>
+        <div class="row"><label>Apply to</label><select id="colorTarget"><option value="F">Fill</option><option value="L">Line</option><option value="T">Font</option></select><input id="shapeColor" type="color" value="#4472c4"><button onclick="applyColor()">Apply</button></div>
+        <div class="group-title" style="margin-top:8px">Theme colors</div>
+        <div class="swatches" id="themeSwatches"></div>
+        <div class="group-title" style="margin-top:8px">Palette colors</div>
+        <div class="swatches" id="genericSwatches"></div>
+        <div class="note">Theme colors stay linked to the template and follow it; palette colors are fixed RGB.</div>
+        <div class="group-title" style="margin-top:9px">Pick from reference</div>
+        <div class="grid four">
+          <button class="action compact" onclick="call('pickSlideAidColors','ALL')"><img src="{{ICON:sa_pick}}">All</button>
+          <button class="action compact" onclick="call('pickSlideAidColors','F')">Fill</button>
+          <button class="action compact" onclick="call('pickSlideAidColors','L')">Line</button>
+          <button class="action compact" onclick="call('pickSlideAidColors','T')">Font</button>
+        </div>
+        <div class="grid" style="margin-top:6px">
+          <button class="action" onclick="call('convertSlideAidColors',false)" title="Make colors independent of the theme so they survive a template change."><img src="{{ICON:sa_torgb}}">Convert to RGB</button>
+          <button class="action" onclick="call('convertSlideAidColors',true)" title="Map matching RGB colors back to theme links."><img src="{{ICON:sa_totheme}}">Convert to Theme</button>
+          <button class="action" onclick="colorInfo()" title="Show the selected object's fill as RGB and hex, and whether it is theme-linked."><img src="{{ICON:sa_info}}">Color Info</button>
+        </div>
+        <div class="grid" style="margin-top:5px">
+          <button class="action compact" onclick="applyPaletteToTheme()" title="Replace the deck's six theme accent colors with the current Chart Aid color theme. Google Slides only - PowerPoint has no equivalent.">Palette → accents</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Text</div>
+        <div class="grid">
+          <button class="action" onclick="call('fitSlideAidShapesToText')" title="Shrink or grow each shape to the size of its text."><img src="{{ICON:sa_fit}}">Fit to Text</button>
+          <button class="action" onclick="call('splitSlideAidTextAtCursor')" title="Click into the text first; the second part is placed directly below."><img src="{{ICON:sa_split}}">Split at Cursor</button>
+          <button class="action" onclick="call('mergeSlideAidTextBoxes')" title="Each box becomes a paragraph of the first, in top-to-bottom order."><img src="{{ICON:sa_merge}}">Merge Boxes</button>
+          <button class="action" onclick="command('text','U')">UPPERCASE</button>
+          <button class="action" onclick="command('text','L')">lowercase</button>
+          <button class="action" onclick="command('text','T')">Title Case</button>
+          <button class="action" onclick="command('text','S')">Sentence case</button>
+          <button class="action" onclick="command('text','TIDY')"><img src="{{ICON:sa_cleanup}}">Remove Double Spaces</button>
+          <button class="action" onclick="command('swapText')" title="Exchange the text of exactly two objects; each keeps its own formatting."><img src="{{ICON:sa_swap}}">Swap Text</button>
+        </div>
+        <div class="note">Set Margins and Wrap Text need per-side text insets and a wrap flag, neither of which the Slides API exposes.</div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">View &amp; Expert</div>
+        <div class="grid">
+          <button class="action" onclick="call('hideSlideAidObjects')" title="Park the selected objects off-canvas, keeping their position and layer, until Unhide All."><img src="{{ICON:sa_hide}}">Hide Objects</button>
+          <button class="action" onclick="call('unhideSlideAidObjects')"><img src="{{ICON:sa_unhide}}">Unhide All</button>
+          <button class="action" onclick="call('pasteSlideAidOnSlides')" title="Copy the selection onto every other slide at the same position."><img src="{{ICON:sa_paste}}">Paste on Slides</button>
+          <button class="action" onclick="confirmCall('removeSlideAidSpeakerNotes','Remove the speaker notes from every slide?')"><img src="{{ICON:sa_cleanup}}">Remove Notes</button>
+          <button class="action" onclick="slideSummary()" title="Copy a numbered list of slide titles.">Slide Summary</button>
+        </div>
+        <div class="note" id="summaryBox" hidden></div>
+        <div class="note">Animations, proofing language, master-object visibility and add-on keyboard shortcuts are not scriptable in Google Slides.</div>
+      </div>
     </section>
 
-    <section class="panel" id="size">
-      <div class="section"><div class="section-title">Match reference</div><div class="grid">
-        <button class="action" onclick="command('size','W')"><img src="{{ICON:sa_width}}">Width</button><button class="action" onclick="command('size','H')"><img src="{{ICON:sa_height}}">Height</button><button class="action" onclick="command('size','WH')"><img src="{{ICON:sa_size}}">Both</button>
-      </div></div>
-      <div class="section"><div class="section-title">Resize and duplicate</div>
-        <div class="row"><label>Scale (%)</label><input id="scale" type="number" value="120" min="1"></div>
-        <div class="row"><label>Rows</label><input id="rows" type="number" value="2" min="1"><label style="min-width:auto">Cols</label><input id="dupeColumns" type="number" value="2" min="1"></div>
-        <div class="grid"><button class="action" onclick="command('scale')"><img src="{{ICON:sa_magic}}">Resize</button><button class="action" onclick="command('slice')"><img src="{{ICON:sa_slice}}">Slice</button><button class="action" onclick="command('multiply')"><img src="{{ICON:sa_multiply}}">Multiply</button></div>
+    <!-- ============================ CHART AID ============================ -->
+    <section class="panel" id="chartaid">
+      <div class="group">
+        <div class="group-title">Charts</div>
+        <div class="grid">
+          <button class="action" onclick="chart('COL')"><img src="{{ICON:sa_ch_col}}">Column</button>
+          <button class="action" onclick="chart('BAR')"><img src="{{ICON:sa_ch_bar}}">Bar</button>
+          <button class="action" onclick="chart('STK')"><img src="{{ICON:sa_ch_stk}}">Stacked</button>
+          <button class="action" onclick="chart('SBR')"><img src="{{ICON:sa_ch_sbr}}">Stacked Bar</button>
+          <button class="action" onclick="chart('PCT')"><img src="{{ICON:sa_ch_pct}}">100%</button>
+          <button class="action" onclick="chart('WF')" title="Rows of label | value. A value of 'e' or '=' becomes a computed subtotal bar."><img src="{{ICON:sa_ch_wf}}">Waterfall</button>
+          <button class="action" onclick="chart('MEK')"><img src="{{ICON:sa_ch_mek}}">Mekko</button>
+          <button class="action" onclick="chart('LINE')"><img src="{{ICON:sa_ch_line}}">Line</button>
+          <button class="action" onclick="chart('AREA')"><img src="{{ICON:sa_ch_area}}">Area</button>
+          <button class="action" onclick="chart('PIE')"><img src="{{ICON:sa_ch_pie}}">Pie</button>
+          <button class="action" onclick="chart('DON')"><img src="{{ICON:sa_ch_don}}">Doughnut</button>
+          <button class="action" onclick="chart('SCAT')" title="Rows of label | x | y."><img src="{{ICON:sa_ch_scat}}">Scatter</button>
+          <button class="action" onclick="chart('BUB')" title="Rows of label | x | y | size."><img src="{{ICON:sa_ch_scat}}">Bubble</button>
+          <button class="action" onclick="chart('GANTT')" title="Rows of activity | start | end. start = end draws a milestone diamond."><img src="{{ICON:sa_ch_gantt}}">Gantt</button>
+        </div>
       </div>
-      <div class="section"><div class="section-title">Shape</div><div class="grid two"><button class="action" onclick="command('angles')"><img src="{{ICON:sa_angles}}">Match rotation</button><button class="action" onclick="command('golden')"><img src="{{ICON:sa_golden}}">Golden canon</button></div></div>
-      <div class="section"><div class="section-title">Text</div><div class="grid">
-        <button class="action" onclick="command('text','U')">UPPER</button><button class="action" onclick="command('text','L')">lower</button><button class="action" onclick="command('text','T')">Title</button>
-        <button class="action" onclick="command('text','S')">Sentence</button><button class="action" onclick="command('text','TIDY')"><img src="{{ICON:sa_cleanup}}">Tidy</button><button class="action" onclick="command('swapText')"><img src="{{ICON:sa_swap}}">Swap text</button>
-      </div><div class="note">Selection-order tools use spatial order in Google Slides.</div></div>
-    </section>
 
-    <section class="panel" id="color">
-      <div class="section"><div class="section-title">Apply RGB color</div>
-        <div class="row"><label>Target</label><select id="colorTarget"><option value="F">Fill</option><option value="L">Line</option><option value="T">Text</option></select><input id="shapeColor" type="color" value="#4472c4"><button onclick="applyColor()">Apply</button></div>
-      </div>
-      <div class="section"><div class="section-title">Chart palette</div><div class="row"><label>Palette</label><select id="palette" onchange="setPalette(this.value)"></select></div><div class="note">The nine palettes match the PowerPoint Chart Aid gallery. Restyle charts after changing the palette.</div></div>
-      <div class="section"><div class="section-title">Theme-linked colors</div><div class="row"><label>Target</label><select id="themeTarget"><option value="F">Fill</option><option value="L">Line</option><option value="T">Text</option></select></div><div class="swatches" id="themeSwatches"></div></div>
-      <div class="section"><div class="section-title">Convert and manage theme</div><div class="grid">
-        <button class="action" onclick="call('convertSlideAidColors',true)">RGB → theme</button><button class="action" onclick="call('convertSlideAidColors',false)">Theme → RGB</button><button class="action" onclick="applyPaletteTheme()">Palette → accents</button>
-      </div><div class="note">Changing theme accents affects every theme-linked object in the deck.</div></div>
-    </section>
-
-    <section class="panel" id="charts">
-      <div class="section"><div class="section-title">Build from selected table</div><div class="grid">
-        <button class="action" onclick="chart('COL')"><img src="{{ICON:sa_ch_col}}">Column</button><button class="action" onclick="chart('BAR')"><img src="{{ICON:sa_ch_bar}}">Bar</button><button class="action" onclick="chart('STK')"><img src="{{ICON:sa_ch_stk}}">Stacked</button>
-        <button class="action" onclick="chart('SBR')"><img src="{{ICON:sa_ch_sbr}}">Stacked bar</button><button class="action" onclick="chart('PCT')"><img src="{{ICON:sa_ch_pct}}">100%</button><button class="action" onclick="chart('WF')"><img src="{{ICON:sa_ch_wf}}">Waterfall</button>
-        <button class="action" onclick="chart('MEK')"><img src="{{ICON:sa_ch_mek}}">Mekko</button><button class="action" onclick="chart('LINE')"><img src="{{ICON:sa_ch_line}}">Line</button><button class="action" onclick="chart('AREA')"><img src="{{ICON:sa_ch_area}}">Area</button>
-        <button class="action" onclick="chart('PIE')"><img src="{{ICON:sa_ch_pie}}">Pie</button><button class="action" onclick="chart('DON')"><img src="{{ICON:sa_ch_don}}">Doughnut</button><button class="action" onclick="chart('SCAT')"><img src="{{ICON:sa_ch_scat}}">Scatter</button>
-        <button class="action" onclick="chart('BUB')"><img src="{{ICON:sa_ch_scat}}">Bubble</button><button class="action" onclick="chart('GANTT')"><img src="{{ICON:sa_ch_gantt}}">Gantt</button>
-      </div></div>
-      <div class="section"><div class="section-title">Edit and style</div><div class="grid two">
-        <button class="action" onclick="api('editSlideAidChartData')"><img src="{{ICON:sa_ch_edit}}">Edit data</button><button class="action" onclick="api('rebuildSlideAidChart')"><img src="{{ICON:sa_ch_rebuild}}">Rebuild</button>
-        <button class="action" onclick="restyle(false)"><img src="{{ICON:sa_ch_restyle}}">Restyle selected</button><button class="action" onclick="restyle(true)">Restyle all</button>
-      </div>
-      <div class="row"><label>Series</label><input id="series" type="number" value="1" min="1"><input id="seriesColor" type="color" value="#4472c4"><button onclick="recolorSeries()">Recolor</button></div>
-      <div class="note">Area, pie and doughnut remain data-editable but render as images because Google Slides does not expose PowerPoint-style freeform paths or adjustment handles.</div></div>
-      <div class="section"><div class="section-title">Linked Google Sheets data</div>
+      <div class="group">
+        <div class="group-title">Data</div>
+        <div class="grid">
+          <button class="action" onclick="api('editSlideAidChartData')" title="Recreate the chart's data table beside it. Edit, select table + chart, then Rebuild."><img src="{{ICON:sa_ch_edit}}">Edit Data</button>
+          <button class="action" onclick="api('rebuildSlideAidChart')" title="Rebuild in place using the chart's own type and stored data."><img src="{{ICON:sa_ch_rebuild}}">Rebuild</button>
+          <button class="action" onclick="loadDataLayouts()"><img src="{{ICON:sa_ch_help}}">Data Layouts</button>
+          <button class="action" onclick="confirmCall('insertSlideAidSampleSlides','Append 14 sample slides, one per chart type?')" title="One live example slide per chart type, built by the real chart code."><img src="{{ICON:sa_ch_samples}}">Sample Slides</button>
+          <button class="action" onclick="confirmCall('removeSlideAidSampleSlides','Remove all Chart Aid sample slides?')">Remove Samples</button>
+        </div>
+        <div class="list" id="layoutHelp" hidden></div>
+        <div class="group-title" style="margin-top:9px">Linked Google Sheets data</div>
         <div class="row"><label>Sheet URL</label><input id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/…"></div>
-        <div class="row"><label>Tab</label><input id="sheetName" placeholder="Sheet1"><label style="min-width:auto">Range</label><input id="sheetRange" value="A1:D6"></div>
+        <div class="row"><label>Tab / Range</label><input id="sheetName" placeholder="Sheet1"><input id="sheetRange" value="A1:D6"></div>
         <div class="row"><label>Chart</label><select id="linkedKind"><option>COL</option><option>BAR</option><option>STK</option><option>SBR</option><option>PCT</option><option>WF</option><option>MEK</option><option>LINE</option><option>AREA</option><option>PIE</option><option>DON</option><option>SCAT</option><option>BUB</option><option>GANTT</option></select></div>
-        <div class="grid"><button class="action" onclick="validateLinked()">Validate</button><button class="action" onclick="buildLinked()">Build linked</button><button class="action" onclick="api('refreshLinkedSlideAidChart')">Refresh selected</button></div>
+        <div class="grid">
+          <button class="action compact" onclick="validateLinked()">Validate</button>
+          <button class="action compact" onclick="buildLinked()">Build linked</button>
+          <button class="action compact" onclick="api('refreshLinkedSlideAidChart')">Refresh selected</button>
+        </div>
         <div class="note" id="linkedStatus">Linked charts store the Sheet tab and range, then rebuild from fresh values.</div>
       </div>
+
+      <div class="group">
+        <div class="group-title">Style</div>
+        <div class="row"><label>Color Theme</label><select id="palette" onchange="setPalette(this.value)" title="One click sets the palette for all chart families and offers to restyle every existing chart."></select></div>
+        <div class="grid">
+          <button class="action" onclick="loadChartSettings()" title="Sliders and toggles for the selected chart's own parameters, or the defaults used by new charts."><img src="{{ICON:sa_ch_settings}}">Chart Settings</button>
+          <button class="action" onclick="loadFamilyPalette()" title="Edit the Bars, Lines or Pies palette as swatches, then Restyle All."><img src="{{ICON:sa_ch_editcolors}}">Edit Colors</button>
+          <button class="action" onclick="restyle(true)" title="Rebuild every Chart Aid chart with the current style. Data, position, size and manual recolors are kept."><img src="{{ICON:sa_ch_restyle}}">Restyle All</button>
+        </div>
+        <div class="grid two" style="margin-top:5px">
+          <button class="action compact" onclick="restyle(false)">Restyle Selected</button>
+          <button class="action compact" onclick="confirmCall('resetSlideAidChartSettings','Reset every chart parameter to its default?','ALL')">Reset to Defaults</button>
+        </div>
+
+        <div id="chartSettingsBox" hidden>
+          <div class="group-title" style="margin-top:9px">Chart Settings — <span id="settingsScope"></span></div>
+          <div id="settingsControls"></div>
+          <div class="grid two">
+            <button class="action compact primary" onclick="applyChartSettings()">Apply</button>
+            <button class="action compact" onclick="$('chartSettingsBox').hidden=true">Close</button>
+          </div>
+          <div class="note" id="settingsNote"></div>
+        </div>
+
+        <div id="editColorsBox" hidden>
+          <div class="group-title" style="margin-top:9px">Edit Colors</div>
+          <div class="row"><label>Family</label><select id="colorFamily" onchange="loadFamilyPalette()"><option value="BARS">Bars</option><option value="LINES">Lines</option><option value="PIES">Pies</option></select></div>
+          <div class="palette-editor" id="familyColors"></div>
+          <div class="grid">
+            <button class="action compact" onclick="addFamilyColor()">Add color</button>
+            <button class="action compact" onclick="removeFamilyColor()">Remove last</button>
+            <button class="action compact" onclick="call('resetSlideAidFamilyPalette',$('colorFamily').value)">Reset</button>
+          </div>
+          <div class="grid two" style="margin-top:5px">
+            <button class="action compact primary" onclick="saveFamilyPalette()">Save palette</button>
+            <button class="action compact" onclick="$('editColorsBox').hidden=true">Close</button>
+          </div>
+          <div class="note" id="familyNote"></div>
+        </div>
+
+        <div class="group-title" style="margin-top:9px">Recolor Series</div>
+        <div class="row"><label>Series</label><input id="series" type="number" value="1" min="1"><input id="seriesColor" type="color" value="#4472c4"><button onclick="recolorSeries()">Recolor</button></div>
+        <div class="note">A recolor is remembered and survives Edit Data and Restyle.</div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Annotations</div>
+        <div class="note">Click into a chart and select two bars (click one, then shift-click the second). Values come from the bars' data, not their pixel sizes.</div>
+        <div class="grid">
+          <button class="action" onclick="call('annotateSlideAidDifference','ABS')"><img src="{{ICON:sa_ch_diff}}">Difference</button>
+          <button class="action" onclick="call('annotateSlideAidDifference','PCT')"><img src="{{ICON:sa_ch_pctdiff}}">% Difference</button>
+          <button class="action" onclick="cagr()"><img src="{{ICON:sa_ch_cagr}}">CAGR</button>
+          <button class="action" onclick="valueLine()" title="Dashed line at a value you choose, on the chart's own scale."><img src="{{ICON:sa_ch_vline}}">Value Line</button>
+          <button class="action" onclick="call('annotateSlideAidAverageLine')" title="Dashed line at the average of the selected bars."><img src="{{ICON:sa_ch_avg}}">Average Line</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Elements</div>
+        <div class="row"><label>Color</label><input id="elementColor" type="color" value="#1f4e79"><label style="min-width:auto">Fill %</label><input id="harveyPercent" type="number" value="50" min="0" max="100" style="flex:0 0 66px"></div>
+        <div class="grid">
+          <button class="action" onclick="call('insertSlideAidHarveyBall',Number($('harveyPercent').value),$('elementColor').value)" title="A circle filled 0-100%."><img src="{{ICON:sa_ch_harvey}}">Harvey Ball</button>
+          <button class="action" onclick="call('insertSlideAidCheckbox','checked',$('elementColor').value)"><img src="{{ICON:sa_ch_check}}">Checkbox</button>
+          <button class="action" onclick="call('cycleSlideAidElementState',$('elementColor').value)" title="Checkboxes step checked - crossed - empty; Harvey balls step in 25% increments."><img src="{{ICON:sa_ch_cycle}}">Cycle State</button>
+        </div>
+      </div>
     </section>
 
-    <section class="panel" id="layouts">
-      <div class="section"><div class="section-title">Named layouts</div>
+    <!-- ============================== ICONS ============================== -->
+    <section class="panel" id="icons">
+      <div class="group">
+        <div class="group-title">Icons</div>
+        <div class="row"><input id="iconSearch" type="search" placeholder="Search icons…"></div>
+        <div class="row">
+          <label>Set</label><select id="iconSet" onchange="renderIcons(true)"><option value="">All sets</option></select>
+          <select id="iconCategory" onchange="renderIcons(true)"><option value="">All categories</option></select>
+        </div>
+        <div class="row"><label>Color</label><input id="iconColor" type="color" value="#1f497d"><button onclick="api('makeSlideAidIconsEditable')" title="Turn inserted icons on this slide into editable shapes you can recolour, ungroup and reshape.">Make Editable</button></div>
+        <div class="note">Clicking an icon inserts it as a picture, exactly as in PowerPoint. <strong>Make Editable</strong> then turns it into real shapes.</div>
+      </div>
+      <div class="group"><div class="icon-grid" id="iconGrid"></div><div class="note" id="iconCount"></div></div>
+    </section>
+
+    <!-- =============================== DECK ============================== -->
+    <section class="panel" id="deck">
+      <div class="group">
+        <div class="group-title">Named layouts</div>
         <div class="row"><label>Name</label><input id="layoutName" placeholder="Three KPI cards"><button onclick="saveLayout()">Save selection</button></div>
         <div class="list" id="layoutList"><div class="note">No layouts saved in this deck.</div></div>
       </div>
-      <div class="section"><div class="section-title">Matrix preview</div><div class="preview" id="matrixPreview"></div><div class="note">Preview uses the current selection count and Columns setting.</div></div>
-    </section>
-
-    <section class="panel" id="library">
-      <div class="section"><div class="section-title">Shared Slides library</div>
+      <div class="group">
+        <div class="group-title">Matrix preview</div>
+        <div class="preview" id="matrixPreview"></div>
+        <div class="note">Preview uses the current selection count and the Columns setting.</div>
+      </div>
+      <div class="group" id="library">
+        <div class="group-title">My Elements — shared Slides library</div>
         <div class="row"><label>Deck URL</label><input id="libraryUrl" placeholder="Explicit Google Slides URL"></div>
-        <div class="grid"><button class="action" onclick="configureLibrary()">Connect</button><button class="action" onclick="loadLibrary()">Refresh list</button><button class="action" onclick="api('refreshSelectedSlideAidLibraryItem')">Refresh selected</button></div>
+        <div class="grid">
+          <button class="action compact" onclick="configureLibrary()">Connect</button>
+          <button class="action compact" onclick="loadLibrary()">Refresh list</button>
+          <button class="action compact" onclick="api('refreshSelectedSlideAidLibraryItem')">Refresh selected</button>
+        </div>
+        <div class="row"><label>Add as</label><input id="libraryName" placeholder="KPI card"><button onclick="addToLibrary()">Add</button></div>
+        <div class="list" id="libraryList"><div class="note">Connect and load a library.</div></div>
         <div class="note">Only the explicitly connected presentation is accessed; Slide Aid does not browse your Drive.</div>
       </div>
-      <div class="section"><div class="section-title">Add current selection</div><div class="row"><label>Name</label><input id="libraryName" placeholder="KPI card"><button onclick="addToLibrary()">Add</button></div></div>
-      <div class="section"><div class="section-title">Items</div><div class="list" id="libraryList"><div class="note">Connect and load a library.</div></div></div>
-    </section>
-
-    <section class="panel" id="icons">
-      <div class="section"><div class="section-title">Icons</div>
-        <div class="row"><input id="iconSearch" type="search" placeholder="Search icons…" oninput="renderIconAid(true)"></div>
-        <div class="row"><label>Category</label><select id="iconCategory" onchange="renderIconAid(true)"><option value="">All</option></select></div>
-        <div class="row"><label>Color</label><input id="iconColor" type="color" value="#1f497d" oninput="renderIconAid(true)"><span class="note">Editable vectors</span></div>
+      <div class="group">
+        <div class="group-title">Deck QA</div>
+        <button class="action primary" style="width:100%" onclick="scanQa()">Scan entire deck</button>
+        <div class="note">Reports off-slide objects, tiny text, missing alt text, low contrast, fixed RGB fills, stale data, orphan datasheets and irregular rows.</div>
+        <div class="list" id="qaList" style="margin-top:6px"><div class="note">No scan run yet.</div></div>
       </div>
-      <div class="section"><div class="icon-grid" id="iconGrid"></div><div class="note" id="iconCount"></div></div>
-    </section>
-
-    <section class="panel" id="qa">
-      <div class="section"><div class="section-title">Presentation quality scan</div><button class="action primary" style="width:100%" onclick="scanQa()">Scan entire deck</button><div class="note">Reports off-slide objects, tiny text, missing alt text, low contrast, fixed RGB fills, stale data, orphan datasheets, and irregular rows.</div></div>
-      <div class="section"><div class="list" id="qaList"><div class="note">No scan run yet.</div></div></div>
     </section>
   </main>
   <div id="status">Ready.</div>
+
   <script>
     const ICONAID_CATALOG = {{ICONAID_CATALOG}};
-    let iconAidVisible = 90;
+    const ICON_INDEX = {{ICON_INDEX}};
+
+    let familyColors = [];
+    let settingsScope = 'GLOBAL';
+    let settingsControls = [];
     const $ = (id) => document.getElementById(id);
-    document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab,.panel').forEach((item) => item.classList.remove('active'));
-      tab.classList.add('active'); $(tab.dataset.panel).classList.add('active');
-    }));
+
+    document.querySelectorAll('.section-tab').forEach((tab) => tab.addEventListener('click', () => showPanel(tab.dataset.panel)));
+    function showPanel(name, scrollTo) {
+      document.querySelectorAll('.section-tab,.panel').forEach((item) => item.classList.remove('active'));
+      document.querySelector(`.section-tab[data-panel="${name}"]`).classList.add('active');
+      $(name).classList.add('active');
+      if (scrollTo) $(scrollTo)?.scrollIntoView({ block:'start' });
+    }
     function busy(value) { $('content').classList.toggle('busy', value); }
     function status(message, type='') { $('status').textContent = message; $('status').className = type; }
     function handle(response) {
       busy(false);
       if (!response || !response.ok) { status(response?.error || 'The operation failed.', 'error'); return; }
       status(response.message || response.data?.message || 'Done.', 'success');
+      // PowerPoint offers a deck-wide restyle whenever a style change leaves
+      // existing charts stale; mirror that instead of making the user hunt for it.
+      const charts = response.data?.charts;
+      if (charts > 0 && confirm(`${response.message}\n\nRestyle ${charts} existing chart${charts === 1 ? '' : 's'} now?`)) { restyle(true); return; }
       refresh();
     }
     function failure(error) { busy(false); status(error.message || String(error), 'error'); }
     function callWith(name, args=[], success=handle) { busy(true); status('Working…'); google.script.run.withSuccessHandler(success).withFailureHandler(failure)[name](...args); }
     function call(name, ...args) { callWith(name, args); }
     function api(name) { call(name); }
-    function command(command, argument) {
-      call('runSlideAidCommand', { command, argument, referenceMode:$('referenceMode').value, gapCm:Number($('gap').value), columns:Number($('columns').value), rows:Number($('rows').value), scalePercent:Number($('scale').value) });
+    function confirmCall(name, question, ...args) { if (confirm(question)) call(name, ...args); }
+
+    function requestBase() {
+      return {
+        referenceMode:$('referenceMode').value, gapCm:Number($('gap').value), columns:Number($('columns').value),
+        rows:Number($('rows').value), scalePercent:Number($('scale').value), scaleFonts:$('scaleFonts').checked,
+      };
     }
+    function command(command, argument) { call('runSlideAidCommand', { ...requestBase(), command, argument }); }
+    function matrixAuto() { call('runSlideAidCommand', { ...requestBase(), command:'matrix', columns:0 }); }
+    function duplicate(kind) { call('runSlideAidCommand', { ...requestBase(), command:kind, columns:Number($('dupeColumns').value) }); }
+    function swap() { call('runSlideAidCommand', { ...requestBase(), command:'swap', swapAnchor:$('swapAnchor').value, swapSizes:$('swapSizes').checked }); }
+    function snapTable() { call('snapSlideAidToTable', $('snapMode').value, Number($('snapMargin').value)); }
     function applyColor() { call('runSlideAidCommand', { command:'color', color:$('shapeColor').value, colorTarget:$('colorTarget').value }); }
     function chart(kind) { call('buildSlideAidChart', kind); }
     function restyle(all) { call('restyleSlideAidCharts', all); }
@@ -226,47 +502,616 @@
     function setPalette(name) { call('setSlideAidPalette', name); }
     function recolorSeries() { call('recolorSlideAidSeries', Number($('series').value), $('seriesColor').value); }
     function buildLinked() { call('buildLinkedSlideAidChart', $('linkedKind').value, $('sheetUrl').value, $('sheetName').value, $('sheetRange').value); }
-    function validateLinked() { callWith('validateLinkedSlideAidChart',[$('linkedKind').value,$('sheetUrl').value,$('sheetName').value,$('sheetRange').value],(response)=>{busy(false);if(!response?.ok){status(response?.error||'Validation failed.','error');return;}$('linkedStatus').textContent=`${response.data.message} Preview: ${response.data.preview.map((row)=>row.join(' | ')).join(' / ')}`;status(response.data.message,'success');}); }
-    function applyPaletteTheme() { if (confirm('Replace the deck’s six theme accent colors with this palette?')) call('applySlideAidPaletteToTheme', $('palette').value); }
     function saveLayout() { call('saveSlideAidLayout', $('layoutName').value); }
     function configureLibrary() { call('configureSlideAidLibrary', $('libraryUrl').value); }
     function addToLibrary() { call('addSelectionToSlideAidLibrary', $('libraryName').value); }
-    function filterCommands() { const query=$('commandSearch').value.trim().toLowerCase();const results=$('searchResults');results.innerHTML='';if(!query){results.hidden=true;return;}const matches=[...document.querySelectorAll('main button.action')].filter((button)=>button.textContent.toLowerCase().includes(query)).slice(0,12);matches.forEach((source)=>{const button=document.createElement('button');button.textContent=source.textContent.trim();button.onclick=()=>{source.click();$('commandSearch').value='';results.hidden=true;};results.appendChild(button);});if(!matches.length){const empty=document.createElement('div');empty.className='note';empty.textContent='No matching commands.';results.appendChild(empty);}results.hidden=false; }
-    function updateMatrixPreview(count, columns) { const preview=$('matrixPreview'); preview.innerHTML=''; const safeCount=Math.max(1,count); const safeColumns=Math.max(1,columns); preview.style.gridTemplateColumns=`repeat(${safeColumns},1fr)`; for(let i=0;i<safeCount;i++) preview.appendChild(document.createElement('span')); }
-    function renderTheme(swatches) { const target=$('themeSwatches'); target.innerHTML=''; swatches.forEach((swatch)=>{ const button=document.createElement('button'); button.className='swatch'; button.style.background=swatch.hex; button.textContent=swatch.name.replace('ACCENT','A'); button.title=`${swatch.name} ${swatch.hex}`; button.onclick=()=>call('applySlideAidThemeColor',$('themeTarget').value,swatch.name); target.appendChild(button); }); }
-    function renderLayouts(layouts) { const list=$('layoutList'); list.innerHTML=''; if(!layouts.length){const empty=document.createElement('div');empty.className='note';empty.textContent='No layouts saved in this deck.';list.appendChild(empty);return;} layouts.forEach((layout)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=layout.name;const meta=document.createElement('div');meta.className='meta';meta.textContent=`${layout.slots.length} slots`;const actions=document.createElement('div');actions.className='actions';const apply=document.createElement('button');apply.textContent='Apply';apply.onclick=()=>call('applySlideAidLayout',layout.name);const del=document.createElement('button');del.textContent='Delete';del.onclick=()=>confirm(`Delete layout “${layout.name}”?`)&&call('deleteSlideAidLayout',layout.name);actions.append(apply,del);item.append(title,meta,actions);list.appendChild(item);}); }
-    function loadLibrary() { callWith('getSlideAidLibraryItems',[],(response)=>{busy(false);if(!response?.ok){status(response?.error||'Could not load library.','error');return;}renderLibrary(response.data);status(`Loaded ${response.data.length} library items.`,'success');}); }
-    function renderLibrary(items) { const list=$('libraryList');list.innerHTML='';if(!items.length){const empty=document.createElement('div');empty.className='note';empty.textContent='The library is empty.';list.appendChild(empty);return;}items.forEach((entry)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=entry.name;const meta=document.createElement('div');meta.className='meta';meta.textContent=`Library slide ${entry.index+1}${entry.updatedAt?' · '+entry.updatedAt:''}`;const button=document.createElement('button');button.textContent='Insert';button.onclick=()=>call('insertSlideAidLibraryItem',entry.slideId);item.append(title,meta,button);list.appendChild(item);}); }
+    function toggleFormats() { $('formatsBox').hidden = !$('formatsBox').hidden; }
+    function toggleAgenda() { $('agendaBox').hidden = !$('agendaBox').hidden; }
+    function buildAgenda() { call('buildSlideAidAgenda', $('agendaItems').value.split('\n')); }
+    function cagr() { const periods = prompt('How many periods between the two bars?', '3'); if (periods !== null) call('annotateSlideAidDifference', 'CAGR', Number(periods)); }
+    function valueLine() { const value = prompt('Draw the line at which value?', '0'); if (value !== null) call('annotateSlideAidValueLine', Number(value)); }
+    function applyPaletteToTheme() { if (confirm('Replace the deck’s six theme accent colors with the current color theme?')) call('applySlideAidPaletteToTheme', $('palette').value); }
+
+    function colorInfo() {
+      callWith('getSlideAidColorInfo', [], (response) => {
+        busy(false);
+        if (!response?.ok) { status(response?.error || 'Could not read the color.', 'error'); return; }
+        status(response.data.message, 'success');
+      });
+    }
+    function slideSummary() {
+      callWith('getSlideAidSlideSummary', [], (response) => {
+        busy(false);
+        if (!response?.ok) { status(response?.error || 'Could not summarize.', 'error'); return; }
+        const box = $('summaryBox');
+        box.hidden = false;
+        box.textContent = response.data.summary;
+        status(`${response.data.message} Select the text above to copy it.`, 'success');
+      });
+    }
+    function validateLinked() {
+      callWith('validateLinkedSlideAidChart', [$('linkedKind').value, $('sheetUrl').value, $('sheetName').value, $('sheetRange').value], (response) => {
+        busy(false);
+        if (!response?.ok) { status(response?.error || 'Validation failed.', 'error'); return; }
+        $('linkedStatus').textContent = `${response.data.message} Preview: ${response.data.preview.map((row) => row.join(' | ')).join(' / ')}`;
+        status(response.data.message, 'success');
+      });
+    }
+
+    // --- Chart Settings -----------------------------------------------------
+    function loadChartSettings() {
+      callWith('getSlideAidChartSettings', [], (response) => {
+        busy(false);
+        if (!response?.ok) { status(response?.error || 'Could not read chart settings.', 'error'); return; }
+        const state = response.data;
+        settingsScope = state.scope;
+        settingsControls = state.controls;
+        $('settingsScope').textContent = state.scopeLabel;
+        $('settingsNote').textContent = state.hasSelectedChart
+          ? 'Apply rebuilds the selected chart in place.'
+          : 'Nothing selected, so these are the defaults new charts use.';
+        const host = $('settingsControls');
+        host.innerHTML = '';
+        state.controls.forEach((control) => {
+          const row = document.createElement('div');
+          row.className = 'settings-row';
+          const label = document.createElement('label');
+          label.textContent = control.label;
+          row.appendChild(label);
+          const value = String(state.values[control.key] ?? '');
+          if (control.type === 'check') {
+            const input = document.createElement('input');
+            input.type = 'checkbox'; input.id = `set_${control.key}`; input.checked = value === '1';
+            row.appendChild(input);
+          } else if (control.type === 'popup') {
+            const select = document.createElement('select');
+            select.id = `set_${control.key}`;
+            control.options.forEach((option) => select.add(new Option(option, option)));
+            select.value = value;
+            row.appendChild(select);
+          } else if (control.type === 'color') {
+            const input = document.createElement('input');
+            input.type = 'color'; input.id = `set_${control.key}`; input.value = value || '#4472C4';
+            row.appendChild(input);
+          } else if (control.type === 'pct') {
+            // A percentage reads better as a slider, which is what the native
+            // PowerPoint panel uses for the same parameters.
+            const input = document.createElement('input');
+            input.type = 'range'; input.id = `set_${control.key}`;
+            input.min = control.min; input.max = control.max; input.value = value;
+            const readout = document.createElement('span');
+            readout.className = 'value'; readout.textContent = `${value}%`;
+            input.addEventListener('input', () => { readout.textContent = `${input.value}%`; });
+            row.append(input, readout);
+          } else {
+            const input = document.createElement('input');
+            input.type = 'number'; input.id = `set_${control.key}`; input.value = value;
+            if (control.min != null) input.min = control.min;
+            if (control.max != null) input.max = control.max;
+            input.step = '0.5';
+            row.appendChild(input);
+          }
+          host.appendChild(row);
+        });
+        $('chartSettingsBox').hidden = false;
+        status(`Chart settings: ${state.scopeLabel}.`, 'success');
+      });
+    }
+    function applyChartSettings() {
+      const values = {};
+      settingsControls.forEach((control) => {
+        const input = $(`set_${control.key}`);
+        if (!input) return;
+        values[control.key] = control.type === 'check' ? (input.checked ? '1' : '0') : input.value;
+      });
+      call('applySlideAidChartSettings', settingsScope, values);
+    }
+
+    // --- Edit Colors --------------------------------------------------------
+    function loadFamilyPalette() {
+      callWith('getSlideAidFamilyPalette', [$('colorFamily').value], (response) => {
+        busy(false);
+        if (!response?.ok) { status(response?.error || 'Could not read the palette.', 'error'); return; }
+        familyColors = response.data.colors.slice();
+        renderFamilyColors();
+        $('editColorsBox').hidden = false;
+        status(`Editing the ${$('colorFamily').value} palette.`, 'success');
+      });
+    }
+    function renderFamilyColors() {
+      const host = $('familyColors');
+      host.innerHTML = '';
+      familyColors.forEach((color, index) => {
+        const input = document.createElement('input');
+        input.type = 'color'; input.value = color;
+        input.title = `Series ${index + 1}`;
+        input.addEventListener('input', () => { familyColors[index] = input.value.toUpperCase(); });
+        host.appendChild(input);
+      });
+      $('familyNote').textContent = `${familyColors.length} colors. Series beyond the last one reuse the palette from the start.`;
+    }
+    function addFamilyColor() { if (familyColors.length < 24) { familyColors.push('#4472C4'); renderFamilyColors(); } }
+    function removeFamilyColor() { if (familyColors.length > 1) { familyColors.pop(); renderFamilyColors(); } }
+    function saveFamilyPalette() { call('saveSlideAidFamilyPalette', $('colorFamily').value, familyColors); }
+
+    // --- Data layouts -------------------------------------------------------
+    function loadDataLayouts() {
+      callWith('getSlideAidDataLayouts', [], (response) => {
+        busy(false);
+        if (!response?.ok) { status(response?.error || 'Could not load the layouts.', 'error'); return; }
+        const host = $('layoutHelp');
+        host.innerHTML = '';
+        response.data.layouts.forEach((entry) => {
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          const title = document.createElement('strong');
+          title.textContent = `${entry.title} (${entry.kind})`;
+          const text = document.createElement('div');
+          text.textContent = entry.layout;
+          const details = document.createElement('details');
+          details.className = 'help';
+          const summary = document.createElement('summary');
+          summary.textContent = 'Example rows';
+          const pre = document.createElement('pre');
+          pre.textContent = entry.example;
+          details.append(summary, pre);
+          item.append(title, text, details);
+          host.appendChild(item);
+        });
+        host.hidden = false;
+        status('Table layout for every chart type.', 'success');
+      });
+    }
+
+    function filterCommands() {
+      const query = $('commandSearch').value.trim().toLowerCase();
+      const results = $('searchResults');
+      results.innerHTML = '';
+      if (!query) { results.hidden = true; return; }
+      const matches = [...document.querySelectorAll('main button.action')].filter((button) => button.textContent.toLowerCase().includes(query)).slice(0, 12);
+      matches.forEach((source) => {
+        const button = document.createElement('button');
+        const panel = source.closest('.panel');
+        const group = source.closest('.group')?.querySelector('.group-title')?.textContent ?? '';
+        button.textContent = `${source.textContent.trim()} — ${group}`;
+        button.onclick = () => {
+          if (panel) showPanel(panel.id);
+          source.click();
+          $('commandSearch').value = '';
+          results.hidden = true;
+        };
+        results.appendChild(button);
+      });
+      if (!matches.length) {
+        const empty = document.createElement('div');
+        empty.className = 'note';
+        empty.textContent = 'No matching commands.';
+        results.appendChild(empty);
+      }
+      results.hidden = false;
+    }
+
+    function updateMatrixPreview(count, columns) {
+      const preview = $('matrixPreview');
+      preview.innerHTML = '';
+      const safeCount = Math.max(1, count);
+      const safeColumns = Math.max(1, columns);
+      preview.style.gridTemplateColumns = `repeat(${safeColumns},1fr)`;
+      for (let i = 0; i < safeCount; i++) preview.appendChild(document.createElement('span'));
+    }
+    function renderTheme(swatches) {
+      const target = $('themeSwatches');
+      target.innerHTML = '';
+      swatches.forEach((swatch) => {
+        const button = document.createElement('button');
+        button.className = 'swatch';
+        button.style.background = swatch.hex;
+        button.textContent = swatch.name.replace('ACCENT', 'A');
+        button.title = `${swatch.name} ${swatch.hex} — stays linked to the template`;
+        button.onclick = () => call('applySlideAidThemeColor', $('colorTarget').value, swatch.name);
+        target.appendChild(button);
+      });
+    }
+    function renderGenericPalette(colors) {
+      const target = $('genericSwatches');
+      target.innerHTML = '';
+      colors.forEach((entry) => {
+        const button = document.createElement('button');
+        button.className = 'swatch';
+        button.style.background = entry.hex;
+        button.title = `${entry.name} ${entry.hex} — fixed RGB`;
+        button.onclick = () => call('runSlideAidCommand', { command:'color', color:entry.hex, colorTarget:$('colorTarget').value });
+        target.appendChild(button);
+      });
+    }
+    function renderFormats(formats) {
+      const list = $('formatList');
+      list.innerHTML = '';
+      if (!formats.length) {
+        const empty = document.createElement('div');
+        empty.className = 'note';
+        empty.textContent = 'No formats saved in this deck.';
+        list.appendChild(empty);
+        return;
+      }
+      formats.forEach((format) => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        const title = document.createElement('strong');
+        title.textContent = format.name;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = [format.fillColor && `fill ${format.fillColor}`, format.fontFamily, format.fontSize && `${format.fontSize}pt`].filter(Boolean).join(' · ');
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const apply = document.createElement('button');
+        apply.textContent = 'Apply';
+        apply.onclick = () => call('applySlideAidFormat', format.name);
+        const remove = document.createElement('button');
+        remove.textContent = 'Delete';
+        remove.onclick = () => confirm(`Delete the format “${format.name}”?`) && call('deleteSlideAidFormat', format.name);
+        actions.append(apply, remove);
+        item.append(title, meta, actions);
+        list.appendChild(item);
+      });
+    }
+    function renderLayouts(layouts) {
+      const list = $('layoutList');
+      list.innerHTML = '';
+      if (!layouts.length) {
+        const empty = document.createElement('div');
+        empty.className = 'note';
+        empty.textContent = 'No layouts saved in this deck.';
+        list.appendChild(empty);
+        return;
+      }
+      layouts.forEach((layout) => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        const title = document.createElement('strong');
+        title.textContent = layout.name;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = `${layout.slots.length} slots`;
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const apply = document.createElement('button');
+        apply.textContent = 'Apply';
+        apply.onclick = () => call('applySlideAidLayout', layout.name);
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.onclick = () => confirm(`Delete layout “${layout.name}”?`) && call('deleteSlideAidLayout', layout.name);
+        actions.append(apply, del);
+        item.append(title, meta, actions);
+        list.appendChild(item);
+      });
+    }
+    function loadLibrary() {
+      callWith('getSlideAidLibraryItems', [], (response) => {
+        busy(false);
+        if (!response?.ok) { status(response?.error || 'Could not load library.', 'error'); return; }
+        renderLibrary(response.data);
+        status(`Loaded ${response.data.length} library items.`, 'success');
+      });
+    }
+    function renderLibrary(items) {
+      const list = $('libraryList');
+      list.innerHTML = '';
+      if (!items.length) {
+        const empty = document.createElement('div');
+        empty.className = 'note';
+        empty.textContent = 'The library is empty.';
+        list.appendChild(empty);
+        return;
+      }
+      items.forEach((entry) => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        const title = document.createElement('strong');
+        title.textContent = entry.name;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = `Library slide ${entry.index + 1}${entry.updatedAt ? ' · ' + entry.updatedAt : ''}`;
+        const button = document.createElement('button');
+        button.textContent = 'Insert';
+        button.onclick = () => call('insertSlideAidLibraryItem', entry.slideId);
+        item.append(title, meta, button);
+        list.appendChild(item);
+      });
+    }
+
+    // Concept search, ported from the PowerPoint task pane so a term behaves the
+    // same in both products. Typing an alias on the left matches icons whose text
+    // contains any target word on the right, which is how a concept like "AI" -
+    // that no icon is named - still surfaces the robot/cpu/chip icons.
+    const ICON_CONCEPTS = [
+      { alias: ["ai","a.i","artificial intelligence","machine learning","ml","deep learning","neural network","neural net","llm","genai","generative ai","cognitive","chatbot"],
+        target: ["robot","cpu","chip","processor","microchip","circuit","brain","android","automation","neural","binary","bot","network"] },
+      { alias: ["ar","augmented reality","vr","virtual reality","xr","metaverse","headset"], target: ["vr","glasses","3d","cube","goggle","headset","ar"] },
+      { alias: ["iot","internet of things","smart home","sensor"], target: ["sensor","wifi","chip","router","broadcast","access-point","cpu"] },
+      { alias: ["api","webhook","sdk","endpoint"], target: ["code","braces","brackets","plug","gear","puzzle","terminal","webhook"] },
+      { alias: ["kpi","kpis","metric","metrics","dashboard","analytics","reporting","report"], target: ["chart","graph","dashboard","gauge","speedometer","target","pie","analytics","activity"] },
+      { alias: ["roi","return on investment","profit","revenue","earnings"], target: ["chart","dollar","coin","currency","money","growth","trending","percent","arrow-up"] },
+      { alias: ["crm","sales","lead","leads","pipeline"], target: ["people","person","user","handshake","contact","funnel","cart","headset"] },
+      { alias: ["hr","human resources","recruit","recruiting","hiring","talent","employee","staff","workforce"], target: ["people","person","user","group","team","id","badge","briefcase"] },
+      { alias: ["money","cash","finance","financial","payment","pay","currency","banking","billing"], target: ["dollar","coin","currency","cash","wallet","bank","credit-card","card","money","piggy","receipt","invoice"] },
+      { alias: ["security","secure","cyber","cybersecurity","privacy","protection","encryption","authentication"], target: ["lock","shield","key","fingerprint","eye","password","verified","safe"] },
+      { alias: ["cloud","saas","hosting","server","infrastructure","devops"], target: ["cloud","server","database","stack","hard-drive","network","container"] },
+      { alias: ["data","big data","warehouse"], target: ["database","server","stack","cylinder","table","grid","folder","data"] },
+      { alias: ["idea","innovation","innovate","creative","brainstorm","insight"], target: ["lightbulb","bulb","idea","sparkle","star","rocket","brain"] },
+      { alias: ["strategy","strategic","planning","roadmap","vision","goal","objective","mission"], target: ["target","bullseye","flag","map","compass","chess","puzzle","route","milestone","telescope"] },
+      { alias: ["growth","scale","increase","trend","trending","progress","improve"], target: ["trending","arrow-up","chart","growth","rocket","stairs","rise"] },
+      { alias: ["communication","communicate","messaging"], target: ["chat","message","comment","envelope","mail","phone","bell","megaphone","bubble"] },
+      { alias: ["email","e-mail","inbox","newsletter"], target: ["envelope","mail","inbox","message","at"] },
+      { alias: ["call","phone","mobile","smartphone","telephone","cell"], target: ["phone","telephone","mobile","device","headset","call"] },
+      { alias: ["meeting","conference","webinar","presentation","present"], target: ["camera","video","people","screen","projector","easel","presentation","podium","microphone","slides","display"] },
+      { alias: ["time","schedule","deadline","reminder"], target: ["clock","watch","timer","hourglass","stopwatch","calendar","alarm","history"] },
+      { alias: ["calendar","date","event","appointment","agenda"], target: ["calendar","date","event","clock","schedule"] },
+      { alias: ["settings","setting","config","configuration","preferences","options","admin","customize"], target: ["gear","cog","sliders","wrench","tool","control","toggle","adjustment","tune"] },
+      { alias: ["edit","modify","compose"], target: ["pencil","pen","edit","write","note","marker"] },
+      { alias: ["delete","remove","erase","discard"], target: ["trash","bin","delete","eraser","garbage","recycle","x-circle"] },
+      { alias: ["search","find","lookup","explore","discover"], target: ["search","magnify","glass","zoom","binocular","telescope"] },
+      { alias: ["user","profile","account","member"], target: ["person","user","profile","account","people","avatar","id"] },
+      { alias: ["team","group","organization","department","collaboration"], target: ["people","group","team","users","community","organization","network"] },
+      { alias: ["location","map","place","address","navigation","gps","direction"], target: ["pin","map","marker","location","geo","compass","navigation","globe","route","signpost"] },
+      { alias: ["chart","graph","diagram","visualization","plot","statistics","stats"], target: ["chart","graph","diagram","pie","analytics","histogram","scatter","plot"] },
+      { alias: ["document","file","doc","paperwork"], target: ["file","document","paper","report","doc","clipboard","page","text"] },
+      { alias: ["warning","alert","caution","error","danger"], target: ["warning","alert","exclamation","triangle","danger","bell","octagon"] },
+      { alias: ["success","done","complete","approved","confirm","valid"], target: ["check","tick","done","verified","complete","badge"] },
+      { alias: ["shopping","ecommerce","e-commerce","store","retail","buy","purchase","cart"], target: ["cart","bag","basket","shop","store","tag","box"] },
+      { alias: ["support","help","faq","assistance"], target: ["question","help","life-preserver","headset","info","buoy"] },
+      { alias: ["energy","power","electric","electricity","battery"], target: ["battery","bolt","lightning","plug","power","flash","charge"] },
+      { alias: ["sustainability","eco","environment","climate","esg","renewable","green"], target: ["leaf","tree","recycle","plant","globe","wind","solar","sun","droplet","flower"] },
+      { alias: ["health","medical","healthcare","wellness","hospital"], target: ["heart","health","medical","cross","hospital","pulse","stethoscope","pill","bandage","activity"] },
+      { alias: ["education","learning","training","course","school","study"], target: ["book","graduation","cap","school","academic","university","mortarboard"] },
+      { alias: ["automation","workflow","process","rpa"], target: ["gear","workflow","flow","robot","arrow-repeat","diagram","recycle","cycle"] },
+      { alias: ["startup","launch","boost","rocket"], target: ["rocket","launch","boost","takeoff"] }
+    ];
+    const ICON_ALIAS = (() => {
+      const norm = (t) => ` ${t.replace(/[^a-z0-9]+/g, ' ').trim()} `;
+      const map = {};
+      ICON_CONCEPTS.forEach((group) => group.alias.forEach((alias) => {
+        const set = map[alias] || (map[alias] = []);
+        group.target.forEach((target) => { const n = norm(target); if (!set.includes(n)) set.push(n); });
+      }));
+      return map;
+    })();
+
+    // One list over both catalogs: the reviewed consulting set (which carries its
+    // own primitives and inserts as shapes straight away) plus the full icon
+    // library shared with PowerPoint.
+    const ICONS = [
+      ...ICONAID_CATALOG.icons.map((icon) => ({
+        id: icon.id, n: icon.name, c: icon.category, s: 'consulting',
+        t: [...icon.aliases, ...icon.tags].join(' '), curated: icon,
+      })),
+      ...ICON_INDEX.icons,
+    ];
+    ICONS.forEach((icon) => {
+      icon._s = `${icon.id} ${icon.n} ${icon.c} ${icon.s} ${icon.t}`.toLowerCase();
+      icon._st = ` ${icon._s} `.replace(/[^a-z0-9]+/g, ' ');
+    });
+    const ICON_PAGE = 120;
+    const pathCache = new Map();
+    let iconMatches = ICONS;
+    let iconShown = 0;
+
+    function iconQueryGroups(query) {
+      if (!query) return [];
+      if (ICON_ALIAS[query]) return [{ token: true, values: ICON_ALIAS[query] }];
+      return query.split(/\s+/).map((term) => ICON_ALIAS[term] ? { token: true, values: ICON_ALIAS[term] } : { token: false, values: [term] });
+    }
+    function iconMatchesQuery(icon, groups, set, category) {
+      if (set && icon.s !== set) return false;
+      if (category && icon.c !== category) return false;
+      for (const group of groups) {
+        const haystack = group.token ? icon._st : icon._s;
+        if (!group.values.some((value) => haystack.includes(value))) return false;
+      }
+      return true;
+    }
     function iconSvg(icon, color) {
-      const ns='http://www.w3.org/2000/svg'; const svg=document.createElementNS(ns,'svg');
-      svg.setAttribute('viewBox',`0 0 ${ICONAID_CATALOG.viewBox} ${ICONAID_CATALOG.viewBox}`);
-      svg.setAttribute('aria-hidden','true');
-      const elements=Array.isArray(icon.elements)&&icon.elements.length?icon.elements:icon.primitives;
-      elements.forEach((primitive)=>{
-        if(primitive.kind==='path'){const node=document.createElementNS(ns,'path');node.setAttribute('d',primitive.d);node.setAttribute('fill',primitive.filled?color:'none');node.setAttribute('stroke',color);node.setAttribute('stroke-width',String(ICONAID_CATALOG.style.stroke));node.setAttribute('stroke-linecap',ICONAID_CATALOG.style.lineCap);node.setAttribute('stroke-linejoin',ICONAID_CATALOG.style.lineJoin);svg.appendChild(node);return;}
-        if(primitive.kind==='polyline'){const node=document.createElementNS(ns,primitive.closed?'polygon':'polyline');node.setAttribute('points',primitive.points.map((point)=>point.join(',')).join(' '));node.setAttribute('fill',primitive.filled?color:'none');node.setAttribute('stroke',color);node.setAttribute('stroke-width',String(ICONAID_CATALOG.style.stroke));node.setAttribute('stroke-linecap',ICONAID_CATALOG.style.lineCap);node.setAttribute('stroke-linejoin',ICONAID_CATALOG.style.lineJoin);svg.appendChild(node);return;}
-        const node=document.createElementNS(ns,primitive.kind==='ellipse'?'ellipse':primitive.kind==='rect'?'rect':'line');
-        if(primitive.kind==='line'){node.setAttribute('x1',primitive.x1);node.setAttribute('y1',primitive.y1);node.setAttribute('x2',primitive.x2);node.setAttribute('y2',primitive.y2);}
-        else if(primitive.kind==='ellipse'){node.setAttribute('cx',primitive.x+primitive.width/2);node.setAttribute('cy',primitive.y+primitive.height/2);node.setAttribute('rx',primitive.width/2);node.setAttribute('ry',primitive.height/2);}
-        else{node.setAttribute('x',primitive.x);node.setAttribute('y',primitive.y);node.setAttribute('width',primitive.width);node.setAttribute('height',primitive.height);if(primitive.rx)node.setAttribute('rx',primitive.rx);}
-        node.setAttribute('fill',primitive.filled?color:'none');node.setAttribute('stroke',color);node.setAttribute('stroke-width',String(ICONAID_CATALOG.style.stroke));node.setAttribute('stroke-linecap',ICONAID_CATALOG.style.lineCap);node.setAttribute('stroke-linejoin',ICONAID_CATALOG.style.lineJoin);svg.appendChild(node);
+      const ns = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('viewBox', `0 0 ${ICONAID_CATALOG.viewBox} ${ICONAID_CATALOG.viewBox}`);
+      svg.setAttribute('aria-hidden', 'true');
+      const elements = Array.isArray(icon.elements) && icon.elements.length ? icon.elements : icon.primitives;
+      elements.forEach((primitive) => {
+        let node;
+        if (primitive.kind === 'path') {
+          node = document.createElementNS(ns, 'path');
+          node.setAttribute('d', primitive.d);
+        } else if (primitive.kind === 'polyline') {
+          node = document.createElementNS(ns, primitive.closed ? 'polygon' : 'polyline');
+          node.setAttribute('points', primitive.points.map((point) => point.join(',')).join(' '));
+        } else if (primitive.kind === 'line') {
+          node = document.createElementNS(ns, 'line');
+          node.setAttribute('x1', primitive.x1); node.setAttribute('y1', primitive.y1);
+          node.setAttribute('x2', primitive.x2); node.setAttribute('y2', primitive.y2);
+        } else if (primitive.kind === 'ellipse') {
+          node = document.createElementNS(ns, 'ellipse');
+          node.setAttribute('cx', primitive.x + primitive.width / 2);
+          node.setAttribute('cy', primitive.y + primitive.height / 2);
+          node.setAttribute('rx', primitive.width / 2);
+          node.setAttribute('ry', primitive.height / 2);
+        } else {
+          node = document.createElementNS(ns, 'rect');
+          node.setAttribute('x', primitive.x); node.setAttribute('y', primitive.y);
+          node.setAttribute('width', primitive.width); node.setAttribute('height', primitive.height);
+          if (primitive.rx) node.setAttribute('rx', primitive.rx);
+        }
+        node.setAttribute('fill', primitive.filled ? color : 'none');
+        node.setAttribute('stroke', color);
+        node.setAttribute('stroke-width', String(ICONAID_CATALOG.style.stroke));
+        node.setAttribute('stroke-linecap', ICONAID_CATALOG.style.lineCap);
+        node.setAttribute('stroke-linejoin', ICONAID_CATALOG.style.lineJoin);
+        svg.appendChild(node);
       });
       return svg;
     }
-    function renderIconAid(reset=false) {
-      if(reset) iconAidVisible=90;
-      const query=$('iconSearch').value.trim().toLowerCase(); const category=$('iconCategory').value; const color=$('iconColor').value;
-      const icons=ICONAID_CATALOG.icons.filter((icon)=>{const haystack=[icon.name,icon.category,...icon.aliases,...icon.tags].join(' ').toLowerCase();return(!query||haystack.includes(query))&&(!category||icon.category===category);});
-      const grid=$('iconGrid');grid.innerHTML='';
-      const visible=icons.slice(0,iconAidVisible);
-      visible.forEach((icon)=>{const button=document.createElement('button');button.className='icon-button';button.title=`Insert ${icon.name}`;button.appendChild(iconSvg(icon,color));const label=document.createElement('span');label.textContent=icon.name;button.appendChild(label);button.onclick=()=>call('insertSlideAidIcon',icon,color);grid.appendChild(button);});
-      if(visible.length<icons.length){const more=document.createElement('button');more.className='icon-more';more.textContent=`Load ${Math.min(90,icons.length-visible.length)} more`;more.onclick=()=>{iconAidVisible+=90;renderIconAid(false);};grid.appendChild(more);}
-      if(!icons.length){const empty=document.createElement('div');empty.className='note';empty.textContent='No matching icons.';grid.appendChild(empty);}
-      $('iconCount').textContent=`Showing ${visible.length} of ${icons.length} matches · ${ICONAID_CATALOG.icons.length} total`;
+    /** SVG markup for a library icon, from the subpaths fetched for it. */
+    function librarySvg(icon, subpaths, color) {
+      const stroke = ICON_INDEX.style;
+      const attrs = icon.f
+        ? `fill="${color}" fill-rule="evenodd" stroke="none"`
+        : `fill="none" stroke="${color}" stroke-width="${stroke.stroke}" stroke-linecap="${stroke.lineCap}" stroke-linejoin="${stroke.lineJoin}"`;
+      return `<svg viewBox="0 0 ${ICON_INDEX.viewBox} ${ICON_INDEX.viewBox}" aria-hidden="true"><path d="${subpaths.join(' ')}" ${attrs}/></svg>`;
     }
-    function initIconAid() { [...new Set(ICONAID_CATALOG.icons.map((icon)=>icon.category))].sort().forEach((category)=>$('iconCategory').add(new Option(category,category))); renderIconAid(true); }
-    function scanQa() { callWith('scanSlideAidDeck',[],(response)=>{busy(false);if(!response?.ok){status(response?.error||'Scan failed.','error');return;}renderQa(response.data.issues);status(response.data.message,'success');}); }
-    function renderQa(issues) { const list=$('qaList');list.innerHTML='';if(!issues.length){const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent='No issues found.';item.appendChild(title);list.appendChild(item);return;}issues.forEach((issue)=>{const item=document.createElement('div');item.className='list-item';const title=document.createElement('strong');title.textContent=`${issue.severity.toUpperCase()} · Slide ${issue.slideNumber}`;const message=document.createElement('div');message.textContent=issue.message;const meta=document.createElement('div');meta.className='meta';meta.textContent=issue.type.replaceAll('_',' ');const actions=document.createElement('div');actions.className='actions';const show=document.createElement('button');show.textContent='Select';show.onclick=()=>call('focusSlideAidQaIssue',issue.slideId,issue.objectIds[0]);actions.appendChild(show);if(issue.fixable){const fix=document.createElement('button');fix.textContent='Fix';fix.onclick=()=>call('fixSlideAidQaIssue',{type:issue.type,slideId:issue.slideId,objectIds:issue.objectIds});actions.appendChild(fix);}item.append(title,message,meta,actions);list.appendChild(item);}); }
+
+    function renderIcons(reset = false) {
+      if (reset) {
+        const groups = iconQueryGroups($('iconSearch').value.trim().toLowerCase());
+        const set = $('iconSet').value;
+        const category = $('iconCategory').value;
+        iconMatches = ICONS.filter((icon) => iconMatchesQuery(icon, groups, set, category));
+        iconShown = 0;
+        $('iconGrid').innerHTML = '';
+      }
+      const color = $('iconColor').value;
+      const page = iconMatches.slice(iconShown, iconShown + ICON_PAGE);
+      const grid = $('iconGrid');
+      grid.querySelector('.icon-more')?.remove();
+
+      const needed = [];
+      page.forEach((icon) => {
+        const button = document.createElement('button');
+        button.className = 'icon-button';
+        button.title = `Insert ${icon.n}`;
+        button.dataset.id = icon.id;
+        if (icon.curated) button.appendChild(iconSvg(icon.curated, color));
+        else if (pathCache.has(icon.id)) button.insertAdjacentHTML('afterbegin', librarySvg(icon, pathCache.get(icon.id), color));
+        else needed.push(icon.id);
+        const label = document.createElement('span');
+        label.textContent = icon.n;
+        button.appendChild(label);
+        button.onclick = () => insertIcon(icon);
+        grid.appendChild(button);
+      });
+      iconShown += page.length;
+
+      if (iconShown < iconMatches.length) {
+        const more = document.createElement('button');
+        more.className = 'icon-more';
+        more.textContent = `Load ${Math.min(ICON_PAGE, iconMatches.length - iconShown)} more`;
+        more.onclick = () => renderIcons(false);
+        grid.appendChild(more);
+      }
+      if (!iconMatches.length) {
+        const empty = document.createElement('div');
+        empty.className = 'note';
+        empty.textContent = 'No matching icons.';
+        grid.appendChild(empty);
+      }
+      $('iconCount').textContent = `Showing ${Math.min(iconShown, iconMatches.length)} of ${iconMatches.length.toLocaleString()} matches · ${ICONS.length.toLocaleString()} icons`;
+      if (needed.length) fetchIconPaths(needed, color);
+    }
+
+    /** Path data arrives per page; the cache means scrolling back is instant. */
+    function fetchIconPaths(ids, color) {
+      // Opened as a plain file for design work: the consulting icons still render
+      // from the embedded catalog, the library ones simply have no artwork yet.
+      if (!window.google?.script?.run) return;
+      google.script.run.withSuccessHandler((response) => {
+        if (!response?.ok) { status(response?.error || 'Could not load icon previews.', 'error'); return; }
+        Object.keys(response.data.paths).forEach((id) => pathCache.set(id, response.data.paths[id]));
+        const byId = new Map(ICONS.map((icon) => [icon.id, icon]));
+        ids.forEach((id) => {
+          const subpaths = pathCache.get(id);
+          const button = $('iconGrid').querySelector(`.icon-button[data-id="${id}"]`);
+          if (!subpaths || !button || button.querySelector('svg')) return;
+          button.insertAdjacentHTML('afterbegin', librarySvg(byId.get(id), subpaths, color));
+        });
+      }).withFailureHandler(failure).getSlideAidIconPaths(ids);
+    }
+
+    /**
+     * Rasterises the icon and inserts it as a picture, the same two-step flow the
+     * PowerPoint task pane uses. Curated icons skip the raster and go in as shapes
+     * directly, since they are only a handful of objects each.
+     */
+    function insertIcon(icon) {
+      const color = $('iconColor').value;
+      if (icon.curated) { call('insertSlideAidCuratedIcon', icon.curated, color, ICONAID_CATALOG.style.stroke); return; }
+      const subpaths = pathCache.get(icon.id);
+      if (!subpaths) { status('Still loading that icon — try again in a moment.', 'error'); return; }
+      const stroke = ICON_INDEX.style;
+      const attrs = icon.f
+        ? `fill="${color}" fill-rule="evenodd" stroke="none"`
+        : `fill="none" stroke="${color}" stroke-width="${stroke.stroke}" stroke-linecap="${stroke.lineCap}" stroke-linejoin="${stroke.lineJoin}"`;
+      const size = 256;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ICON_INDEX.viewBox} ${ICON_INDEX.viewBox}" width="${size}" height="${size}"><path d="${subpaths.join(' ')}" ${attrs}/></svg>`;
+      const image = new Image();
+      status(`Inserting ${icon.n}…`);
+      image.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = size; canvas.height = size;
+          canvas.getContext('2d').drawImage(image, 0, 0, size, size);
+          call('insertSlideAidIcon', icon.id, icon.n, color, canvas.toDataURL('image/png').split(',')[1]);
+        } catch (error) {
+          status(`Could not render that icon: ${error.message}`, 'error');
+        }
+      };
+      image.onerror = () => status('Could not render that icon preview.', 'error');
+      image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    function debounceIcons(fn, ms) { let timer; return () => { clearTimeout(timer); timer = setTimeout(fn, ms); }; }
+    function initIcons() {
+      [...new Set(ICONS.map((icon) => icon.s))].sort().forEach((set) => $('iconSet').add(new Option(set, set)));
+      [...new Set(ICONS.map((icon) => icon.c))].sort().forEach((category) => $('iconCategory').add(new Option(category, category)));
+      $('iconSearch').addEventListener('input', debounceIcons(() => renderIcons(true), 140));
+      $('iconColor').addEventListener('input', debounceIcons(() => renderIcons(true), 140));
+      renderIcons(true);
+    }
+
+    function scanQa() {
+      callWith('scanSlideAidDeck', [], (response) => {
+        busy(false);
+        if (!response?.ok) { status(response?.error || 'Scan failed.', 'error'); return; }
+        renderQa(response.data.issues);
+        status(response.data.message, 'success');
+      });
+    }
+    function renderQa(issues) {
+      const list = $('qaList');
+      list.innerHTML = '';
+      if (!issues.length) {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        const title = document.createElement('strong');
+        title.textContent = 'No issues found.';
+        item.appendChild(title);
+        list.appendChild(item);
+        return;
+      }
+      issues.forEach((issue) => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        const title = document.createElement('strong');
+        title.textContent = `${issue.severity.toUpperCase()} · Slide ${issue.slideNumber}`;
+        const message = document.createElement('div');
+        message.textContent = issue.message;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = issue.type.replaceAll('_', ' ');
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const show = document.createElement('button');
+        show.textContent = 'Select';
+        show.onclick = () => call('focusSlideAidQaIssue', issue.slideId, issue.objectIds[0]);
+        actions.appendChild(show);
+        if (issue.fixable) {
+          const fix = document.createElement('button');
+          fix.textContent = 'Fix';
+          fix.onclick = () => call('fixSlideAidQaIssue', { type:issue.type, slideId:issue.slideId, objectIds:issue.objectIds });
+          actions.appendChild(fix);
+        }
+        item.append(title, message, meta, actions);
+        list.appendChild(item);
+      });
+    }
+
     function refresh() {
       google.script.run.withSuccessHandler((response) => {
         if (!response?.ok) return;
@@ -275,19 +1120,33 @@
         $('selectionCount').textContent = `${state.selectedCount} object${state.selectedCount === 1 ? '' : 's'} selected`;
         $('referenceLabel').textContent = state.reference ? state.reference.label : 'No reference pinned';
         $('inspectorTitle').textContent = `${state.selectedCount} object${state.selectedCount === 1 ? '' : 's'} selected`;
-        $('inspectorDetails').textContent = state.selectionBounds ? `Bounds ${state.selectionBounds.width.toFixed(1)} × ${state.selectionBounds.height.toFixed(1)} pt · ${state.selection.slice(0,3).map((item)=>item.label).join(', ')}` : 'Select objects to inspect or modify.';
-        $('gap').value = state.settings.gapCm; $('columns').value = state.settings.matrixColumns;
+        $('inspectorDetails').textContent = state.selectionBounds
+          ? `Bounds ${state.selectionBounds.width.toFixed(1)} × ${state.selectionBounds.height.toFixed(1)} pt · ${state.selection.slice(0, 3).map((item) => item.label).join(', ')}`
+          : 'Select objects to inspect or modify.';
+        $('gap').value = state.settings.gapCm;
+        $('columns').value = state.settings.matrixColumns;
         if (!$('palette').options.length) state.palettes.forEach((name) => $('palette').add(new Option(name, name)));
         $('palette').value = state.settings.palette;
-        renderTheme(state.theme); renderLayouts(state.layouts); updateMatrixPreview(state.selectedCount,state.settings.matrixColumns);
-        if (state.deckSettings.libraryPresentationUrl) $('libraryUrl').value=state.deckSettings.libraryPresentationUrl;
-        if (state.selectedChart?.source) { $('sheetUrl').value=state.selectedChart.source.spreadsheetUrl; $('sheetName').value=state.selectedChart.source.sheetName; $('sheetRange').value=state.selectedChart.source.rangeA1; $('linkedKind').value=state.selectedChart.kind; $('linkedStatus').textContent=`Linked to ${state.selectedChart.source.sheetName}!${state.selectedChart.source.rangeA1}`; }
+        renderTheme(state.theme);
+        renderGenericPalette(state.genericPalette);
+        renderFormats(state.formats);
+        renderLayouts(state.layouts);
+        updateMatrixPreview(state.selectedCount, state.settings.matrixColumns);
+        if (state.deckSettings.libraryPresentationUrl) $('libraryUrl').value = state.deckSettings.libraryPresentationUrl;
+        if (state.selectedChart?.source) {
+          $('sheetUrl').value = state.selectedChart.source.spreadsheetUrl;
+          $('sheetName').value = state.selectedChart.source.sheetName;
+          $('sheetRange').value = state.selectedChart.source.rangeA1;
+          $('linkedKind').value = state.selectedChart.kind;
+          $('linkedStatus').textContent = `Linked to ${state.selectedChart.source.sheetName}!${state.selectedChart.source.rangeA1}`;
+        }
       }).getSidebarState();
     }
-    $('columns').addEventListener('input',()=>updateMatrixPreview(Number($('selectionCount').textContent.split(' ')[0])||1,Number($('columns').value)||1));
-    window.addEventListener('focus',refresh);
-    initIconAid();
-    if (window.google?.script?.run) refresh(); else $('deck').textContent='Local Icons preview';
+
+    $('columns').addEventListener('input', () => updateMatrixPreview(Number($('selectionCount').textContent.split(' ')[0]) || 1, Number($('columns').value) || 1));
+    window.addEventListener('focus', refresh);
+    initIcons();
+    if (window.google?.script?.run) refresh(); else $('deck').textContent = 'Local Icons preview';
   </script>
 </body>
 </html>

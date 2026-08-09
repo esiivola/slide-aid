@@ -1,0 +1,27 @@
+{
+  "comment": "Canonical Chart Aid style parameters. PowerPoint stores these as chartstyle.txt lines in its sandbox folder (apps/powerpoint/src/modChartStyle.bas, KeyDefs); Google Slides stores the same flat keys in shared Document Properties (apps/google-slides/src/core/chart-style.ts). A key may be written globally ('LabelSizePt') or scoped to one chart kind ('COL.LabelSizePt'), and the scoped value always wins.",
+  "keys": [
+    { "key": "PlotWidthCm", "default": "12", "description": "Default chart width (cm)" },
+    { "key": "PlotHeightCm", "default": "8", "description": "Default chart height (cm)" },
+    { "key": "ClusterFill", "default": "0.72", "description": "Bar group width as share of category slot (clustered)" },
+    { "key": "StackFill", "default": "0.65", "description": "Bar width as share of slot (stacked / 100%)" },
+    { "key": "WaterfallFill", "default": "0.62", "description": "Bar width as share of slot (waterfall)" },
+    { "key": "MekkoGapPt", "default": "2", "description": "Gap between Mekko columns (pt)" },
+    { "key": "LabelSizePt", "default": "9", "description": "Font size of chart labels (pt)" },
+    { "key": "Decimals", "default": "auto", "description": "Value decimals: auto, 0, 1 or 2" },
+    { "key": "ValueLabels", "default": "1", "description": "Show value labels (1 = yes, 0 = no)" },
+    { "key": "TotalLabels", "default": "1", "description": "Show totals on stacked columns (1/0)" },
+    { "key": "Legend", "default": "1", "description": "Show the series legend (1/0)" },
+    { "key": "MarkerSizePt", "default": "5", "description": "Line-chart marker size (pt)" },
+    { "key": "WaterfallUp", "default": "9BBB59", "description": "Waterfall: positive segments (hex)" },
+    { "key": "WaterfallDown", "default": "C0504D", "description": "Waterfall: negative segments (hex)" },
+    { "key": "WaterfallTotal", "default": "BFBFBF", "description": "Waterfall: subtotal bars (hex)" },
+    { "key": "GanttBarColor", "default": "theme", "description": "Gantt bars: hex color, or 'theme' to follow the palette" }
+  ],
+  "paletteFamilies": {
+    "comment": "Applying a Color Theme writes all three; Edit Colors edits one at a time.",
+    "BARS": ["COL", "BAR", "STK", "SBR", "PCT", "WF", "MEK", "GANTT"],
+    "LINES": ["LINE", "AREA", "SCAT", "BUB"],
+    "PIES": ["PIE", "DON"]
+  }
+}

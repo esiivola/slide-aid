@@ -68,9 +68,13 @@ def test_build_end_to_end(tmp_path, monkeypatch):
     srcf.write_text(json.dumps(src))
     webf = tmp_path / "catalog.json"
     datf = tmp_path / "icons.dat"
+    slidesd = tmp_path / "slides"
     monkeypatch.setattr(B, "SRC", srcf)
     monkeypatch.setattr(B, "WEB_OUT", webf)
     monkeypatch.setattr(B, "DAT_OUT", datf)
+    # Every output path must be redirected, or the build writes its fixture over
+    # the real generated catalog.
+    monkeypatch.setattr(B, "SLIDES_DIR", slidesd)
 
     B.main()
 
@@ -89,6 +93,25 @@ def test_build_end_to_end(tmp_path, monkeypatch):
     fields = pipe_line.split("|")
     assert fields[1] == "A/B"                                         # '|' escaped so fields stay aligned
     assert len(fields) >= 5                                           # id|name|cat|tags|>=1 path
+
+    # Google Slides target: metadata index plus sharded path data, same icons.
+    index = json.loads((slidesd / "index.json").read_text())
+    assert sorted(ic["id"] for ic in index["icons"]) == sorted(ids)
+    # Sorted by id so each shard is a contiguous range both sides can binary-search.
+    assert [ic["id"] for ic in index["icons"]] == sorted(ids)
+    assert index["shards"][0]["firstId"] == sorted(ids)[0]
+    assert index["shards"][-1]["lastId"] == sorted(ids)[-1]
+    # Solid sources are flagged so the renderers fill them instead of stroking.
+    flags = {ic["id"]: ic.get("f", 0) for ic in index["icons"]}
+    assert flags["bootstrap-circle"] == 1 and flags["tabler-home"] == 0
+
+    shard_paths = {}
+    for entry in index["shards"]:
+        shard_paths.update(json.loads((slidesd / f"paths-{entry['shard']:02d}.json").read_text()))
+    assert sorted(shard_paths) == sorted(ids)
+    # The Slides shards carry exactly the paths the task pane catalog carries.
+    for icon in cat:
+        assert shard_paths[icon["id"]] == icon["d"]
 
 
 # --- consistency of the real generated files (when present) ----------------

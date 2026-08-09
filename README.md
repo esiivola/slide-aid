@@ -17,7 +17,7 @@ Start with the visual guide:
 
 - **Slide Aid** handles everyday production work: align, size, dock, distribute, stack, grid, recolor, format-paint, clean up, reuse components, and manage text boxes.
 - **Chart Aid** builds editable shape-based charts from PowerPoint tables: column, bar, stacked, 100%, waterfall, Mekko, line, area, pie, doughnut, scatter, bubble, and Gantt. Style them with native panels — **Chart Settings** (sliders, toggles, colors) and **Edit Colors** — plus one-click color themes and per-series recolor.
-- **Icons** is a visual task pane for original business, technology, finance, operations, people, security, communication, and ESG icons. The active schema-3 catalog is currently a reviewed consulting-style pilot set while the full catalog is being rebuilt. Search, filter, recolor, and click to insert; in PowerPoint an inserted icon becomes an editable vector via **Make Editable**, and in Google Slides it inserts as grouped vectors directly.
+- **Icons** is a visual browser over 10,049 icons from Lucide, Tabler, Phosphor, Bootstrap and Heroicons, plus a reviewed consulting set covering business, technology, finance, operations, people, security, communication, and ESG. Search by concept, filter, recolor, and click to insert. Both platforms work the same way: an inserted icon is a picture, and **Make Editable** turns it into editable vectors.
 - **Reusable libraries** store personal elements and saved formats in PowerPoint's sandbox-safe Slide Aid folder.
 - **Mac-native helpers** provide optional color picking and PowerPoint-scoped keyboard shortcuts through Hammerspoon.
 

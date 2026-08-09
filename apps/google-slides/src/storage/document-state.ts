@@ -1,6 +1,7 @@
 import {
   CHART_META_PREFIX, decodeMetadata, type ChartMetadata,
 } from "../core/chart-data";
+import type { PaletteFamily, StyleStore } from "../core/chart-style";
 
 const DECK_KEY = "slideAid.deck.v1";
 const CHART_KEY_PREFIX = "slideAid.chart.v2.";
@@ -22,14 +23,36 @@ export interface LayoutPreset {
   createdAt: string;
 }
 
+export interface SavedFormat {
+  name: string;
+  fillColor?: string;
+  borderColor?: string;
+  borderWeight?: number;
+  borderDash?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontColor?: string;
+  bold?: boolean;
+  italic?: boolean;
+  alignment?: string;
+  contentAlignment?: string;
+  createdAt: string;
+}
+
 export interface DeckSettings {
   palette?: string;
   libraryPresentationId?: string;
   libraryPresentationUrl?: string;
   layouts: LayoutPreset[];
+  /** Chart Aid parameters, flat "Key" / "KIND.Key" entries. See core/chart-style.ts. */
+  chartStyle: StyleStore;
+  /** Per-family chart palettes (BARS / LINES / PIES), edited by Edit Colors. */
+  familyPalettes: Partial<Record<PaletteFamily, string[]>>;
+  /** My Formats entries, shared with deck collaborators like the layouts are. */
+  formats: SavedFormat[];
 }
 
-const DEFAULT_DECK_SETTINGS: DeckSettings = { layouts: [] };
+const DEFAULT_DECK_SETTINGS: DeckSettings = { layouts: [], chartStyle: {}, familyPalettes: {}, formats: [] };
 
 function documentProperties(): GoogleAppsScript.Properties.Properties {
   const properties = PropertiesService.getDocumentProperties();
@@ -81,14 +104,25 @@ function deleteChunked(key: string): void {
   });
 }
 
+function freshDeckSettings(): DeckSettings {
+  return { ...DEFAULT_DECK_SETTINGS, layouts: [], chartStyle: {}, familyPalettes: {}, formats: [] };
+}
+
 export function getDeckSettings(): DeckSettings {
   const raw = readChunked(DECK_KEY);
-  if (!raw) return { ...DEFAULT_DECK_SETTINGS, layouts: [] };
+  if (!raw) return freshDeckSettings();
   try {
     const parsed = JSON.parse(raw) as Partial<DeckSettings>;
-    return { ...DEFAULT_DECK_SETTINGS, ...parsed, layouts: Array.isArray(parsed.layouts) ? parsed.layouts : [] };
+    return {
+      ...DEFAULT_DECK_SETTINGS,
+      ...parsed,
+      layouts: Array.isArray(parsed.layouts) ? parsed.layouts : [],
+      chartStyle: parsed.chartStyle && typeof parsed.chartStyle === "object" ? parsed.chartStyle : {},
+      familyPalettes: parsed.familyPalettes && typeof parsed.familyPalettes === "object" ? parsed.familyPalettes : {},
+      formats: Array.isArray(parsed.formats) ? parsed.formats : [],
+    };
   } catch {
-    return { ...DEFAULT_DECK_SETTINGS, layouts: [] };
+    return freshDeckSettings();
   }
 }
 
