@@ -5,6 +5,10 @@ import { insertIconImage, makeIconsEditable } from "../src/slides/icons";
 import { buildChart, applyChartSettings, chartSettingsState, saveFamilyPalette } from "../src/charts/charts";
 import { annotateDifference, insertHarveyBall } from "../src/charts/annotations";
 import { barTag } from "../src/core/chart-data";
+import { iconPathsFor } from "../src/slides/icon-catalog";
+import { hideObjects, unhideAll } from "../src/commands/deck-commands";
+import { snapToTable } from "../src/commands/object-commands";
+import { executeCommand } from "../src/commands/geometry-commands";
 
 // A tiny two-shard catalog: one stroke icon and one solid one.
 const STROKE_PATH = "M4 4 L20 4 L20 20 L4 20 Z";
@@ -258,4 +262,138 @@ test("a chart with no payload is reported as not being a Chart Aid chart", (t) =
   t.after(teardown);
   installHost({ existing: [{ id: "shape1", type: "SHAPE" }], selectedIds: ["shape1"] });
   assert.throws(() => annotateDifference("ABS"), /Select a Chart Aid chart/);
+});
+
+// --- Icon catalog sharding -------------------------------------------------
+
+test("an icon resolves to its shard by binary search over the boundary table", (t) => {
+  t.after(teardown);
+  installHost({ projectFiles: PROJECT_FILES });
+  // One id from each shard, plus ids that fall outside every range.
+  assert.deepEqual(iconPathsFor(["lucide-frame"]), { "lucide-frame": [STROKE_PATH] });
+  assert.deepEqual(iconPathsFor(["bootstrap-box"]), { "bootstrap-box": [SOLID_PATH] });
+  assert.deepEqual(iconPathsFor(["aaa-before-everything"]), {});
+  assert.deepEqual(iconPathsFor(["zzz-after-everything"]), {});
+  // A mixed request spans both shards and drops the unknown one.
+  assert.deepEqual(Object.keys(iconPathsFor(["bootstrap-box", "nope-missing", "lucide-frame"])).sort(),
+    ["bootstrap-box", "lucide-frame"]);
+});
+
+test("icon path requests are bounded and sanitised", (t) => {
+  t.after(teardown);
+  installHost({ projectFiles: PROJECT_FILES });
+  assert.throws(() => iconPathsFor(Array.from({ length: 501 }, () => "lucide-frame")), /Too many icons/);
+  assert.throws(() => iconPathsFor("lucide-frame" as unknown as string[]), /by id/);
+  // Ids that could not come from the catalog are ignored rather than looked up.
+  assert.deepEqual(iconPathsFor(["../../etc/passwd", "Lucide-Frame"]), {});
+});
+
+test("a deployment without the catalog says so plainly", (t) => {
+  t.after(teardown);
+  installHost({ projectFiles: {} });
+  assert.throws(() => iconPathsFor(["lucide-frame"]), /icon catalog is missing from this deployment/);
+});
+
+// --- View & Expert ---------------------------------------------------------
+
+test("hiding and unhiding restores the original position", (t) => {
+  t.after(teardown);
+  const state = installHost({
+    existing: [{ id: "s1", type: "SHAPE", left: 120, top: 60, width: 40, height: 20 }],
+    selectedIds: ["s1"],
+  });
+
+  hideObjects();
+  const hidden = state.elements.get("s1")!;
+  assert.ok(hidden.left > 1000, "the object is parked off-canvas");
+  assert.equal(hidden.top, 60, "only the horizontal position moves");
+  assert.match(hidden.description, /\[slide-aid-hidden:120:60\]/);
+
+  unhideAll();
+  const restored = state.elements.get("s1")!;
+  assert.equal(restored.left, 120);
+  assert.equal(restored.top, 60);
+  assert.ok(!restored.description.includes("slide-aid-hidden"), "the marker is cleared");
+  // Nothing left to restore.
+  assert.throws(() => unhideAll(), /No hidden objects/);
+});
+
+test("hiding twice does not lose the original position", (t) => {
+  t.after(teardown);
+  const state = installHost({
+    existing: [{ id: "s1", type: "SHAPE", left: 10, top: 10, width: 5, height: 5 }],
+    selectedIds: ["s1"],
+  });
+  hideObjects();
+  // A second hide must be refused, or the parked coordinate would be recorded
+  // as the "real" one and the object would never come back.
+  assert.throws(() => hideObjects(), /already hidden/);
+  unhideAll();
+  assert.equal(state.elements.get("s1")!.left, 10);
+});
+
+// --- Snap to Table ---------------------------------------------------------
+
+test("snap to table centres objects in the cell beneath them", (t) => {
+  t.after(teardown);
+  const state = installHost({
+    existing: [
+      { id: "table1", type: "TABLE", left: 0, top: 0, width: 200, height: 100, cells: [["", ""], ["", ""]] },
+      // Sits over the second column, first row.
+      { id: "dot", type: "SHAPE", left: 130, top: 20, width: 10, height: 10 },
+    ],
+    selectedIds: ["table1", "dot"],
+  });
+  const table = state.elements.get("table1")!;
+  (table as unknown as { columnWidths: number[]; rowHeights: number[] }).columnWidths = [100, 100];
+  (table as unknown as { columnWidths: number[]; rowHeights: number[] }).rowHeights = [50, 50];
+
+  snapToTable("C");
+  const dot = state.elements.get("dot")!;
+  assert.equal(dot.left, 145, "centred in the 100-200 column");
+  assert.equal(dot.top, 20, "centred in the 0-50 row");
+});
+
+test("snap to table needs both the table and something to snap", (t) => {
+  t.after(teardown);
+  installHost({ existing: [{ id: "a", type: "SHAPE" }, { id: "b", type: "SHAPE" }], selectedIds: ["a", "b"] });
+  assert.throws(() => snapToTable("C"), /Select the table/);
+});
+
+// --- Geometry command dispatch ---------------------------------------------
+
+test("Magic Resizer scales geometry and type together", (t) => {
+  t.after(teardown);
+  const state = installHost({
+    existing: [{
+      id: "s1", type: "SHAPE", left: 100, top: 100, width: 50, height: 20,
+      runs: [{ text: "KPI", fontSize: 12 }],
+    }],
+    selectedIds: ["s1"],
+  });
+  executeCommand({ command: "scale", scalePercent: 200, scaleFonts: true });
+  const shape = state.elements.get("s1")!;
+  assert.equal(shape.width, 100);
+  assert.equal(shape.height, 40);
+  assert.equal(shape.left, 75, "scaled about its centre");
+  assert.deepEqual(state.fontSizes.get("s1"), [24], "12pt text doubled with the box");
+
+  executeCommand({ command: "scale", scalePercent: 50, scaleFonts: false });
+  assert.deepEqual(state.fontSizes.get("s1"), [24], "type is left alone when asked");
+});
+
+test("one-click Matrix needs no column count", (t) => {
+  t.after(teardown);
+  const state = installHost({
+    existing: [
+      { id: "a", type: "SHAPE", left: 0, top: 0, width: 10, height: 10 },
+      { id: "b", type: "SHAPE", left: 40, top: 0, width: 10, height: 10 },
+      { id: "c", type: "SHAPE", left: 80, top: 0, width: 10, height: 10 },
+      { id: "d", type: "SHAPE", left: 120, top: 0, width: 10, height: 10 },
+    ],
+  });
+  executeCommand({ command: "matrix", columns: 0, gapCm: 0 });
+  // Four objects make a 2x2 near-square grid.
+  assert.deepEqual([...state.elements.values()].map((item) => [item.left, item.top]),
+    [[0, 0], [10, 0], [0, 10], [10, 10]]);
 });

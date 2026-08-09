@@ -131,29 +131,33 @@ It does **not** request a Drive scope and cannot list or search Drive files. Use
 
 Personal values such as the pinned reference and preferred spacing live in User Properties. Deck palettes, chart style parameters, per-family palettes, named layouts, saved formats, library configuration, and chart payloads live in Document Properties shared by collaborators. Chart data is split into Unicode-safe chunks below the Apps Script per-property size limit.
 
-## Local setup
+## Install
 
-Requirements: Node.js 20 or newer and a Google account allowed to create Apps Script projects.
+Everything below runs from `apps/google-slides`. You need **Node.js 20 or newer**
+and a Google account allowed to create Apps Script projects. Nothing is installed
+system-wide, and no Drive access is requested at any point.
+
+### 1. Build
 
 ```bash
 cd apps/google-slides
 npm install
-npm run check
-npm test
 npm run build
 ```
 
-The build produces only the Apps Script deployment files under `dist/`:
+`dist/` is the whole deployment — nothing else is uploaded:
 
 ```text
-dist/Code.js
-dist/Sidebar.html
-dist/appsscript.json
+dist/Code.js            the add-on
+dist/Sidebar.html       the sidebar, with the icon search index embedded
+dist/appsscript.json    manifest and OAuth scopes
+dist/IconShards.html    icon shard boundary table
+dist/IconPaths00..22    icon path data, read on demand
 ```
 
-Source files, tests, and `node_modules` are excluded from deployment.
+To check your changes first: `npm run check` (types) and `npm test` (71 tests).
 
-## Create and push an Apps Script project
+### 2. Connect an Apps Script project
 
 Authenticate once:
 
@@ -161,28 +165,62 @@ Authenticate once:
 npx clasp login
 ```
 
-Create a standalone Apps Script project, or create one in the Apps Script UI and copy its script ID. For a new project from the command line:
+Then either create a project:
 
 ```bash
 npx clasp create --type standalone --title "Slide Aid for Google Slides" --rootDir dist
 ```
 
-If using an existing project, copy `.clasp.example.json` to `.clasp.json`, replace `YOUR_SCRIPT_ID`, and keep `rootDir` set to `dist`. Then push:
+…or point at an existing one by copying `.clasp.example.json` to `.clasp.json`,
+replacing `YOUR_SCRIPT_ID`, and keeping `rootDir` as `dist`.
+
+### 3. Push
 
 ```bash
 npm run push
 ```
 
-In the Apps Script editor:
+This rebuilds and uploads. It is ~6 MB, most of it icon data, so the first push
+takes a moment.
 
-1. Open **Deploy → Test deployments**.
-2. Choose **Editor add-on** and Google Slides as the host application.
-3. Install the test deployment for your account.
-4. Open or reload a Google Slides presentation.
-5. Confirm that **Services** contains **Google Slides API** (`Slides`, v1). It is declared by `appsscript.json`; if the project uses a custom Google Cloud project, also enable the Google Slides API there.
-6. Use **Extensions → Slide Aid → Open Slide Aid** and authorize presentation, read-only spreadsheet, and container-UI access.
+### 4. Install it into Google Slides
 
-For organization-wide distribution, create a versioned deployment and configure a private Google Workspace Marketplace SDK listing. Keep PowerPoint wording and screenshots canonical; document only Google-specific differences in this folder.
+In the Apps Script editor (`npm run open`):
+
+1. Confirm **Services** lists **Google Slides API** (`Slides`, v1). `appsscript.json`
+   declares it; if the project uses a custom Google Cloud project, enable the
+   Google Slides API there too. Charts and icons both need it — without it the
+   sidebar loads but every build fails.
+2. **Deploy → Test deployments → Install**, choosing **Editor add-on** with Google
+   Slides as the host.
+3. Open or reload a Google Slides presentation.
+4. **Extensions → Slide Aid → Open Slide Aid**, then authorize presentation,
+   read-only spreadsheet, and container-UI access.
+
+### 5. Check it works
+
+Worth doing once, since these three paths exercise most of the add-on:
+
+- **Position** — draw two boxes, select one, **Set reference**, select the other, **Left**.
+- **Chart Aid** — insert a 3x3 table (blank top-left, categories across, series down),
+  select it, click **Column**. You should get bars with value labels and a legend.
+- **Icons** — search `strategy`, click an icon, then **Make Editable**.
+
+### Updating
+
+`npm run push` again, then reload the presentation. A test deployment tracks the
+latest push, so there is nothing to reinstall. For organization-wide distribution,
+create a versioned deployment and configure a private Google Workspace Marketplace
+SDK listing.
+
+### If something fails
+
+| Symptom | Cause |
+|---|---|
+| "The Advanced Slides service is not enabled for this deployment." | Step 4.1 — the Slides API service is not added to the project. |
+| "The icon catalog is missing from this deployment." | `dist` was pushed without the `IconPaths*`/`IconShards` files. Re-run `npm run build`, then `npm run push`. |
+| Sidebar opens but every command errors | Authorization was declined. Remove the test deployment and reinstall to be re-prompted. |
+| Charts build but look unstyled | A **Color Theme** change needs **Restyle All** to reach existing charts. |
 
 ## Use
 

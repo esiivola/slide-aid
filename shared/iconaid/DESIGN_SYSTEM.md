@@ -61,7 +61,16 @@ IconAid is a monochrome management-consulting icon system for presentation work.
 
 Schema 3 separates artwork from insertion fallback:
 
-- `elements`: richer SVG-oriented preview geometry. Paths are allowed here for clean curves.
-- `primitives`: editable fallback geometry for PowerPoint and Google Slides insertion. This layer must stay visually close to `elements` but may approximate curves until native path insertion is proven reliable.
+- `elements`: the artwork. Paths and polylines are allowed here for clean curves, and this is what both the preview and the insert now draw.
+- `primitives`: a coarse rect/ellipse/line approximation, kept for compatibility.
 
-This split is temporary pressure relief, not permission to ship weak insertion geometry. Before expanding beyond the pilot, PowerPoint and Google Slides insertion quality must be reviewed from real host output.
+`primitives` is no longer an insertion path. It existed as fallback geometry while
+native path insertion was unproven, and the two layers drifting apart was a real
+defect: Google Slides previewed `elements` but inserted `primitives`, so 57 of the
+70 pilot icons landed as a visibly different shape than the thumbnail the user
+clicked. Both hosts now render `elements` — PowerPoint through its freeform
+convert, Google Slides by flattening paths into native lines
+(`apps/google-slides/src/core/icon-path.ts`).
+
+Keep the two visually close anyway while `primitives` still ships, and review
+insertion quality from real host output before expanding beyond the pilot.

@@ -16,7 +16,7 @@
     { "key": "WaterfallUp", "default": "9BBB59", "description": "Waterfall: positive segments (hex)" },
     { "key": "WaterfallDown", "default": "C0504D", "description": "Waterfall: negative segments (hex)" },
     { "key": "WaterfallTotal", "default": "BFBFBF", "description": "Waterfall: subtotal bars (hex)" },
-    { "key": "GanttBarColor", "default": "theme", "description": "Gantt bars: hex color, or 'theme' to follow the palette" }
+    { "key": "GanttBarColor", "default": "theme", "description": "Gantt bars: hex color, or 'theme'" }
   ],
   "paletteFamilies": {
     "comment": "Applying a Color Theme writes all three; Edit Colors edits one at a time.",

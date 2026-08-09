@@ -10,7 +10,7 @@ import {
 } from "../src/core/chart-data";
 import {
   applyControlValues, clearScope, controlsFor, controlValues, familyForKind, formatValue,
-  isKnownStyleKey, styleColor, styleFlag, styleNumber, styleString,
+  isKnownStyleKey, STYLE_KEYS, styleColor, styleFlag, styleNumber, styleString,
 } from "../src/core/chart-style";
 import {
   contrastRatio, decodeLibraryReference, encodeLibraryReference, extractGoogleFileId, isOutsideSlide, normalizeIconDefinition,
@@ -19,6 +19,11 @@ import {
 import { flattenIconElements, flattenPath, polylineSegments } from "../src/core/icon-path";
 import { fillSpans, isFilledIcon } from "../src/core/icon-fill";
 import catalog from "../../../shared/iconaid/catalog.json" with { type: "json" };
+import chartStyleSpec from "../../../shared/specs/chart-style.json" with { type: "json" };
+import palettesSpec from "../../../shared/specs/palettes.json" with { type: "json" };
+import chartKindsSpec from "../../../shared/specs/chart-kinds.json" with { type: "json" };
+import { PALETTES } from "../src/storage/preferences";
+import { SAMPLES, dataLayouts } from "../src/charts/samples";
 
 const boxes: Box[] = [
   { id: "a", left: 10, top: 20, width: 30, height: 10 },
@@ -446,4 +451,58 @@ test("filled catalog icons produce drawable spans", () => {
   const widest = spans.reduce((best, span) => (span.width > best.width ? span : best), spans[0]!);
   assert.ok(widest.top > 8 && widest.top < 16, "a circle is widest across its middle");
   assert.ok(widest.width > 18);
+});
+
+// --- Shared contract: shared/specs must match the implementation -----------
+//
+// These files are described as the reviewable contract between the two
+// products. Nothing enforced that, so drift was silent and only showed up as
+// two platforms drawing different charts.
+
+test("chart style keys and defaults match shared/specs/chart-style.json", () => {
+  const spec = chartStyleSpec as { keys: { key: string; default: string; description: string }[]; paletteFamilies: Record<string, string[]> };
+  assert.deepEqual(
+    STYLE_KEYS.map((entry) => ({ key: entry.key, default: entry.value, description: entry.description })),
+    spec.keys,
+    "src/core/chart-style.ts and shared/specs/chart-style.json disagree",
+  );
+  // Every kind belongs to exactly the family the spec assigns it.
+  for (const family of Object.keys(spec.paletteFamilies)) {
+    if (family === "comment") continue;
+    for (const kind of spec.paletteFamilies[family]!) {
+      assert.equal(familyForKind(kind), family, `${kind} should be in ${family}`);
+    }
+  }
+});
+
+test("palettes match shared/specs/palettes.json", () => {
+  assert.deepEqual(PALETTES, palettesSpec, "deck palettes have drifted from the shared spec");
+  for (const name of Object.keys(PALETTES)) {
+    assert.equal(PALETTES[name]!.length, 6, `${name} must have six colors`);
+    for (const color of PALETTES[name]!) assert.match(color, /^#[0-9A-F]{6}$/, `${name} has a malformed color`);
+  }
+});
+
+test("chart kinds match shared/specs/chart-kinds.json", () => {
+  const spec = chartKindsSpec as { chartKinds: string[] };
+  // Every kind the spec lists must build, style and sample cleanly.
+  const sampled = SAMPLES.map((sample) => sample.kind);
+  assert.deepEqual([...sampled].sort(), [...spec.chartKinds].sort(), "Sample Slides and the shared spec disagree");
+  for (const kind of spec.chartKinds) {
+    assert.ok(controlsFor(kind).length > 0, `${kind} has no Chart Settings controls`);
+    assert.ok(["BARS", "LINES", "PIES"].includes(familyForKind(kind)), `${kind} has no palette family`);
+  }
+});
+
+test("every chart type documents a data layout with a usable example", () => {
+  const layouts = dataLayouts();
+  assert.equal(layouts.length, 14);
+  for (const layout of layouts) {
+    assert.ok(layout.layout.length > 20, `${layout.kind} needs a real layout description`);
+    assert.ok(layout.example.includes("|"), `${layout.kind} needs example rows`);
+  }
+  // The examples must actually satisfy the validator they are teaching.
+  for (const sample of SAMPLES) {
+    assert.doesNotThrow(() => validateChartData(sample.kind, { cells: sample.cells }), `${sample.kind} sample does not validate`);
+  }
 });

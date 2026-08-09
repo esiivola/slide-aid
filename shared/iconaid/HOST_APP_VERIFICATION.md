@@ -21,4 +21,4 @@ Date: 2026-07-31
 ## Remaining Host Gates
 
 - Open the IconAid task pane inside PowerPoint after restarting PowerPoint, search for pilot icons, insert multiple icons in light and dark colors, and confirm a single selectable vector group is inserted on the current slide without adding slides.
-- Push/install the Google Slides test deployment, open the sidebar in a real Slides presentation, search pilot icons, insert multiple colors, and confirm grouped native vector output remains usable.
+- Push/install the Google Slides test deployment, open the sidebar in a real Slides presentation, search both the consulting set and the library, insert in multiple colors, then run **Make Editable** on a stroke icon and on a solid Bootstrap icon and confirm both convert to usable shapes at the picture's own size.

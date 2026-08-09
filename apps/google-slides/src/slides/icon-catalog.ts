@@ -20,8 +20,15 @@ const BOUNDARY_FILE = "IconShards";
 
 // Parsed shards are memoised for the life of one execution: converting several
 // selected icons at once then costs one parse per shard rather than per icon.
-const loaded: Record<number, Record<string, string[]>> = {};
+// Apps Script gives every execution a fresh module, so this never goes stale in
+// production; resetCatalogCache exists so tests can swap deployments.
+let loaded: Record<number, Record<string, string[]>> = {};
 let boundaryTable: ShardBoundary[] | null = null;
+
+export function resetCatalogCache(): void {
+  loaded = {};
+  boundaryTable = null;
+}
 
 function readProjectJson<T>(name: string): T {
   const content = HtmlService.createHtmlOutputFromFile(name).getContent();

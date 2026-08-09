@@ -10,6 +10,7 @@
  *
  * It is deliberately thin. It models what Slide Aid uses and nothing else.
  */
+import { resetCatalogCache } from "../src/slides/icon-catalog";
 
 export interface RecordedRequest {
   [key: string]: Record<string, unknown>;
@@ -30,6 +31,11 @@ export interface FakeElement {
   image?: { bytes: number[]; contentType: string };
   /** TABLE only: the grid a chart builder reads. */
   cells?: string[][];
+  /** TABLE only: geometry Snap to Table measures against. */
+  columnWidths?: number[];
+  rowHeights?: number[];
+  /** SHAPE only: text runs, so font scaling and text tools have something real. */
+  runs?: { text: string; fontSize: number }[];
 }
 
 export interface HostState {
@@ -43,6 +49,8 @@ export interface HostState {
   /** Contents of the project's icon data files, keyed by file name. */
   projectFiles: Map<string, string>;
   batchUpdates: number;
+  /** Font sizes per element after any scaling, for assertions. */
+  fontSizes: Map<string, number[]>;
 }
 
 let uuidCounter = 0;
@@ -83,6 +91,41 @@ function wrapElement(state: HostState, item: FakeElement): Record<string, unknow
     asGroup: () => api,
     getChildren: () => [],
   };
+  if (item.type === "SHAPE") {
+    // Shapes default to a single 12pt run so font scaling has something to move.
+    item.runs ??= [{ text: "", fontSize: 12 }];
+    const syncSizes = (): void => { state.fontSizes.set(item.id, item.runs!.map((run) => run.fontSize)); };
+    syncSizes();
+    const textStyle = (run: { fontSize: number }) => ({
+      getFontSize: () => run.fontSize,
+      setFontSize: (value: number) => { run.fontSize = value; syncSizes(); },
+      setForegroundColor: () => undefined,
+      setFontFamily: () => undefined,
+      setBold: () => undefined,
+      setItalic: () => undefined,
+      getForegroundColor: () => null,
+      getFontFamily: () => null,
+      isBold: () => null,
+      isItalic: () => null,
+    });
+    Object.assign(api, {
+      getText: () => ({
+        asString: () => item.runs!.map((run) => run.text).join(""),
+        setText: (value: string) => { item.runs = [{ text: value, fontSize: item.runs![0]?.fontSize ?? 12 }]; syncSizes(); },
+        getRuns: () => item.runs!.map((run) => ({ getTextStyle: () => textStyle(run) })),
+        getTextStyle: () => textStyle(item.runs![0]!),
+        getParagraphStyle: () => ({ getParagraphAlignment: () => null, setParagraphAlignment: () => undefined }),
+      }),
+      getFill: () => ({ getType: () => "SOLID", getSolidFill: () => ({ getColor: () => ({ getColorType: () => "RGB", asRgbColor: () => ({ asHexString: () => "#FFFFFF" }) }) }), setSolidFill: () => undefined }),
+      getBorder: () => ({
+        getLineFill: () => ({ getFillType: () => "SOLID", getSolidFill: () => ({ getColor: () => ({ getColorType: () => "RGB", asRgbColor: () => ({ asHexString: () => "#000000" }) }) }), setSolidFill: () => undefined }),
+        getWeight: () => 1, setWeight: () => undefined, getDashStyle: () => null, setDashStyle: () => undefined,
+      }),
+      getShapeType: () => "RECTANGLE",
+      getContentAlignment: () => null,
+      setContentAlignment: () => undefined,
+    });
+  }
   if (item.type === "TABLE") {
     // Tables have to answer the same way whether the code got them from
     // insertTable or from getPageElements, or the chart reader sees an empty grid.
@@ -90,6 +133,12 @@ function wrapElement(state: HostState, item: FakeElement): Record<string, unknow
     Object.assign(api, {
       getNumRows: () => item.cells!.length,
       getNumColumns: () => Math.max(0, ...item.cells!.map((row) => row.length)),
+      getColumn: (index: number) => ({
+        getWidth: () => item.columnWidths?.[index] ?? item.width / Math.max(1, Math.max(0, ...item.cells!.map((row) => row.length))),
+      }),
+      getRow: (index: number) => ({
+        getMinimumHeight: () => item.rowHeights?.[index] ?? item.height / Math.max(1, item.cells!.length),
+      }),
       getCell: (row: number, column: number) => ({
         getText: () => ({
           asString: () => item.cells![row]?.[column] ?? "",
@@ -127,8 +176,12 @@ export function installHost(options: HostOptions = {}): HostState {
     userProperties: new Map(),
     projectFiles: new Map(Object.entries(options.projectFiles ?? {})),
     batchUpdates: 0,
+    fontSizes: new Map(),
   };
   uuidCounter = 0;
+  // The icon catalog memoises shards for the life of an execution; each test is
+  // a fresh "execution", so the cache must not survive between them.
+  resetCatalogCache();
 
   for (const item of options.existing ?? []) element(state, item);
   const selectedIds = options.selectedIds ?? (options.existing ?? []).map((item) => item.id);

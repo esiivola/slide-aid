@@ -11,7 +11,7 @@ Start with the visual guide:
 - [Slide Aid Documentation](DOCUMENTATION.md) - visual workflow demos, ribbon tour, and icon-by-icon reference.
 - [Chart layouts and examples](docs/CHARTS.md) - table formats for every Chart Aid chart type.
 - [PowerPoint UI reference](docs/POWERPOINT_UI_REFERENCE.md) - source-of-truth tab order, groups, control names, icon files, ribbon tags, and behavior.
-- [Google Slides companion](apps/google-slides/README.md) - platform-specific notes for the separate Apps Script implementation.
+- [Google Slides companion](apps/google-slides/README.md) - the Apps Script implementation, its deviations from this one, and [how to install it](apps/google-slides/README.md#install).
 
 ## What It Does
 
@@ -75,7 +75,7 @@ python3 scripts/build_icon_catalog.py
 python3 scripts/build_icon_catalog.py --check
 ```
 
-The icon artwork is original, MIT-licensed, and defined on a shared 24x24 primitive grid. PowerPoint uses the cross-platform Office.js task pane in `apps/powerpoint-iconaid/`; Google Slides uses the **Icons** sidebar tab. Both insert grouped native shapes rather than temporary preview slides or bitmap fallbacks.
+The icon artwork is normalized onto a shared 24x24 grid; the consulting set is original and MIT-licensed, and the library sets keep their own licenses (see `shared/iconaid/LICENSES.md`). PowerPoint uses the cross-platform Office.js task pane in `apps/powerpoint-iconaid/`; Google Slides uses the **Icons** sidebar tab. Both insert an icon as a tagged picture and convert it to editable vectors on demand via **Make Editable**, so neither ever leaves a bitmap you cannot recolor.
 
 For local PowerPoint development, serve the repository over trusted HTTPS on port 3000 and sideload `apps/powerpoint-iconaid/manifest.xml`. The manifest adds an **Insert Icons** button to PowerPoint's **Insert** tab (next to the VBA **Make Editable** button); the PPAM no longer contains the retired VBA icon picker.
 
