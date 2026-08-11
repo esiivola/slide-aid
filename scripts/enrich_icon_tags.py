@@ -122,17 +122,19 @@ SEMANTIC_ENRICHMENTS = {
         "development", "software", "developer", "engineering", "tech"
     ],
     r"chip|processor|cpu": [
-        "ai", "computing", "hardware", "semiconductor", "machine learning"
+        "ai", "artificial intelligence", "machine learning", "computing",
+        "hardware", "semiconductor", "microchip", "processor", "technology"
     ],
     r"network|nodes": [
         "connections", "topology", "distributed", "mesh", "ecosystem"
     ],
     r"robot|automation": [
-        "rpa", "workflow", "automatic", "efficiency", "orchestration"
+        "robot", "robotics", "automation", "rpa", "workflow", "automatic",
+        "efficiency", "orchestration", "machine", "ai", "artificial intelligence"
     ],
     
     # Security
-    r"lock|secure": [
+    r"(?<![a-z])(?:un)?lock(?![a-z])|secure": [
         "security", "protection", "privacy", "access control", "encryption"
     ],
     r"shield": [
@@ -213,7 +215,12 @@ SEMANTIC_ENRICHMENTS = {
         "storage", "stock", "fulfillment", "distribution center"
     ],
     r"factory|manufacturing": [
-        "production", "industry", "plant", "operations", "output"
+        "factory", "manufacturing", "industrial", "industry", "production",
+        "plant", "operations", "output", "assembly", "machinery"
+    ],
+    r"industry|industrial": [
+        "industry", "industrial", "sector", "manufacturing", "production",
+        "factory", "business", "economy"
     ],
     r"box|package|parcel": [
         "product", "shipping", "delivery", "order", "goods"
@@ -318,6 +325,14 @@ SEMANTIC_ENRICHMENTS = {
     ],
     r"search|magnifying": [
         "find", "lookup", "discover", "explore", "query"
+    ],
+    r"diamond|gem|jewel": [
+        "diamond", "gem", "gemstone", "jewel", "jewelry", "premium",
+        "quality", "value", "luxury", "design", "creative"
+    ],
+    r"monitor|screen|display": [
+        "monitor", "screen", "display", "desktop", "computer", "device",
+        "interface", "ui", "ux", "design", "presentation"
     ],
     r"settings|gear|cog": [
         "configuration", "preferences", "options", "customize", "admin"
@@ -427,7 +442,9 @@ SEMANTIC_ENRICHMENTS = {
         "industry", "sector", "customers", "demand", "competition", "share"
     ],
     r"customer|client|consumer": [
-        "user", "buyer", "account", "relationship", "service"
+        "customer", "client", "consumer", "user", "buyer", "account",
+        "relationship", "service", "customer experience", "client service",
+        "consumer experience", "cx", "user experience"
     ],
     r"stakeholder": [
         "investor", "partner", "interested party", "shareholder", "owner"
@@ -520,6 +537,10 @@ SEMANTIC_ENRICHMENTS = {
     ],
     r"compliance|regulatory": [
         "rules", "regulations", "legal", "governance", "standards"
+    ],
+    r"cyber|cybersecurity": [
+        "cyber", "cybersecurity", "cyber security", "information security",
+        "infosec", "security", "digital security", "threat", "protection"
     ],
     r"insurance": [
         "coverage", "protection", "risk", "policy", "premium"
@@ -750,7 +771,13 @@ SEMANTIC_ENRICHMENTS = {
         "health", "love", "vital", "cardiovascular", "organ"
     ],
     r"brain|mental": [
-        "mind", "cognitive", "thinking", "psychology", "neurology"
+        "brain", "mind", "cognitive", "cognition", "thinking", "psychology",
+        "neurology", "neuroscience", "intelligence", "ai",
+        "artificial intelligence", "machine learning", "research"
+    ],
+    r"research|science|laboratory|lab": [
+        "research", "science", "scientific", "laboratory", "lab", "experiment",
+        "testing", "discovery", "innovation", "analysis", "development", "r&d"
     ],
     r"fitness|exercise|gym": [
         "health", "workout", "training", "physical", "active"
@@ -888,7 +915,11 @@ CATEGORY_ENRICHMENTS = {
     "Finance": ["money", "financial", "banking", "monetary", "economic", "investment", "capital", "currency"],
     "Technology": ["tech", "digital", "software", "IT", "computing", "electronic", "innovation", "system"],
     "Communication": ["messaging", "contact", "outreach", "connect", "talk", "dialogue", "correspondence"],
-    "Security": ["protection", "safety", "secure", "privacy", "defense", "guard", "access control"],
+    "Security": [
+        "protection", "safety", "secure", "security", "privacy", "defense",
+        "guard", "access control", "cybersecurity", "cyber security",
+        "information security", "infosec", "risk", "compliance"
+    ],
     "Operations": ["process", "workflow", "logistics", "management", "execution", "production"],
     "Document": ["file", "paper", "content", "record", "report", "attachment", "text"],
     "E-commerce": ["shopping", "retail", "purchase", "commerce", "store", "buy", "sell", "transaction"],

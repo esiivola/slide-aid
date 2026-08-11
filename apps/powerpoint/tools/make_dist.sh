@@ -70,7 +70,7 @@ tools - the "Master" is always the object you selected LAST) and **Chart Aid**
 live examples).
 
 **Icons:** on the **Insert** tab, click **Insert Icons** to search a sidebar of
-10,000+ vector icons; click one to drop it on the slide, then select it and click
+54,000+ vector icons; click one to drop it on the slide, then select it and click
 **Make Editable** (also on the Insert tab) to turn it into an editable shape.
 (The sidebar loads its catalog online, so it needs an internet connection.)
 

@@ -20,10 +20,10 @@
     });
   }
 
-  // Bootstrap icons (and a few heroicons solid/mini) are drawn as FILLED
-  // shapes; the rest are stroke outlines. Render each as designed.
+  // Expanded catalogs carry an explicit filled flag. Keep the legacy source/id
+  // checks so pictures inserted from older deployments remain compatible.
   function isFilled(icon) {
-    return icon.s === "bootstrap" || /-(solid|mini)$/.test(icon.id);
+    return icon.f === 1 || icon.s === "bootstrap" || /-(solid|mini)$/.test(icon.id);
   }
 
   function pathAttrs(icon, color) {

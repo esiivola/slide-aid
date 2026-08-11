@@ -1,5 +1,5 @@
 /**
- * Server-side access to the ~10k icon path data.
+ * Server-side access to the 54k+ icon path data.
  *
  * The paths ship as numbered HTML files in the Apps Script project (Apps Script
  * only stores .gs and .html, so a JSON payload rides inside an .html file).

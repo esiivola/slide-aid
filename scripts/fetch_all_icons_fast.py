@@ -21,12 +21,13 @@ import subprocess
 import tarfile
 import tempfile
 import urllib.request
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = ROOT / "shared" / "iconaid" / "external-sources"
+SOURCE_MANIFEST = ROOT / "shared" / "iconaid" / "sources.json"
 
 # NPM registry URL pattern
 NPM_TARBALL_URL = "https://registry.npmjs.org/{package}/-/{name}-{version}.tgz"
@@ -44,23 +45,25 @@ def fetch_npm_package_info(package_name: str) -> dict | None:
         return None
 
 
-def download_and_extract_npm(package_name: str, dest_dir: Path) -> bool:
-    """Download and extract npm package."""
+def download_and_extract_npm(
+    package_name: str, dest_dir: Path, requested_version: str | None = None
+) -> str | None:
+    """Download and extract an npm package, returning its resolved version."""
     info = fetch_npm_package_info(package_name)
     if not info:
-        return False
+        return None
     
-    latest_version = info.get("dist-tags", {}).get("latest")
-    if not latest_version:
-        print(f"No latest version found for {package_name}")
-        return False
+    resolved_version = requested_version or info.get("dist-tags", {}).get("latest")
+    if not resolved_version:
+        print(f"No version found for {package_name}")
+        return None
     
-    tarball_url = info.get("versions", {}).get(latest_version, {}).get("dist", {}).get("tarball")
+    tarball_url = info.get("versions", {}).get(resolved_version, {}).get("dist", {}).get("tarball")
     if not tarball_url:
-        print(f"No tarball URL found for {package_name}@{latest_version}")
-        return False
+        print(f"No tarball URL found for {package_name}@{resolved_version}")
+        return None
     
-    print(f"Downloading {package_name}@{latest_version}...")
+    print(f"Downloading {package_name}@{resolved_version}...")
     
     try:
         req = urllib.request.Request(tarball_url, headers={"User-Agent": "IconAid/1.0"})
@@ -76,11 +79,185 @@ def download_and_extract_npm(package_name: str, dest_dir: Path) -> bool:
         
         os.unlink(tmp_path)
         print(f"Extracted {package_name} to {dest_dir}")
-        return True
+        return resolved_version
         
     except Exception as e:
         print(f"Failed to download {package_name}: {e}")
-        return False
+        return None
+
+
+def load_source_manifest() -> dict[str, Any]:
+    """Load the reviewed source allowlist used by fetching and normalization."""
+    return json.loads(SOURCE_MANIFEST.read_text(encoding="utf-8"))
+
+
+def _number(value: str | None, default: float = 0.0) -> float:
+    """Parse a simple SVG numeric attribute (Iconify data has no CSS units)."""
+    if value is None:
+        return default
+    match = re.match(r"[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?", value)
+    return float(match.group(0)) if match else default
+
+
+def _fmt_number(value: float) -> str:
+    text = f"{value:.6f}".rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def _points_to_path(points: str, close: bool) -> str | None:
+    values = [_number(value) for value in re.findall(
+        r"[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?", points
+    )]
+    if len(values) < 4 or len(values) % 2:
+        return None
+    pairs = list(zip(values[::2], values[1::2]))
+    path = f"M{_fmt_number(pairs[0][0])} {_fmt_number(pairs[0][1])}"
+    path += "".join(f" L{_fmt_number(x)} {_fmt_number(y)}" for x, y in pairs[1:])
+    return path + (" Z" if close else "")
+
+
+def extract_iconify_paths(body: str) -> tuple[list[str], str]:
+    """Convert safe Iconify body geometry to paths and infer stroke/fill mode.
+
+    Iconify has already removed scripts, external resources and unsupported
+    elements.  This importer handles the geometry elements used by the selected
+    monochrome packs. Icons with transformations are skipped instead of being
+    silently distorted; the build summary makes such losses visible.
+    """
+    try:
+        root = ET.fromstring(f'<svg xmlns="http://www.w3.org/2000/svg">{body}</svg>')
+    except ET.ParseError:
+        return [], "fill"
+
+    paths: list[str] = []
+    has_stroke = False
+    unsupported_transform = False
+
+    def walk(element: ET.Element, inherited: dict[str, str]) -> None:
+        nonlocal has_stroke, unsupported_transform
+        attrs = dict(inherited)
+        attrs.update({key.split("}")[-1]: value for key, value in element.attrib.items()})
+        if attrs.get("transform"):
+            unsupported_transform = True
+            return
+        stroke = attrs.get("stroke", "")
+        if stroke and stroke.lower() != "none":
+            has_stroke = True
+
+        tag = element.tag.split("}")[-1]
+        if tag == "path" and attrs.get("d"):
+            paths.append(attrs["d"])
+        elif tag == "line":
+            paths.append(
+                f"M{attrs.get('x1', '0')} {attrs.get('y1', '0')} "
+                f"L{attrs.get('x2', '0')} {attrs.get('y2', '0')}"
+            )
+        elif tag in {"polyline", "polygon"}:
+            path = _points_to_path(attrs.get("points", ""), tag == "polygon")
+            if path:
+                paths.append(path)
+        elif tag == "circle":
+            cx, cy, radius = (_number(attrs.get("cx")), _number(attrs.get("cy")), _number(attrs.get("r")))
+            if radius > 0:
+                c, y, r = map(_fmt_number, (cx, cy, radius))
+                paths.append(f"M{_fmt_number(cx-radius)} {y} A{r} {r} 0 1 0 {_fmt_number(cx+radius)} {y} A{r} {r} 0 1 0 {_fmt_number(cx-radius)} {y} Z")
+        elif tag == "ellipse":
+            cx, cy = _number(attrs.get("cx")), _number(attrs.get("cy"))
+            rx, ry = _number(attrs.get("rx")), _number(attrs.get("ry"))
+            if rx > 0 and ry > 0:
+                paths.append(
+                    f"M{_fmt_number(cx-rx)} {_fmt_number(cy)} A{_fmt_number(rx)} {_fmt_number(ry)} 0 1 0 "
+                    f"{_fmt_number(cx+rx)} {_fmt_number(cy)} A{_fmt_number(rx)} {_fmt_number(ry)} 0 1 0 "
+                    f"{_fmt_number(cx-rx)} {_fmt_number(cy)} Z"
+                )
+        elif tag == "rect":
+            x, y = _number(attrs.get("x")), _number(attrs.get("y"))
+            width, height = _number(attrs.get("width")), _number(attrs.get("height"))
+            if width > 0 and height > 0:
+                paths.append(
+                    f"M{_fmt_number(x)} {_fmt_number(y)} H{_fmt_number(x+width)} "
+                    f"V{_fmt_number(y+height)} H{_fmt_number(x)} Z"
+                )
+
+        for child in element:
+            walk(child, attrs)
+
+    walk(root, {})
+    return ([], "stroke" if has_stroke else "fill") if unsupported_transform else (paths, "stroke" if has_stroke else "fill")
+
+
+def process_iconify_json(extract_dir: Path, source: dict[str, Any]) -> list[dict]:
+    """Process one reviewed @iconify-json package into normalized source data."""
+    package_dir = extract_dir / "package"
+    icons_path = package_dir / "icons.json"
+    if not icons_path.exists():
+        print(f"Iconify icons.json not found for {source['id']}")
+        return []
+
+    data = json.loads(icons_path.read_text(encoding="utf-8"))
+    default_width = data.get("width", source.get("viewBox", 24))
+    default_height = data.get("height", default_width)
+    category_by_icon: dict[str, list[str]] = {}
+    for category, names in data.get("categories", {}).items():
+        for icon_name in names:
+            category_by_icon.setdefault(icon_name, []).append(category)
+    aliases_by_parent: dict[str, list[str]] = {}
+    for alias, alias_data in data.get("aliases", {}).items():
+        aliases_by_parent.setdefault(alias_data.get("parent", ""), []).append(alias)
+
+    icons = []
+    skipped = 0
+    filtered = 0
+    include_pattern = source.get("includePattern")
+    exclude_pattern = source.get("excludePattern")
+    category_override = source.get("categoryOverride")
+    source_tags = source.get("sourceTags", [])
+    for icon_id, icon_data in data.get("icons", {}).items():
+        if include_pattern and not re.search(include_pattern, icon_id):
+            filtered += 1
+            continue
+        if exclude_pattern and re.search(exclude_pattern, icon_id):
+            filtered += 1
+            continue
+        paths, inferred_mode = extract_iconify_paths(icon_data.get("body", ""))
+        if not paths:
+            skipped += 1
+            continue
+        words = re.split(r"[-_\s]+", icon_id.lower())
+        categories = category_by_icon.get(icon_id, [])
+        aliases = aliases_by_parent.get(icon_id, [])
+        category = category_override or (
+            categories[0].replace("-", " ").title()
+            if categories else categorize_by_name(icon_id)
+        )
+        tags = generate_tags(icon_id) + words + categories + aliases + source_tags
+        tags = list(dict.fromkeys(tag.lower() for tag in tags if tag))
+        render_mode = source.get("renderMode", "auto")
+        if render_mode == "auto":
+            render_mode = inferred_mode
+        width = icon_data.get("width", default_width)
+        height = icon_data.get("height", default_height)
+        if width != height:
+            skipped += 1
+            continue
+        display_name = " ".join(word.capitalize() for word in re.split(r"[-_]", icon_id))
+        icons.append({
+            "id": icon_id,
+            "name": display_name,
+            "category": category,
+            "tags": tags,
+            "license": source["license"],
+            "source": source["id"],
+            "svg_paths": paths,
+            "viewBox": width,
+            "renderMode": render_mode,
+            "searchable": " ".join([icon_id, display_name, category, *tags]).lower(),
+        })
+    summary = f"Found {len(icons)} {source['name']} icons; skipped {skipped} unsupported icons"
+    if filtered:
+        summary += f"; filtered {filtered} non-canonical variants"
+    print(summary)
+    return icons
 
 
 def extract_svg_paths(svg_content: str) -> list[str]:
@@ -318,6 +495,17 @@ def process_bootstrap_icons(extract_dir: Path) -> list[dict]:
 def categorize_by_name(name: str) -> str:
     """Categorize icon by name patterns."""
     name_lower = name.lower()
+    normalized_name = "-" + re.sub(r"[^a-z0-9]+", "-", name_lower).strip("-") + "-"
+
+    def has_pattern(pattern: str) -> bool:
+        normalized_pattern = re.sub(r"[^a-z0-9]+", "-", pattern.lower()).strip("-")
+        if f"-{normalized_pattern}-" in normalized_name:
+            return True
+        # Common plural variants should retain their singular category without
+        # reintroducing substring bugs such as classifying "clock" as "lock".
+        if "-" not in normalized_pattern and len(normalized_pattern) > 3:
+            return f"-{normalized_pattern}s-" in normalized_name or f"-{normalized_pattern}es-" in normalized_name
+        return False
     
     categories = {
         "Arrows": ["arrow", "chevron", "caret", "sort", "move", "expand", "collapse"],
@@ -340,7 +528,7 @@ def categorize_by_name(name: str) -> str:
     
     for category, patterns in categories.items():
         for pattern in patterns:
-            if pattern in name_lower:
+            if has_pattern(pattern):
                 return category
     
     return "General"
@@ -356,6 +544,7 @@ def generate_tags(name: str) -> list[str]:
     
     # Add semantic tags based on patterns
     name_lower = name.lower()
+    name_tokens = set(re.split(r'[-_\s]+', name_lower))
     
     semantics = {
         "chart": ["analytics", "data", "visualization", "metrics"],
@@ -392,26 +581,32 @@ def generate_tags(name: str) -> list[str]:
     }
     
     for pattern, semantic_tags in semantics.items():
-        if pattern in name_lower:
+        if pattern in name_tokens:
             tags.extend(semantic_tags)
     
     return list(set(tags))
 
 
-def save_normalized_file(icons: list[dict], source: str, output_dir: Path) -> None:
+def save_normalized_file(
+    icons: list[dict], source: dict[str, Any], version: str, output_dir: Path
+) -> None:
     """Save normalized icons to JSON file."""
     output = {
-        "source": source,
-        "license": icons[0]["license"] if icons else "MIT",
+        "source": source["id"],
+        "sourceName": source["name"],
+        "license": source["license"],
+        "upstream": source["upstream"],
+        "package": source["package"],
+        "version": version,
         "total_icons": len(icons),
         "icons": sorted(icons, key=lambda x: x["name"].lower()),
     }
-    
-    output_file = output_dir / f"{source}-icons-normalized.json"
+
+    output_file = output_dir / source["file"]
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
     
-    print(f"Saved {len(icons)} {source} icons to {output_file}")
+    print(f"Saved {len(icons)} {source['id']} icons to {output_file}")
 
 
 def main():
@@ -424,30 +619,36 @@ def main():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         
-        # Define packages to download
-        packages = [
-            ("@tabler/icons", "tabler", process_tabler_icons),
-            ("lucide-static", "lucide", process_lucide_icons),
-            ("heroicons", "heroicons", process_heroicons),
-            ("@phosphor-icons/core", "phosphor", process_phosphor_icons),
-            ("bootstrap-icons", "bootstrap", process_bootstrap_icons),
-        ]
+        processors = {
+            "tabler": process_tabler_icons,
+            "lucide": process_lucide_icons,
+            "heroicons": process_heroicons,
+            "phosphor": process_phosphor_icons,
+            "bootstrap": process_bootstrap_icons,
+        }
+        sources = [source for source in load_source_manifest()["sources"] if source.get("enabled")]
         
         all_icons = []
         source_counts = {}
         
-        for package_name, source_name, processor in packages:
+        for source in sources:
+            package_name = source["package"]
+            source_name = source["id"]
             print(f"\n{'='*40}")
             print(f"Processing {source_name.upper()}")
             print(f"{'='*40}")
             
             extract_dir = tmp_path / source_name
             
-            if download_and_extract_npm(package_name, extract_dir):
-                icons = processor(extract_dir)
+            version = download_and_extract_npm(package_name, extract_dir, source.get("version"))
+            if version:
+                if source["format"] == "iconify-json":
+                    icons = process_iconify_json(extract_dir, source)
+                else:
+                    icons = processors[source_name](extract_dir)
                 
                 if icons:
-                    save_normalized_file(icons, source_name, OUTPUT_DIR)
+                    save_normalized_file(icons, source, version, OUTPUT_DIR)
                     all_icons.extend(icons)
                     source_counts[source_name] = len(icons)
                     print(f"✓ {source_name}: {len(icons)} icons")
@@ -461,11 +662,12 @@ def main():
         print("BUILDING COMBINED INDEX")
         print(f"{'='*40}")
         
-        # Deduplicate by name similarity
+        # Preserve alternative artwork from every source; collapse only an
+        # accidental repeated record from the same source.
         seen_names = set()
         unique_icons = []
         for icon in all_icons:
-            key = icon["name"].lower().replace(" ", "")
+            key = f"{icon.get('source', '')}:{icon['id']}"
             if key not in seen_names:
                 seen_names.add(key)
                 unique_icons.append(icon)

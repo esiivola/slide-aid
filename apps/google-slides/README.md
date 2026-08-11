@@ -42,7 +42,7 @@ every section, because the reference is the concept every position tool depends 
 - Read-only Google Sheets connections: build from an explicit spreadsheet URL, tab, and range, then refresh the selected chart from current values.
 - A live selection inspector, command search across every button, matrix preview, and named layouts shared with deck collaborators.
 - Shared element libraries backed by one explicitly configured Slides presentation. Slide Aid never searches the user's Drive.
-- An **Icons** panel carrying the same 10,049-icon library as PowerPoint plus the reviewed consulting set, with the task pane's concept search, set and category filters, color selection, and incremental loading. Icons insert as pictures and **Make Editable** converts them to native shapes, matching PowerPoint's flow.
+- An **Icons** panel carrying the same 54,250-icon library as PowerPoint plus the reviewed consulting set, with the task pane's concept search, set and category filters, color selection, and incremental loading. Icons insert as pictures and **Make Editable** converts them to native shapes, matching PowerPoint's flow.
 - Deck QA reporting for off-slide objects, tiny text, missing alt text, low contrast, fixed RGB fills, stale/broken Sheet sources, orphan datasheets, and irregular horizontal spacing. Safe mechanical issues have targeted fixes.
 - The PowerPoint PNG icons are embedded into the built sidebar at build time, so no public image host is required.
 
@@ -56,12 +56,11 @@ Area, pie, and doughnut charts are server-rendered with the Apps Script Charts s
 
 The shared Slides library replaces the local PowerPoint My Elements store, but it is intentionally URL-based rather than a Drive-wide browser. Google Slides still lacks reliable click-order tracking and add-on keyboard-shortcut hooks.
 
-The Icons panel carries the same library as PowerPoint — 10,049 icons from Lucide,
-Tabler, Phosphor, Bootstrap and Heroicons, plus the 70-icon reviewed consulting
-set — and follows PowerPoint's two-step model: clicking inserts a picture, and
-**Make Editable** turns it into real shapes. Inserting the vectors directly on
-every click was the alternative, and it is the wrong default: the median catalog
-icon is 56 segments and the largest is 1081, so a slide would fill with objects.
+The Icons panel carries the same library as PowerPoint — 54,250 icons from 14
+permissively licensed libraries, plus the 70-icon reviewed consulting set — and
+follows PowerPoint's two-step model: clicking inserts a picture, and **Make
+Editable** turns it into real shapes. Inserting every vector segment directly on
+each click would make complex icons unwieldy, so the picture remains the default.
 
 Both steps are exact. The sidebar rasterises the icon from the same normalized
 path data the add-in uses, so the picture matches the thumbnail; **Make Editable**

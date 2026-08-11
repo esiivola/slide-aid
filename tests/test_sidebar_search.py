@@ -29,6 +29,7 @@ const mk = (raw, c) => {
 
 // ---- filled classification: source 'bootstrap' OR id ending -solid / -mini ----
 A.equal(api.isFilled({s: "bootstrap", id: "bootstrap-heart"}), true);
+A.equal(api.isFilled({s: "mingcute", id: "mingcute-diamond", f: 1}), true); // explicit catalog metadata
 A.equal(!!api.isFilled({s: "bootstrap", id: "anything-at-all"}), true);   // source wins
 A.equal(!!api.isFilled({s: "tabler", id: "tabler-home"}), false);
 A.equal(!!api.isFilled({s: "heroicons", id: "star-solid"}), true);

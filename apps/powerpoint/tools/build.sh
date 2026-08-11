@@ -36,7 +36,7 @@ find "$SOURCE_CACHE" -type f -name '*.bas' -delete
 cp src/*.bas "$SOURCE_CACHE/"
 cp tools/import_helper.bas "$SOURCE_CACHE/modImportHelper.bas"
 
-# IconAid loads its 2,500 icons at runtime from icons.dat in the SlideAid
+# IconAid loads its 54,000+ icons at runtime from icons.dat in the SlideAid
 # folder (too much data to live inside the VBA project). Environ("HOME") in
 # sandboxed PowerPoint maps here, so the add-in finds it at SlideAid/icons.dat.
 if [ ! -f data/icons.dat ]; then

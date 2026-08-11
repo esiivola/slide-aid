@@ -44,7 +44,7 @@ sidebar = sidebar.replace(
   JSON.stringify(iconAidCatalog).replaceAll("<", "\\u003c"),
 );
 
-// The full ~10k catalog is split: metadata rides in the sidebar so search is
+// The full catalog is split: metadata rides in the sidebar so search is
 // instant, while the path data ships as numbered project files that the server
 // reads on demand. Apps Script stores only .gs and .html, so each JSON payload
 // travels inside an .html file.

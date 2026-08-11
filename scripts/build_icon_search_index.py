@@ -21,9 +21,12 @@ import re
 from pathlib import Path
 from typing import Any
 
+from enrich_icon_tags import enrich_icon_tags
+
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES_DIR = ROOT / "shared" / "iconaid" / "external-sources"
 OUTPUT_FILE = SOURCES_DIR / "combined-search-index.json"
+SOURCE_MANIFEST = ROOT / "shared" / "iconaid" / "sources.json"
 
 
 def load_source(filepath: Path) -> list[dict[str, Any]]:
@@ -42,54 +45,19 @@ def build_combined_index() -> dict[str, Any]:
     all_icons = []
     source_counts = {}
     
-    # Load Tabler icons
-    tabler_file = SOURCES_DIR / "tabler-icons-normalized.json"
-    tabler_icons = load_source(tabler_file)
-    for icon in tabler_icons:
-        icon["source_id"] = f"tabler:{icon['id']}"
-    all_icons.extend(tabler_icons)
-    source_counts["tabler"] = len(tabler_icons)
-    
-    # Load Lucide icons
-    lucide_file = SOURCES_DIR / "lucide-icons-normalized.json"
-    lucide_icons = load_source(lucide_file)
-    for icon in lucide_icons:
-        icon["source_id"] = f"lucide:{icon['id']}"
-    all_icons.extend(lucide_icons)
-    source_counts["lucide"] = len(lucide_icons)
-    
-    # Load Heroicons
-    heroicons_file = SOURCES_DIR / "heroicons-normalized.json"
-    heroicons = load_source(heroicons_file)
-    for icon in heroicons:
-        icon["source_id"] = f"heroicons:{icon['id']}"
-    all_icons.extend(heroicons)
-    source_counts["heroicons"] = len(heroicons)
-    
-    # Load Phosphor icons
-    phosphor_file = SOURCES_DIR / "phosphor-icons-normalized.json"
-    phosphor_icons = load_source(phosphor_file)
-    for icon in phosphor_icons:
-        icon["source_id"] = f"phosphor:{icon['id']}"
-    all_icons.extend(phosphor_icons)
-    source_counts["phosphor"] = len(phosphor_icons)
-    
-    # Load Bootstrap icons
-    bootstrap_file = SOURCES_DIR / "bootstrap-icons-normalized.json"
-    bootstrap_icons = load_source(bootstrap_file)
-    for icon in bootstrap_icons:
-        icon["source_id"] = f"bootstrap:{icon['id']}"
-    all_icons.extend(bootstrap_icons)
-    source_counts["bootstrap"] = len(bootstrap_icons)
-    
-    # Deduplicate by name (prefer Tabler > Lucide > Heroicons > Phosphor > Bootstrap if same name)
-    seen_names = set()
-    unique_icons = []
-    for icon in all_icons:
-        name_key = icon["name"].lower()
-        if name_key not in seen_names:
-            seen_names.add(name_key)
-            unique_icons.append(icon)
+    manifest = json.loads(SOURCE_MANIFEST.read_text(encoding="utf-8"))
+    for source in manifest["sources"]:
+        if not source.get("enabled"):
+            continue
+        icons = load_source(SOURCES_DIR / source["file"])
+        for icon in icons:
+            icon["source_id"] = f"{source['id']}:{icon['id']}"
+            enrich_icon_tags(icon)
+        all_icons.extend(icons)
+        source_counts[source["id"]] = len(icons)
+
+    # Preserve stylistic/source alternatives; only duplicate source IDs collapse.
+    unique_icons = list({icon["source_id"]: icon for icon in all_icons}.values())
     
     # Sort by name
     unique_icons.sort(key=lambda x: x["name"].lower())

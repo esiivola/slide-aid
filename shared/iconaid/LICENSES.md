@@ -1,32 +1,49 @@
 # IconAid Licensing
 
-IconAid pilot artwork is original Slide Aid geometry and is distributed under the project MIT license in `shared/iconaid/LICENSE`.
+IconAid's curated pilot artwork is original Slide Aid geometry and is distributed under the project MIT license in `shared/iconaid/LICENSE`.
 
-No third-party SVG path data has been copied into the pilot catalog.
+The full offline search library also redistributes normalized SVG path data from
+the reviewed open-source projects listed in `shared/iconaid/sources.json`. Each
+record retains its source, source version, upstream URL, and license. Geometry is
+scaled and converted to the common IconAid path representation; those technical
+modifications do not replace or remove the upstream license.
 
 ## Searchable Icon Database
 
-The IconAid project maintains a searchable database of **7,500+ icons** from approved open-source libraries. These icons are stored in normalized JSON format for search and discovery. When adapting icons for IconAid, the geometry must be redrawn to match IconAid design specifications.
+The IconAid project maintains a searchable offline database of **54,250+ insertable icons**
+from approved open-source libraries. The catalog is generated from pinned npm
+package versions, enriched with search terms, normalized to a 24×24 coordinate
+system, and shared by the PowerPoint and Google Slides integrations.
 
 ### Database Files
 
 | Source | Icons | License | File |
 |--------|-------|---------|------|
-| Tabler Icons | 3,990 | MIT | `external-sources/tabler-icons-normalized.json` |
-| Bootstrap Icons | 2,029 | MIT | `external-sources/bootstrap-icons-normalized.json` |
-| Phosphor Icons | 1,480 | MIT | `external-sources/phosphor-icons-normalized.json` |
-| Lucide | 920 | ISC | `external-sources/lucide-icons-normalized.json` |
+| Tabler Icons | 5,130 | MIT | `external-sources/tabler-icons-normalized.json` |
+| Lucide | 1,993 | ISC | `external-sources/lucide-icons-normalized.json` |
 | Heroicons | 324 | MIT | `external-sources/heroicons-normalized.json` |
-| **Combined** | **7,519** | Various | `external-sources/combined-search-index.json` |
+| Phosphor Icons | 1,512 | MIT | `external-sources/phosphor-icons-normalized.json` |
+| Bootstrap Icons | 2,078 | MIT | `external-sources/bootstrap-icons-normalized.json` |
+| Iconoir | 1,676 | MIT | `external-sources/iconoir-icons-normalized.json` |
+| Hugeicons Free | 5,080 | MIT | `external-sources/hugeicons-icons-normalized.json` |
+| IconPark Outline | 2,586 | Apache-2.0 | `external-sources/icon-park-outline-icons-normalized.json` |
+| MingCute Core | 3,334 | Apache-2.0 | `external-sources/mingcute-icons-normalized.json` |
+| Carbon Icons | 2,713 | Apache-2.0 | `external-sources/carbon-icons-normalized.json` |
+| Material Symbols | 16,278 | Apache-2.0 | `external-sources/material-symbols-icons-normalized.json` |
+| Fluent System Icons (24px regular and filled) | 5,136 | MIT | `external-sources/fluent-icons-normalized.json` |
+| Simple Icons | 3,723 | CC0-1.0 | `external-sources/simple-icons-normalized.json` |
+| Health Icons | 2,691 | MIT | `external-sources/healthicons-normalized.json` |
+| **Combined source records** | **54,254** | Various | `unified-catalog.json` |
+
+Four legacy Lucide records contain no insertable path segments, so the host
+catalogs contain 54,250 icons. Source records are retained for auditability.
 
 ### Search Quality
 
-All icons have been enriched with semantic tags for better searchability:
-- **Total searchable tags**: 113,000+
-- **Average tags per icon**: 15.1
-- **Icons with 5+ tags**: 94%
-- **Icons with 10+ tags**: 84%
-- **Icons with 15+ tags**: 54%
+All icons are enriched at build time with their complete upstream terms plus
+domain, business, technical, visual, abbreviation, and synonym mappings. The
+normalizer no longer truncates icons to 20 tags, and the shipped catalogs no
+longer truncate them to 12 tags.
 
 Tags include business concepts (ROI, merger, agile, kanban), technical terms (API, cloud, devops), 
 ESG terminology (carbon, sustainability, renewable), and visual descriptors (animal, shape, color).
@@ -47,7 +64,35 @@ python3 scripts/recommend_icons.py --expansion-batch 7  # ESG
 
 ## Approved Source Libraries
 
-The following open-source icon libraries are approved for deriving IconAid icons. When adapting icons from these sources, the geometry must be redrawn to match IconAid design specifications (24×24 grid, 1.6px stroke, round caps/joins, simplified to 4-10 elements).
+The source manifest is the authoritative allowlist. Adding a source requires a
+permissive license, upstream and package provenance, a defined render mode, and
+tests covering import and search behavior. Sources outside the manifest are not
+part of the distributable library.
+
+The expansion adds:
+
+- **Iconoir** — MIT, https://github.com/iconoir-icons/iconoir
+- **Hugeicons Free** — MIT, https://github.com/hugeicons/hugeicons
+- **IconPark Outline** — Apache-2.0, https://github.com/bytedance/IconPark
+- **MingCute Core Regular and Filled** — Apache-2.0,
+  https://github.com/mingcute-design/mingcute-icons
+- **Carbon Icons** — Apache-2.0,
+  https://github.com/carbon-design-system/carbon
+- **Material Symbols** — Apache-2.0,
+  https://github.com/google/material-design-icons
+- **Fluent System Icons, canonical 24px regular and filled variants** — MIT,
+  https://github.com/microsoft/fluentui-system-icons
+- **Simple Icons** — CC0-1.0,
+  https://github.com/simple-icons/simple-icons
+- **Health Icons** — MIT,
+  https://github.com/resolvetosavelives/healthicons
+
+Only MingCute's public Core collection is included. MingCute Pro artwork and
+packages are not approved.
+
+Simple Icons contains third-party brand marks. Its icon data is CC0-1.0, but
+names and logos can remain subject to trademark rules. Inclusion does not imply
+endorsement, and users are responsible for brand-compliant use.
 
 ### Tabler Icons (Recommended Primary Source)
 
@@ -91,6 +136,9 @@ When deriving from Heroicons:
 ### Other Approved MIT-Licensed Libraries
 
 - **Microsoft Fluent UI System Icons**: MIT, https://github.com/microsoft/fluentui-system-icons
+- **Iconoir**: MIT, https://github.com/iconoir-icons/iconoir
+- **Hugeicons Free**: MIT, https://github.com/hugeicons/hugeicons
+- **Health Icons**: MIT, https://github.com/resolvetosavelives/healthicons
 
 ### Bootstrap Icons
 
@@ -114,6 +162,8 @@ When deriving from Bootstrap Icons:
 
 - **Material Symbols and Material Icons**: Apache 2.0, https://fonts.google.com/icons
 - **IBM Carbon Icons**: Apache 2.0, https://github.com/carbon-design-system/carbon
+- **IconPark Outline**: Apache 2.0, https://github.com/bytedance/IconPark
+- **MingCute Core**: Apache 2.0, https://github.com/mingcute-design/mingcute-icons
 
 When deriving from Apache 2.0 sources:
 - Preserve the Apache 2.0 notice in this file
@@ -126,6 +176,9 @@ When deriving from Apache 2.0 sources:
 
 ## Prohibited Sources
 
+- **Remix Icon (current releases)**: Remix Icon License v1.0 prohibits using
+  the icons to create a competing icon library. Do not ingest current releases,
+  even if an older aggregator record still labels the project Apache-2.0.
 - **Streamline**: Proprietary license. Do not vendor, trace, or derive.
 - **Consulting Firm Artwork**: McKinsey, BCG, Bain, Deloitte, PwC, and Accenture report graphics are proprietary. Visual language reference only - do not trace, copy, or derive matching artwork.
 

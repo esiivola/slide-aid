@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the full (~10.7k) IconAid data from unified-catalog.json:
+"""Build the full IconAid data from unified-catalog.json:
 
   apps/powerpoint-iconaid/catalog.json  - for the web sidebar (metadata + normalized
                                            M/L/C/Z paths in a common 24 viewBox)
@@ -29,17 +29,14 @@ from pathlib import Path
 
 import svg_normalize as N
 
-# Keep one consistent outline/regular style so every icon reads with the same
-# 1.6 centerline stroke. Fill/solid/duotone paths are solid regions (stroking
-# them looks thin/hollow); phosphor thin/light/bold are different weights.
-# These are id suffixes, so legitimate names (e.g. "traffic-light") aren't hit
-# unless the suffix is a real style variant.
-_VARIANT = re.compile(r'-(fill|filled|solid|duotone)$')
+# Source packages select the styles we intend to ship. Do not discard generic
+# fill/solid suffixes: those are valuable alternatives in the expanded library.
+# The only legacy duplicates still filtered are non-regular Phosphor weights.
 _PH_WEIGHT = re.compile(r'^phosphor-.+-(thin|light|bold)$')
 
 
 def is_variant(icon_id: str) -> bool:
-    return bool(_VARIANT.search(icon_id) or _PH_WEIGHT.search(icon_id))
+    return bool(_PH_WEIGHT.search(icon_id))
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "shared" / "iconaid" / "unified-catalog.json"
@@ -57,7 +54,9 @@ SLIDES_SHARD_SIZE = 450
 _FILLED_SUFFIX = re.compile(r'-(solid|mini)$')
 
 
-def is_filled(icon_id: str, source: str) -> bool:
+def is_filled(icon_id: str, source: str, render_mode: str = "") -> bool:
+    if render_mode:
+        return render_mode == "fill"
     return source == "bootstrap" or bool(_FILLED_SUFFIX.search(icon_id))
 
 
@@ -80,14 +79,14 @@ def write_slides_catalog(web: list[dict]) -> None:
         shards.append({"shard": number, "firstId": chunk[0]["id"], "lastId": chunk[-1]["id"]})
         for icon in chunk:
             entry = {"id": icon["id"], "n": icon["n"], "c": icon["c"], "s": icon["s"], "t": icon["t"], "k": number}
-            if is_filled(icon["id"], icon["s"]):
+            if icon.get("f"):
                 entry["f"] = 1
             index.append(entry)
 
     (SLIDES_DIR / "index.json").write_text(
         json.dumps(
             {
-                "schema": 4,
+                "schema": 5,
                 "viewBox": 24,
                 "style": {"stroke": 1.6, "lineCap": "round", "lineJoin": "round"},
                 "shardSize": SLIDES_SHARD_SIZE,
@@ -103,7 +102,8 @@ def write_slides_catalog(web: list[dict]) -> None:
     paths_mb = sum(p.stat().st_size for p in SLIDES_DIR.glob("paths-*.json")) / 1024 / 1024
     print(f"{SLIDES_DIR}  index {index_mb:.2f} MB + {len(shards)} path shards {paths_mb:.2f} MB")
 
-# Native viewBox per source -> scale factor to a common 24-unit grid.
+# Legacy native viewBox per source -> scale factor to a common 24-unit grid.
+# New sources carry viewBox per icon in their style metadata.
 VIEWBOX = {"tabler": 24, "lucide": 24, "heroicons": 24, "bootstrap": 16, "phosphor": 256}
 
 
@@ -122,7 +122,9 @@ def main():
             variants += 1
             continue
         src = icon.get("source", "")
-        vb = VIEWBOX.get(src, 24)
+        style = icon.get("style", {})
+        vb = style.get("viewBox", VIEWBOX.get(src, 24))
+        render_mode = style.get("renderMode", "")
         scale = 24.0 / vb
         subpaths = []
         for d in icon.get("paths", []):
@@ -135,8 +137,11 @@ def main():
             continue
         name = icon["name"]
         cate = icon.get("category", "General")
-        tags = " ".join(icon.get("tags", [])[:12])
-        web.append({"id": iid, "n": name, "c": cate, "s": src, "t": tags, "d": subpaths})
+        tags = " ".join(icon.get("tags", []))
+        entry = {"id": iid, "n": name, "c": cate, "s": src, "t": tags, "d": subpaths}
+        if is_filled(iid, src, render_mode):
+            entry["f"] = 1
+        web.append(entry)
         # pipe-delimited line for the add-in (id|name|cat|tags|subpaths...)
         safe = lambda x: str(x).replace("|", "/").replace("\n", " ")
         lines.append("|".join([safe(iid), safe(name), safe(cate), safe(tags)] + subpaths))
