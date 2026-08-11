@@ -16,15 +16,16 @@ Output: A single unified catalog with all icons as first-class IconAid citizens.
 from __future__ import annotations
 
 import json
-import re
 import hashlib
 from pathlib import Path
 from typing import Any
-from collections import Counter
+
+from enrich_icon_tags import enrich_icon_tags
 
 ROOT = Path(__file__).resolve().parent.parent
 EXTERNAL_DIR = ROOT / "shared" / "iconaid" / "external-sources"
 OUTPUT_PATH = ROOT / "shared" / "iconaid" / "unified-catalog.json"
+SOURCE_MANIFEST = ROOT / "shared" / "iconaid" / "sources.json"
 
 # Standard IconAid style
 ICONAID_STYLE = {
@@ -72,19 +73,41 @@ def extract_path_bounds(paths: list[str]) -> tuple[float, float, float, float]:
 
 def create_unified_icon(
     source_icon: dict,
-    source_name: str,
-    source_license: str,
+    source: dict[str, Any],
+    source_version: str = "",
 ) -> dict:
     """
     Create a unified IconAid icon from a source icon.
     """
     # Generate unique ID
     original_id = source_icon.get("id", source_icon.get("name", "unknown"))
+    source_name = source["id"]
+    render_mode = source_icon.get("renderMode", source.get("renderMode", "stroke"))
     icon_id = f"{source_name}-{original_id}".lower().replace(" ", "-").replace("_", "-")
     
     # Clean up duplicate dashes
     while "--" in icon_id:
         icon_id = icon_id.replace("--", "-")
+    # All hosts have legacy-compatible filled-icon detection based on an id
+    # suffix. Preserve that contract while carrying explicit renderMode too.
+    if render_mode == "fill" and source_name != "bootstrap" and not icon_id.endswith(("-solid", "-mini")):
+        icon_id += "-solid"
+    elif render_mode != "fill" and source_name != "bootstrap" and icon_id.endswith(("-solid", "-mini")):
+        # A few outline packs use "solid" as part of the concept name (for
+        # example mail-out-solid) even though the SVG is a centerline stroke.
+        # Avoid colliding with the legacy cross-host fill suffix contract.
+        icon_id += "-outline"
+    if len(icon_id) > 64:
+        digest = hashlib.sha1(icon_id.encode("utf-8")).hexdigest()[:8]
+        # The legacy VBA/editable paths infer filled geometry from the suffix.
+        # Keep it at the very end even when long IDs require truncation.
+        suffix = next(
+            (value for value in ("-solid", "-mini") if render_mode == "fill" and icon_id.endswith(value)),
+            "",
+        )
+        stem = icon_id[:-len(suffix)] if suffix else icon_id
+        room = 64 - len(suffix) - len(digest) - 1
+        icon_id = f"{stem[:room].rstrip('-')}-{digest}{suffix}"
     
     # Get SVG paths
     svg_paths = source_icon.get("svg_paths", [])
@@ -99,7 +122,7 @@ def create_unified_icon(
     # Get metadata
     name = source_icon.get("name", original_id)
     category = source_icon.get("category", "General")
-    tags = source_icon.get("tags", [])
+    tags = list(dict.fromkeys(str(tag).strip().lower() for tag in source_icon.get("tags", []) if str(tag).strip()))
     
     # Build searchable text
     searchable = " ".join([
@@ -109,45 +132,48 @@ def create_unified_icon(
         source_name,
     ])
     
-    return {
+    icon = {
         "id": icon_id,
         "name": name,
         "category": category,
-        "tags": tags[:20],  # Limit tags
+        "tags": tags,
         "source": source_name,
-        "license": source_license,
+        "sourceName": source["name"],
+        "sourceVersion": source_version,
+        "sourceUrl": source["upstream"],
+        "license": source["license"],
         "paths": normalized_paths,
         "searchable": searchable,
         "style": {
-            "viewBox": 24,
+            "viewBox": source_icon.get("viewBox", source.get("viewBox", 24)),
+            "renderMode": render_mode,
             "defaultStroke": 1.6,
             "linecap": "round",
             "linejoin": "round",
         },
     }
+    return enrich_icon_tags(icon)
 
 
 def load_all_sources() -> list[dict]:
     """Load and normalize all icons from all sources."""
-    sources = [
-        ("tabler-icons-normalized.json", "tabler", "MIT"),
-        ("lucide-icons-normalized.json", "lucide", "ISC"),
-        ("heroicons-normalized.json", "heroicons", "MIT"),
-        ("phosphor-icons-normalized.json", "phosphor", "MIT"),
-        ("bootstrap-icons-normalized.json", "bootstrap", "MIT"),
-    ]
+    manifest = json.loads(SOURCE_MANIFEST.read_text(encoding="utf-8"))
+    sources = [source for source in manifest["sources"] if source.get("enabled")]
     
     all_icons = []
     source_counts = {}
     
-    for filename, source_name, license_text in sources:
+    for source in sources:
+        filename = source["file"]
+        source_name = source["id"]
         print(f"Loading {source_name}...")
         data = load_source_file(filename)
         icons = data.get("icons", [])
+        source_version = data.get("version", "")
         
         count = 0
         for source_icon in icons:
-            unified = create_unified_icon(source_icon, source_name, license_text)
+            unified = create_unified_icon(source_icon, source, source_version)
             if unified:
                 all_icons.append(unified)
                 count += 1
@@ -160,37 +186,33 @@ def load_all_sources() -> list[dict]:
 
 def deduplicate_icons(icons: list[dict]) -> list[dict]:
     """
-    Remove duplicate icons (same paths from different sources).
-    Prefer: tabler > lucide > heroicons > phosphor > bootstrap
+    Preserve every icon while making normalized ID collisions deterministic.
+
+    The library deliberately keeps semantically equivalent icons from different
+    families. A source can also contain names that normalize to the same legacy
+    fill-suffixed ID (for example ``foo`` and ``foo-solid``). In that rare case,
+    keep both and add a stable hash before the legacy fill suffix.
     """
-    source_priority = {
-        "tabler": 1,
-        "lucide": 2, 
-        "heroicons": 3,
-        "phosphor": 4,
-        "bootstrap": 5,
-    }
-    
-    # Hash paths to detect duplicates
-    path_hash_to_icon = {}
-    
+    by_id: dict[str, dict] = {}
     for icon in icons:
-        # Create hash of paths
-        paths_str = "|".join(sorted(icon["paths"]))
-        path_hash = hashlib.md5(paths_str.encode()).hexdigest()[:12]
-        
-        if path_hash not in path_hash_to_icon:
-            path_hash_to_icon[path_hash] = icon
-        else:
-            # Keep the one with higher priority (lower number)
-            existing = path_hash_to_icon[path_hash]
-            existing_priority = source_priority.get(existing["source"], 99)
-            new_priority = source_priority.get(icon["source"], 99)
-            
-            if new_priority < existing_priority:
-                path_hash_to_icon[path_hash] = icon
-    
-    return list(path_hash_to_icon.values())
+        icon_id = icon["id"]
+        if icon_id in by_id:
+            suffix = next((value for value in ("-solid", "-mini") if icon_id.endswith(value)), "")
+            stem = icon_id[:-len(suffix)] if suffix else icon_id
+            seed = f"{icon.get('source', '')}:{icon.get('name', '')}:{icon_id}"
+            digest = hashlib.sha1(seed.encode("utf-8")).hexdigest()[:8]
+            room = 64 - len(suffix) - len(digest) - 1
+            icon_id = f"{stem[:room].rstrip('-')}-{digest}{suffix}"
+            attempt = 1
+            while icon_id in by_id:
+                digest = hashlib.sha1(f"{seed}:{attempt}".encode("utf-8")).hexdigest()[:8]
+                icon_id = f"{stem[:room].rstrip('-')}-{digest}{suffix}"
+                attempt += 1
+            icon = dict(icon)
+            icon["id"] = icon_id
+            enrich_icon_tags(icon)
+        by_id[icon_id] = icon
+    return list(by_id.values())
 
 
 def build_category_index(icons: list[dict]) -> dict[str, list[str]]:
@@ -250,7 +272,7 @@ def main():
     catalog = {
         "schema": 4,
         "name": "IconAid Unified Catalog",
-        "description": "All icons normalized to IconAid style - customizable stroke, offline-ready",
+        "description": "Permissively licensed icons normalized for offline IconAid search and rendering",
         "style": ICONAID_STYLE,
         "sources": source_counts,
         "totalIcons": len(unique_icons),
@@ -275,8 +297,8 @@ def main():
     print(f"Categories: {len(category_index)}")
     print(f"Unique tags: {len(tag_index)}")
     print("\nAll icons now support:")
-    print("  ✓ Customizable stroke color")
-    print("  ✓ Customizable stroke width")
+    print("  ✓ Customizable monochrome color")
+    print("  ✓ Explicit stroke/fill rendering")
     print("  ✓ SVG export with any style")
     print("  ✓ PNG export at any resolution")
     print("  ✓ Offline usage")

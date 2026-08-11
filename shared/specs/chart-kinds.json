@@ -17,6 +17,9 @@
   ],
   "metadata": {
     "powerpointTagPrefix": "SACH_",
-    "googleSlidesDescriptionPrefix": "SLIDE_AID_CHART_V1:"
+    "googleSlidesChartMarker": "[slide-aid-chart:<id>]",
+    "googleSlidesDatumMarker": "[slide-aid-bar:<series>:<category>:<value>]",
+    "googleSlidesLegacyDescriptionPrefix": "SLIDE_AID_CHART_V1:",
+    "comment": "Google Slides keeps the chart payload in Document Properties and marks the grouped chart with googleSlidesChartMarker; each drawn bar carries googleSlidesDatumMarker so the annotation tools read real data values. The legacy prefix is the retired v0.1 alt-text format, still decoded on first touch."
   }
 }

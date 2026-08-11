@@ -61,12 +61,11 @@ def test_generated_icon_catalog_is_current_and_searchable() -> None:
     assert "Current" in contact_sheet and "Benchmark cues" in contact_sheet and "72pt dark" in contact_sheet
     assert "IconAid operations batch contact sheet" in latest_sheet and "Service Operations" in latest_sheet
     for path, expected in build_icon_catalog.outputs().items():
-        # The legacy per-icon VBA modules (modIconAid*.bas) were replaced by the
-        # file-backed loader + external icons.dat, so they are intentionally no
-        # longer on disk; skip them here rather than regenerate dead code.
-        if path.name.startswith("modIconAid"):
-            continue
         assert path.read_text() == expected
+    # The legacy per-icon VBA modules (modIconAid*.bas) were replaced by the
+    # file-backed loader + external icons.dat, so the generator no longer emits
+    # them and they must stay off disk.
+    assert not list((ROOT / "apps" / "powerpoint" / "src").glob("modIconAid[!C]*.bas"))
     # IconAid VBA is now a single file-backed loader (modIconAidCurated.bas); the
     # per-icon data modules (modIconAidData*.bas) were replaced by icons.dat.
     src_dir = ROOT / "apps" / "powerpoint" / "src"
@@ -194,13 +193,14 @@ def test_powerpoint_taskpane_manifest_targets_the_insert_tab() -> None:
     assert host is not None and host.attrib["Name"] == "Presentation"
     assert source is not None and source.attrib["DefaultValue"].split("?")[0].endswith("/taskpane.html")
     manifest_text = (app / "manifest.xml").read_text()
-    # Current design: the "Browse Icons" button lives on the built-in Insert tab
-    # (OfficeTab), not a CustomTab, and reads "Icon Library" / "Search 10k+ Icons".
-    # (Replaces the old schema3-pilot CustomTab + insertVectorIcon adapter, which
-    # the file-backed loader + hosted sidebar made obsolete.)
+    # Current design: the icon button lives on the built-in Insert tab (OfficeTab),
+    # not a CustomTab, and reads "Insert Icons" so it pairs with the VBA "Make
+    # Editable" button sitting beside it. (Replaces the old schema3-pilot CustomTab
+    # + insertVectorIcon adapter, which the file-backed loader and hosted sidebar
+    # made obsolete.)
     assert '<OfficeTab id="TabInsert">' in manifest_text
     assert "CustomTab" not in manifest_text
-    assert "Icon Library" in manifest_text
-    assert "Search 10k+ Icons" in manifest_text
+    assert "Insert Icons" in manifest_text
+    assert "Make Editable" in manifest_text
     assert "schema3-pilot" not in manifest_text
     assert not [element for element in manifest.iter() if element.tag.endswith("CustomTab")]

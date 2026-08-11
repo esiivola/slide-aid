@@ -1,6 +1,7 @@
 import {
-  align, bounds, distribute, dock, fillGap, matchSize, matrix, placeRegion,
-  scaleAroundCenter, setSpacing, stack, stretch, type Axis, type Box, type Edge,
+  align, bounds, distribute, dock, fillGap, matchSize, matrix, placeRegion, processChain,
+  scaleAroundCenter, setSpacing, squareColumns, stack, stretch, swapPositions,
+  type Axis, type Box, type Edge, type SwapAnchor,
 } from "../core/geometry";
 import { getSettings, updateSettings } from "../storage/preferences";
 import { applyBoxesAtomically } from "../slides/batch";
@@ -18,6 +19,11 @@ export interface CommandRequest {
   scalePercent?: number;
   color?: string;
   colorTarget?: "F" | "L" | "T";
+  /** Swap: which corner is matched, and whether sizes travel with positions. */
+  swapAnchor?: SwapAnchor;
+  swapSizes?: boolean;
+  /** Magic Resizer scales font sizes with the geometry, like PowerPoint. */
+  scaleFonts?: boolean;
 }
 
 export interface CommandResult {
@@ -141,9 +147,29 @@ function swapText(): void {
   second.setText(value);
 }
 
-function alignAngles(): void {
-  const { elements, boxes, reference } = targetsAndReference({ command: "angles", referenceMode: "PINNED" });
+function alignAngles(request: CommandRequest): void {
+  const { elements, boxes, reference } = targetsAndReference({ ...request, command: "angles" });
   applyBoxes(elements, boxes.map((box) => ({ ...box, rotation: reference.rotation ?? 0 })));
+}
+
+/**
+ * Scales every text run in a shape. PowerPoint's Magic Resizer resizes type
+ * along with geometry, which is the whole point of it - a scaled card whose text
+ * stayed put looks broken.
+ */
+function scaleFontSizes(element: GoogleAppsScript.Slides.PageElement, factor: number): void {
+  if (element.getPageElementType() === SlidesApp.PageElementType.GROUP) {
+    element.asGroup().getChildren().forEach((child) => scaleFontSizes(child, factor));
+    return;
+  }
+  if (element.getPageElementType() !== SlidesApp.PageElementType.SHAPE) return;
+  const text = element.asShape().getText();
+  if (!text.asString().trim()) return;
+  for (const run of text.getRuns()) {
+    const style = run.getTextStyle();
+    const size = style.getFontSize();
+    if (size) style.setFontSize(Math.max(1, Math.round(size * factor * 10) / 10));
+  }
 }
 
 export function executeCommand(request: CommandRequest): CommandResult {
@@ -160,20 +186,30 @@ export function executeCommand(request: CommandRequest): CommandResult {
     if (command === "golden") result = boxes.map((box) => ({ ...box, top: reference.top + (reference.height - box.height) / 3 }));
     applyBoxes(elements, result);
     count = elements.length;
-  } else if (["stack", "spacing", "distribute", "matrix", "scale", "place"].includes(command)) {
-    const { context, elements, boxes } = selectionOnly(command === "distribute" ? 3 : 1);
+  } else if (command === "procChain") {
+    const { elements, boxes, reference } = targetsAndReference(request);
+    applyBoxes(elements, processChain(boxes, reference));
+    count = elements.length;
+  } else if (["stack", "spacing", "distribute", "matrix", "scale", "place", "swap"].includes(command)) {
+    const { context, elements, boxes } = selectionOnly(command === "distribute" ? 3 : command === "swap" ? 2 : 1);
     let result = boxes;
     const gapCm = Number.isFinite(request.gapCm) ? request.gapCm! : getSettings().gapCm;
     const gap = gapCm * CM_TO_PT;
     if (command === "stack") result = stack(boxes, request.argument as Axis, gap);
     if (command === "spacing") result = setSpacing(boxes, request.argument as Axis, gap);
     if (command === "distribute") result = distribute(boxes, request.argument as Axis);
+    if (command === "swap") result = swapPositions(boxes, request.swapAnchor ?? "C", request.swapSizes === true);
     if (command === "matrix") {
-      const columns = request.columns ?? getSettings().matrixColumns;
+      // "Matrix" with no column count is PowerPoint's one-click near-square grid.
+      const columns = request.columns && request.columns > 0 ? request.columns : squareColumns(boxes.length);
       result = matrix(boxes, columns, gap, gap);
       updateSettings({ gapCm, matrixColumns: columns });
     }
-    if (command === "scale") result = scaleAroundCenter(boxes, (request.scalePercent ?? 100) / 100);
+    if (command === "scale") {
+      const factor = (request.scalePercent ?? 100) / 100;
+      result = scaleAroundCenter(boxes, factor);
+      if (request.scaleFonts !== false) elements.forEach((element) => scaleFontSizes(element, factor));
+    }
     if (command === "place") {
       const region = placeRegion(slideBox(context), request.argument ?? "FULL");
       if (boxes.length === 1) result = [{ ...boxes[0]!, left: region.left, top: region.top, width: region.width, height: region.height }];
@@ -197,7 +233,7 @@ export function executeCommand(request: CommandRequest): CommandResult {
     swapText();
     count = 2;
   } else if (command === "angles") {
-    alignAngles();
+    alignAngles(request);
     count = activeContext().elements.length;
   } else {
     throw new Error(`Unknown command: ${command}`);

@@ -256,7 +256,7 @@ Use **Cycle State** repeatedly to step selected Harvey balls and checkboxes thro
 
 #### Icons
 
-On PowerPoint's built-in **Insert** tab, click **Insert Icons** to open a searchable sidebar of 10,000+ vector icons; click any icon to drop it on the slide as a picture. To recolor or reshape one, keep it selected and click **Make Editable** (also on the Insert tab) to convert every inserted icon on the slide into an editable vector group. In Google Slides the same icons live in the **Icons** sidebar tab and insert as editable vectors directly.
+On PowerPoint's built-in **Insert** tab, click **Insert Icons** to open a searchable sidebar of 10,000+ vector icons; click any icon to drop it on the slide as a picture. To recolor or reshape one, keep it selected and click **Make Editable** (also on the Insert tab) to convert every inserted icon on the slide into an editable vector group. Google Slides works the same way: the same icons live in the **Icons** sidebar tab, click inserts a picture, and **Make Editable** converts it into shapes.
 
 ### Ribbon tour
 

@@ -7,7 +7,7 @@ Attribute VB_Name = "modIconAidCurated"
 ' editable freeform - adjustable stroke color, line weight, and (for filled
 ' designs) fill color.
 '
-' Icon geometry lives in an external data file, icons.dat (~10k lines of
+' Icon geometry lives in an external data file, icons.dat (54k+ lines of
 ' "id|name|category|tags|subpath1|subpath2|..."), NOT in this VBA project - far
 ' more data than Mac PowerPoint can hold in a project. icons.dat ships in the
 ' installer, is copied into PowerPoint's SlideAid folder, and is loaded into

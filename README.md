@@ -11,13 +11,13 @@ Start with the visual guide:
 - [Slide Aid Documentation](DOCUMENTATION.md) - visual workflow demos, ribbon tour, and icon-by-icon reference.
 - [Chart layouts and examples](docs/CHARTS.md) - table formats for every Chart Aid chart type.
 - [PowerPoint UI reference](docs/POWERPOINT_UI_REFERENCE.md) - source-of-truth tab order, groups, control names, icon files, ribbon tags, and behavior.
-- [Google Slides companion](apps/google-slides/README.md) - platform-specific notes for the separate Apps Script implementation.
+- [Google Slides companion](apps/google-slides/README.md) - the Apps Script implementation, its deviations from this one, and [how to install it](apps/google-slides/README.md#install).
 
 ## What It Does
 
 - **Slide Aid** handles everyday production work: align, size, dock, distribute, stack, grid, recolor, format-paint, clean up, reuse components, and manage text boxes.
 - **Chart Aid** builds editable shape-based charts from PowerPoint tables: column, bar, stacked, 100%, waterfall, Mekko, line, area, pie, doughnut, scatter, bubble, and Gantt. Style them with native panels — **Chart Settings** (sliders, toggles, colors) and **Edit Colors** — plus one-click color themes and per-series recolor.
-- **Icons** is a visual task pane for original business, technology, finance, operations, people, security, communication, and ESG icons. The active schema-3 catalog is currently a reviewed consulting-style pilot set while the full catalog is being rebuilt. Search, filter, recolor, and click to insert; in PowerPoint an inserted icon becomes an editable vector via **Make Editable**, and in Google Slides it inserts as grouped vectors directly.
+- **Icons** is a visual browser over 54,250 icons from 14 permissively licensed libraries, plus a reviewed consulting set covering business, technology, finance, operations, people, security, communication, healthcare, brands, and ESG. Search by concept, filter, recolor, and click to insert. Both platforms work the same way: an inserted icon is a picture, and **Make Editable** turns it into editable vectors.
 - **Reusable libraries** store personal elements and saved formats in PowerPoint's sandbox-safe Slide Aid folder.
 - **Mac-native helpers** provide optional color picking and PowerPoint-scoped keyboard shortcuts through Hammerspoon.
 
@@ -75,7 +75,7 @@ python3 scripts/build_icon_catalog.py
 python3 scripts/build_icon_catalog.py --check
 ```
 
-The icon artwork is original, MIT-licensed, and defined on a shared 24x24 primitive grid. PowerPoint uses the cross-platform Office.js task pane in `apps/powerpoint-iconaid/`; Google Slides uses the **Icons** sidebar tab. Both insert grouped native shapes rather than temporary preview slides or bitmap fallbacks.
+The icon artwork is normalized onto a shared 24x24 grid; the consulting set is original and MIT-licensed, and the library sets keep their own licenses (see `shared/iconaid/LICENSES.md`). PowerPoint uses the cross-platform Office.js task pane in `apps/powerpoint-iconaid/`; Google Slides uses the **Icons** sidebar tab. Both insert an icon as a tagged picture and convert it to editable vectors on demand via **Make Editable**, so neither ever leaves a bitmap you cannot recolor.
 
 For local PowerPoint development, serve the repository over trusted HTTPS on port 3000 and sideload `apps/powerpoint-iconaid/manifest.xml`. The manifest adds an **Insert Icons** button to PowerPoint's **Insert** tab (next to the VBA **Make Editable** button); the PPAM no longer contains the retired VBA icon picker.
 

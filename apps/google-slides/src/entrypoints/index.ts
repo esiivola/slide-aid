@@ -1,8 +1,13 @@
 import { executeCommand, type CommandRequest } from "../commands/geometry-commands";
 import {
-  buildChart, buildLinkedChart, editChartData, rebuildChart, recolorSeries, refreshLinkedChart,
-  restyleCharts, selectedChartState, setPalette, validateLinkedChart,
+  applyChartSettings, buildChart, buildLinkedChart, chartSettingsState, editChartData, familyPalette,
+  rebuildChart, recolorSeries, refreshLinkedChart, resetChartSettings, resetFamilyPalette, restyleCharts,
+  saveFamilyPalette, selectedChartState, setPalette, validateLinkedChart,
 } from "../charts/charts";
+import {
+  annotateAverageLine, annotateDifference, annotateValueLine, cycleElementState, insertCheckbox, insertHarveyBall,
+} from "../charts/annotations";
+import { dataLayouts, insertSampleSlides, removeSampleSlides } from "../charts/samples";
 import { deleteReference, getSettings, PALETTES } from "../storage/preferences";
 import { activeContext, elementBox, labelFor, referenceState, setReferenceFromCurrentSelection } from "../slides/selection";
 import { bounds } from "../core/geometry";
@@ -11,7 +16,15 @@ import { applyPaletteToTheme, applyThemeColor, convertSelectionColors, currentTh
 import { applyLayout, deleteLayout, listLayouts, saveLayout } from "../layouts/layouts";
 import { addSelectionToLibrary, configureLibrary, insertLibraryItem, listLibraryItems, refreshSelectedLibraryItem } from "../library/library";
 import { fixQaIssue, focusQaIssue, scanDeck, type QaIssue } from "../qa/qa";
-import { normalizeIconDefinition } from "../core/integrations";
+import {
+  applyFormat, colorInfo, deleteFormat, fitToText, GENERIC_PALETTE, listFormats, mergeTextBoxes,
+  paintFormat, pickColorsFromReference, saveFormat, selectSimilar, snapToTable, splitAtCursor,
+} from "../commands/object-commands";
+import {
+  buildAgenda, copyToAllSlides, hideObjects, removeGeneratedAgenda, removeSpeakerNotes, slideSummary, unhideAll,
+} from "../commands/deck-commands";
+import { insertCuratedIcon, insertIconImage, makeIconsEditable } from "../slides/icons";
+import { iconPathsFor } from "../slides/icon-catalog";
 
 export interface ApiResponse<T = unknown> {
   ok: boolean;
@@ -71,8 +84,10 @@ export function getSidebarState(): ApiResponse {
       settings: { ...settings, palette: deckSettings.palette ?? settings.palette },
       deckSettings,
       palettes: Object.keys(PALETTES),
+      genericPalette: GENERIC_PALETTE,
       theme: currentThemeSwatches(),
       layouts: listLayouts(),
+      formats: listFormats(),
       selectedChart: context.elements.length ? selectedChartState() : null,
     };
   });
@@ -173,69 +188,20 @@ export function refreshSelectedSlideAidLibraryItem(): ApiResponse {
   return response(refreshSelectedLibraryItem);
 }
 
-export function insertSlideAidIcon(icon: unknown, color: string): ApiResponse {
-  return response(() => {
-    const definition = normalizeIconDefinition(icon);
-    if (!/^#[0-9a-f]{6}$/i.test(color)) throw new Error("Icon color must use #RRGGBB format.");
-    const context = activeContext();
-    const size = 72;
-    const scale = size / 24;
-    const left = (context.presentation.getPageWidth() - size) / 2;
-    const top = (context.presentation.getPageHeight() - size) / 2;
-    const elements: GoogleAppsScript.Slides.PageElement[] = [];
-    try {
-      for (const primitive of definition.primitives) {
-        if (primitive.kind === "line") {
-          const item = context.slide.insertLine(
-            SlidesApp.LineCategory.STRAIGHT,
-            left + primitive.x1 * scale,
-            top + primitive.y1 * scale,
-            left + primitive.x2 * scale,
-            top + primitive.y2 * scale,
-          );
-          item.getLineFill().setSolidFill(color);
-          item.setWeight(1.5);
-          const pageElement = context.presentation.getPageElementById(item.getObjectId());
-          if (!pageElement) throw new Error("Google Slides did not expose the inserted line for grouping.");
-          elements.push(pageElement);
-          continue;
-        }
-        const shapeType = primitive.kind === "ellipse" ? SlidesApp.ShapeType.ELLIPSE : SlidesApp.ShapeType.RECTANGLE;
-        const item = context.slide.insertShape(
-          shapeType,
-          left + primitive.x * scale,
-          top + primitive.y * scale,
-          primitive.width * scale,
-          primitive.height * scale,
-        );
-        if (primitive.filled) {
-          item.getFill().setSolidFill(color);
-          item.getBorder().setTransparent();
-        } else {
-          item.getFill().setTransparent();
-          item.getBorder().getLineFill().setSolidFill(color);
-          item.getBorder().setWeight(1.5);
-        }
-        const pageElement = context.presentation.getPageElementById(item.getObjectId());
-        if (!pageElement) throw new Error("Google Slides did not expose the inserted shape for grouping.");
-        elements.push(pageElement);
-      }
-      const group = context.slide.group(elements);
-      group.setTitle(`IconAid: ${definition.name}`);
-      group.setDescription(`Editable IconAid vector icon [iconaid:${definition.id}]`);
-      group.select();
-    } catch (error) {
-      for (const element of elements) {
-        try {
-          element.remove();
-        } catch {
-          // Ignore cleanup errors and report the original insertion failure.
-        }
-      }
-      throw error;
-    }
-    return { message: `Inserted ${definition.name}.` };
-  });
+export function insertSlideAidIcon(id: string, name: string, color: string, pngBase64: string): ApiResponse {
+  return response(() => insertIconImage(id, name, color, pngBase64));
+}
+
+export function insertSlideAidCuratedIcon(icon: unknown, color: string, strokeWidth?: number): ApiResponse {
+  return response(() => insertCuratedIcon(icon, color, strokeWidth ?? 1.6));
+}
+
+export function makeSlideAidIconsEditable(): ApiResponse {
+  return response(makeIconsEditable);
+}
+
+export function getSlideAidIconPaths(ids: string[]): ApiResponse {
+  return response(() => ({ paths: iconPathsFor(ids) }));
 }
 
 export function scanSlideAidDeck(): ApiResponse {
@@ -248,4 +214,145 @@ export function focusSlideAidQaIssue(slideId: string, objectId: string): ApiResp
 
 export function fixSlideAidQaIssue(issue: Pick<QaIssue, "type" | "slideId" | "objectIds">): ApiResponse {
   return response(() => fixQaIssue(issue));
+}
+
+// --- Chart Aid: Style ------------------------------------------------------
+
+export function getSlideAidChartSettings(): ApiResponse {
+  return response(chartSettingsState);
+}
+
+export function applySlideAidChartSettings(scope: string, values: Record<string, unknown>): ApiResponse {
+  return response(() => applyChartSettings(scope, values));
+}
+
+export function resetSlideAidChartSettings(scope: string): ApiResponse {
+  return response(() => resetChartSettings(scope));
+}
+
+export function getSlideAidFamilyPalette(family: string): ApiResponse {
+  return response(() => familyPalette(family));
+}
+
+export function saveSlideAidFamilyPalette(family: string, colors: unknown): ApiResponse {
+  return response(() => saveFamilyPalette(family, colors));
+}
+
+export function resetSlideAidFamilyPalette(family: string): ApiResponse {
+  return response(() => resetFamilyPalette(family));
+}
+
+// --- Chart Aid: Data, Annotations, Elements --------------------------------
+
+export function getSlideAidDataLayouts(): ApiResponse {
+  return response(() => ({ layouts: dataLayouts() }));
+}
+
+export function insertSlideAidSampleSlides(): ApiResponse {
+  return response(insertSampleSlides);
+}
+
+export function removeSlideAidSampleSlides(): ApiResponse {
+  return response(removeSampleSlides);
+}
+
+export function annotateSlideAidDifference(mode: string, periods?: number): ApiResponse {
+  return response(() => annotateDifference(mode === "PCT" ? "PCT" : mode === "CAGR" ? "CAGR" : "ABS", periods));
+}
+
+export function annotateSlideAidValueLine(value: number): ApiResponse {
+  return response(() => annotateValueLine(Number(value)));
+}
+
+export function annotateSlideAidAverageLine(): ApiResponse {
+  return response(annotateAverageLine);
+}
+
+export function insertSlideAidHarveyBall(percent: number, color: string): ApiResponse {
+  return response(() => insertHarveyBall(Number(percent), color));
+}
+
+export function insertSlideAidCheckbox(state: string, color: string): ApiResponse {
+  return response(() => insertCheckbox(state, color));
+}
+
+export function cycleSlideAidElementState(color: string): ApiResponse {
+  return response(() => cycleElementState(color));
+}
+
+// --- Slide Aid: Wizards, Color, Text, Shape --------------------------------
+
+export function paintSlideAidFormat(): ApiResponse {
+  return response(paintFormat);
+}
+
+export function saveSlideAidFormat(name: string): ApiResponse {
+  return response(() => saveFormat(name));
+}
+
+export function applySlideAidFormat(name: string): ApiResponse {
+  return response(() => applyFormat(name));
+}
+
+export function deleteSlideAidFormat(name: string): ApiResponse {
+  return response(() => deleteFormat(name));
+}
+
+export function selectSlideAidSimilar(mode: string): ApiResponse {
+  return response(() => selectSimilar(mode === "F" ? "F" : mode === "TF" ? "TF" : "T"));
+}
+
+export function pickSlideAidColors(target: string): ApiResponse {
+  return response(() => pickColorsFromReference(target === "F" || target === "L" || target === "T" ? target : "ALL"));
+}
+
+export function getSlideAidColorInfo(): ApiResponse {
+  return response(colorInfo);
+}
+
+export function fitSlideAidShapesToText(): ApiResponse {
+  return response(fitToText);
+}
+
+export function splitSlideAidTextAtCursor(): ApiResponse {
+  return response(splitAtCursor);
+}
+
+export function mergeSlideAidTextBoxes(): ApiResponse {
+  return response(mergeTextBoxes);
+}
+
+export function snapSlideAidToTable(mode: string, marginCm?: number): ApiResponse {
+  const margin = Number.isFinite(marginCm) ? Number(marginCm) * 28.3464567 : 4;
+  return response(() => snapToTable(mode === "L" ? "L" : mode === "R" ? "R" : "C", margin));
+}
+
+// --- Slide Aid: View & Expert ---------------------------------------------
+
+export function hideSlideAidObjects(): ApiResponse {
+  return response(hideObjects);
+}
+
+export function unhideSlideAidObjects(): ApiResponse {
+  return response(unhideAll);
+}
+
+export function pasteSlideAidOnSlides(): ApiResponse {
+  return response(copyToAllSlides);
+}
+
+export function removeSlideAidSpeakerNotes(): ApiResponse {
+  return response(removeSpeakerNotes);
+}
+
+export function getSlideAidSlideSummary(): ApiResponse {
+  return response(slideSummary);
+}
+
+export function buildSlideAidAgenda(items: unknown): ApiResponse {
+  return response(() => buildAgenda(items));
+}
+
+export function removeSlideAidAgenda(): ApiResponse {
+  return response(() => removeGeneratedAgenda());
 }

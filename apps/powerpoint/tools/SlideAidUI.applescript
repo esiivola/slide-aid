@@ -263,13 +263,27 @@ end editColors
 -- ---------- shared UI helpers ----------
 
 on runAlert(alert, tokens)
+	-- AppleScriptTask runs this helper as a background/accessory process, so a
+	-- bare NSAlert never comes to the front (it "does nothing" in PowerPoint).
+	-- Promote to a regular foreground app first, then activate, so runModal's
+	-- window is visible and takes key focus. This is the fix for the modal not
+	-- appearing under AppleScriptTask (it already worked from a GUI osascript).
 	try
-		(current application's NSApplication's sharedApplication())'s activateIgnoringOtherApps:true
+		set nsApp to current application's NSApplication's sharedApplication()
+		nsApp's setActivationPolicy:0 -- NSApplicationActivationPolicyRegular
+		nsApp's activateIgnoringOtherApps:true
 	end try
 	try
-		(alert's |window|())'s setLevel:3
+		(alert's |window|())'s setLevel:8 -- above normal app windows
 	end try
-	set code to (alert's runModal()) as integer
+	-- A failed runModal must read as Cancel rather than throwing back into VBA,
+	-- which would leave the caller's editing tag behind.
+	set code to -99999
+	try
+		set code to (alert's runModal()) as integer
+	on error
+		return "CANCEL"
+	end try
 	set idx to code - 999
 	if idx < 1 or idx > (count of tokens) then return "CANCEL"
 	return item idx of tokens

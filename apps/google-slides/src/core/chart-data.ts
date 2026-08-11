@@ -13,6 +13,22 @@ export interface ChartRect {
   height: number;
 }
 
+/**
+ * Where the value axis sits after a build, so annotations can be placed on the
+ * chart's own scale instead of guessing from pixels. This is the Slides
+ * equivalent of PowerPoint's SACH_Y0 / SACH_PPU shape tags.
+ */
+export interface ChartAxis {
+  /** Coordinate of value zero: an x for horizontal charts, a y otherwise. */
+  zero: number;
+  /** Points per data unit. */
+  scale: number;
+  horizontal: boolean;
+  /** Start and length of the plot band across the category direction. */
+  plotStart: number;
+  plotSize: number;
+}
+
 export interface ChartMetadata {
   schema: 1;
   id: string;
@@ -22,6 +38,40 @@ export interface ChartMetadata {
   palette: string;
   overrides: Record<string, string>;
   source?: SheetSource;
+  axis?: ChartAxis;
+}
+
+const BAR_TAG = /\[slide-aid-bar:(\d+):(\d+):(-?[\d.]+)\]/;
+
+export interface BarReference {
+  series: number;
+  category: number;
+  value: number;
+}
+
+/** Marks one drawn bar/segment/point with the data it came from. */
+export function barTag(series: number, category: number, value: number): string {
+  return `[slide-aid-bar:${series}:${category}:${value}]`;
+}
+
+export function parseBarTag(description: string): BarReference | null {
+  const match = description.match(BAR_TAG);
+  if (!match) return null;
+  const value = Number.parseFloat(match[3]!);
+  if (!Number.isFinite(value)) return null;
+  return { series: Number(match[1]), category: Number(match[2]), value };
+}
+
+/** Compound annual growth rate between two values over a number of periods. */
+export function cagr(first: number, last: number, periods: number): number {
+  if (!(periods > 0)) throw new Error("CAGR needs at least one period.");
+  if (first <= 0 || last <= 0) throw new Error("CAGR needs two positive values.");
+  return ((last / first) ** (1 / periods) - 1) * 100;
+}
+
+export function percentDifference(first: number, last: number): number {
+  if (first === 0) throw new Error("Percent difference needs a non-zero starting value.");
+  return ((last - first) / Math.abs(first)) * 100;
 }
 
 export interface SheetSource {

@@ -1,18 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  align, bounds, distribute, fillGap, matchSize, matrix, placeRegion,
-  scaleAroundCenter, setSpacing, stack, type Box,
+  align, bounds, distribute, fillGap, matchSize, matrix, placeRegion, processChain,
+  scaleAroundCenter, setSpacing, squareColumns, stack, swapPositions, type Box,
 } from "../src/core/geometry";
 import {
-  decodeMetadata, encodeMetadata, isSubtotal, paletteColor, parseNumber,
-  validateChartData, type ChartMetadata,
+  barTag, cagr, decodeMetadata, encodeMetadata, isSubtotal, paletteColor, parseBarTag, parseNumber,
+  percentDifference, validateChartData, type ChartMetadata,
 } from "../src/core/chart-data";
+import {
+  applyControlValues, clearScope, controlsFor, controlValues, familyForKind, formatValue,
+  isKnownStyleKey, STYLE_KEYS, styleColor, styleFlag, styleNumber, styleString,
+} from "../src/core/chart-style";
 import {
   contrastRatio, decodeLibraryReference, encodeLibraryReference, extractGoogleFileId, isOutsideSlide, normalizeIconDefinition,
   normalizeLayout, projectLayout,
 } from "../src/core/integrations";
-import { insertSlideAidIcon } from "../src/entrypoints/index";
+import { flattenIconElements, flattenPath, polylineSegments } from "../src/core/icon-path";
+import { fillSpans, isFilledIcon } from "../src/core/icon-fill";
+import catalog from "../../../shared/iconaid/catalog.json" with { type: "json" };
+import chartStyleSpec from "../../../shared/specs/chart-style.json" with { type: "json" };
+import palettesSpec from "../../../shared/specs/palettes.json" with { type: "json" };
+import chartKindsSpec from "../../../shared/specs/chart-kinds.json" with { type: "json" };
+import { PALETTES } from "../src/storage/preferences";
+import { SAMPLES, dataLayouts } from "../src/charts/samples";
 
 const boxes: Box[] = [
   { id: "a", left: 10, top: 20, width: 30, height: 10 },
@@ -189,92 +200,309 @@ test("IconAid definitions reject unsafe or unsupported payloads", () => {
   }), /path coordinates/);
 });
 
-test("IconAid inserts and groups native Google Slides vectors", () => {
-  const inserted: Array<Record<string, unknown>> = [];
-  const byId = new Map<string, Record<string, unknown>>();
-  let groupState: Record<string, unknown> | undefined;
 
-  function register(kind: string, values: unknown[]): Record<string, unknown> {
-    const id = `element-${inserted.length + 1}`;
-    const state: Record<string, unknown> = { id, kind, values, removed: false };
-    const element = {
-      getObjectId: () => id,
-      getLineFill: () => ({ setSolidFill: (color: string) => { state.lineColor = color; } }),
-      setWeight: (weight: number) => { state.weight = weight; },
-      getFill: () => ({
-        setSolidFill: (color: string) => { state.fillColor = color; },
-        setTransparent: () => { state.fillTransparent = true; },
-      }),
-      getBorder: () => ({
-        setTransparent: () => { state.borderTransparent = true; },
-        getLineFill: () => ({ setSolidFill: (color: string) => { state.borderColor = color; } }),
-        setWeight: (weight: number) => { state.borderWeight = weight; },
-      }),
-      remove: () => { state.removed = true; },
-    };
-    Object.assign(state, element);
-    inserted.push(state);
-    byId.set(id, state);
-    return state;
+// --- Icon path flattening --------------------------------------------------
+
+test("flattenPath turns lines, axis moves and curves into point runs", () => {
+  const [run] = flattenPath("M2 4 L8 4 H12 V10");
+  assert.deepEqual(run!.points, [[2, 4], [8, 4], [12, 4], [12, 10]]);
+  assert.equal(run!.closed, false);
+
+  const [curve] = flattenPath("M0 0 C4 0 8 4 8 8");
+  // Sampled, not a single segment, and it must land exactly on the endpoint.
+  assert.ok(curve!.points.length > 3);
+  assert.deepEqual(curve!.points[0], [0, 0]);
+  assert.deepEqual(curve!.points[curve!.points.length - 1], [8, 8]);
+});
+
+test("flattenPath closes subpaths and honours relative commands", () => {
+  const [closed] = flattenPath("M2 2 L6 2 L6 6 Z");
+  assert.equal(closed!.closed, true);
+  assert.deepEqual(closed!.points[closed!.points.length - 1], [2, 2]);
+
+  const [relative] = flattenPath("M2 2 l4 0 l0 4");
+  assert.deepEqual(relative!.points, [[2, 2], [6, 2], [6, 6]]);
+
+  const runs = flattenPath("M0 0 L2 0 M6 6 L8 6");
+  assert.equal(runs.length, 2);
+  assert.deepEqual(runs[1]!.points, [[6, 6], [8, 6]]);
+});
+
+test("flattenPath rejects unsupported and malformed paths", () => {
+  assert.throws(() => flattenPath("M0 0 A5 5 0 0 1 10 10"), /unsupported command/);
+  assert.throws(() => flattenPath("L"), /incomplete line/);
+  assert.throws(() => flattenPath(""), /empty/);
+});
+
+test("icon elements split into native shapes and line runs", () => {
+  const { shapes, polylines } = flattenIconElements([
+    { kind: "rect", x: 2, y: 2, width: 4, height: 4, filled: true },
+    { kind: "ellipse", x: 8, y: 8, width: 4, height: 4, filled: false },
+    { kind: "line", x1: 0, y1: 0, x2: 4, y2: 4 },
+    { kind: "polyline", points: [[1, 1], [5, 1], [5, 5]], closed: true, filled: false },
+    { kind: "path", d: "M10 10 L14 10", filled: false },
+  ]);
+  assert.equal(shapes.length, 2);
+  assert.deepEqual(shapes.map((shape) => shape.kind), ["rect", "ellipse"]);
+  // A closed polyline gains the return segment; the path and line each add one.
+  assert.equal(polylines.length, 3);
+  assert.deepEqual(polylines[1]!.points[polylines[1]!.points.length - 1], [1, 1]);
+
+  const segments = polylineSegments(polylines);
+  assert.equal(segments.length, 5);
+  assert.deepEqual(segments[0], { x1: 0, y1: 0, x2: 4, y2: 4 });
+});
+
+test("polylineSegments drops zero-length segments", () => {
+  const segments = polylineSegments([{ points: [[1, 1], [1, 1], [4, 1]], closed: false }]);
+  assert.deepEqual(segments, [{ x1: 1, y1: 1, x2: 4, y2: 1 }]);
+});
+
+test("every catalog icon flattens to something drawable", () => {
+  for (const icon of catalog.icons) {
+    const definition = normalizeIconDefinition(icon);
+    const { shapes, polylines } = flattenIconElements(definition.elements);
+    const drawn = shapes.length + polylineSegments(polylines).length;
+    assert.ok(drawn > 0, `${definition.id} produced nothing to draw`);
+    // The insert path is what the sidebar previews, so it must never fall back
+    // to the coarser `primitives` list.
+    assert.ok(drawn >= definition.primitives.length - 2, `${definition.id} lost detail versus its primitives`);
   }
+});
 
-  const slide = {
-    insertLine: (...values: unknown[]) => register("line", values),
-    insertShape: (...values: unknown[]) => register("shape", values),
-    group: (elements: unknown[]) => {
-      groupState = { elements, selected: false };
-      return {
-        setTitle: (title: string) => { groupState!.title = title; },
-        setDescription: (description: string) => { groupState!.description = description; },
-        select: () => { groupState!.selected = true; },
-      };
-    },
-  };
-  const presentation = {
-    getPageWidth: () => 720,
-    getPageHeight: () => 405,
-    getPageElementById: (id: string) => byId.get(id),
-    getSelection: () => ({
-      getCurrentPage: () => ({
-        getPageType: () => "SLIDE",
-        asSlide: () => slide,
-      }),
-      getPageElementRange: () => null,
-    }),
-  };
-  (globalThis as unknown as { SlidesApp: unknown }).SlidesApp = {
-    getActivePresentation: () => presentation,
-    PageType: { SLIDE: "SLIDE" },
-    LineCategory: { STRAIGHT: "STRAIGHT" },
-    ShapeType: { ELLIPSE: "ELLIPSE", RECTANGLE: "RECTANGLE" },
-  };
+// --- Chart style system ----------------------------------------------------
 
-  const result = insertSlideAidIcon({
-    id: "host-smoke",
-    name: "Host Smoke",
-    category: "Technology",
-    aliases: ["runtime test", "adapter check"],
-    tags: ["host", "smoke", "vector", "native", "group", "style", "metadata", "insertion"],
-    primitives: [
-      { kind: "line", x1: 1, y1: 2, x2: 3, y2: 4 },
-      { kind: "rect", x: 5, y: 6, width: 7, height: 8, filled: true },
-      { kind: "ellipse", x: 14, y: 10, width: 6, height: 6, filled: false },
-    ],
-  }, "#123456");
+test("per-type chart settings override the global ones", () => {
+  const store = { LabelSizePt: "9", "COL.LabelSizePt": "12", ClusterFill: "0.8" };
+  assert.equal(styleNumber(store, "COL", "LabelSizePt"), 12);
+  assert.equal(styleNumber(store, "BAR", "LabelSizePt"), 9);
+  assert.equal(styleNumber(store, "COL", "ClusterFill"), 0.8);
+  // Unset keys fall back to the documented PowerPoint defaults.
+  assert.equal(styleNumber({}, "COL", "StackFill"), 0.65);
+  assert.equal(styleString({}, null, "Decimals"), "auto");
+});
 
-  assert.equal(result.ok, true);
-  assert.equal(result.message, "Inserted Host Smoke.");
-  assert.deepEqual(inserted[0]!.values, ["STRAIGHT", 327, 172.5, 333, 178.5]);
-  assert.deepEqual(inserted[1]!.values, ["RECTANGLE", 339, 184.5, 21, 24]);
-  assert.equal(inserted[0]!.lineColor, "#123456");
-  assert.equal(inserted[0]!.weight, 1.5);
-  assert.equal(inserted[1]!.fillColor, "#123456");
-  assert.equal(inserted[1]!.borderTransparent, true);
-  assert.equal(inserted[2]!.fillTransparent, true);
-  assert.equal(inserted[2]!.borderColor, "#123456");
-  assert.equal(inserted[2]!.borderWeight, 1.5);
-  assert.equal((groupState!.elements as unknown[]).length, 3);
-  assert.equal(groupState!.title, "IconAid: Host Smoke");
-  assert.equal(groupState!.description, "Editable IconAid vector icon [iconaid:host-smoke]");
-  assert.equal(groupState!.selected, true);
+test("chart flags and colors read the way PowerPoint stores them", () => {
+  assert.equal(styleFlag({}, "COL", "ValueLabels"), true);
+  assert.equal(styleFlag({ "COL.ValueLabels": "0" }, "COL", "ValueLabels"), false);
+  assert.equal(styleFlag({ Legend: "0" }, "STK", "Legend"), false);
+  assert.equal(styleColor({ WaterfallUp: "9BBB59" }, "WF", "WaterfallUp"), "#9BBB59");
+  // "theme" means "follow the palette", so callers get null and choose.
+  assert.equal(styleColor({}, "GANTT", "GanttBarColor"), null);
+  assert.equal(styleColor({ "GANTT.GanttBarColor": "#ff0000" }, "GANTT", "GanttBarColor"), "#FF0000");
+});
+
+test("value formatting matches FmtNum", () => {
+  assert.equal(formatValue(1234, "auto"), "1,234");
+  assert.equal(formatValue(1234.5, "auto"), "1,234.5");
+  assert.equal(formatValue(1234.5, "0"), "1,235");
+  assert.equal(formatValue(0.25, "2"), "0.25");
+  assert.equal(formatValue(-98765.4, "auto"), "-98,765.4");
+});
+
+test("chart families follow the PowerPoint palette groups", () => {
+  assert.equal(familyForKind("COL"), "BARS");
+  assert.equal(familyForKind("GANTT"), "BARS");
+  assert.equal(familyForKind("LINE"), "LINES");
+  assert.equal(familyForKind("BUB"), "LINES");
+  assert.equal(familyForKind("DON"), "PIES");
+});
+
+test("chart settings submissions are scoped and validated", () => {
+  const patch = applyControlValues("COL", { ClusterFill: "80", ValueLabels: "1", Legend: "0", LabelSizePt: "11", Decimals: "1" });
+  assert.deepEqual(patch, {
+    "COL.ClusterFill": "0.8", "COL.ValueLabels": "1", "COL.Legend": "0",
+    "COL.LabelSizePt": "11", "COL.Decimals": "1",
+  });
+  assert.deepEqual(applyControlValues("GLOBAL", { LabelSizePt: "10" }), { LabelSizePt: "10" });
+  assert.throws(() => applyControlValues("COL", { LabelSizePt: "99" }), /between 5 and 24/);
+  assert.throws(() => applyControlValues("COL", { Decimals: "7" }), /one of auto, 0, 1, 2/);
+  assert.throws(() => applyControlValues("WF", { WaterfallUp: "nope" }), /#RRGGBB/);
+  assert.equal(applyControlValues("WF", { WaterfallUp: "" })["WF.WaterfallUp"], "theme");
+});
+
+test("resetting a scope leaves the other scopes alone", () => {
+  const store = { LabelSizePt: "9", "COL.LabelSizePt": "12", "BAR.LabelSizePt": "14" };
+  assert.deepEqual(clearScope(store, "COL"), { LabelSizePt: "9", "BAR.LabelSizePt": "14" });
+  // Clearing GLOBAL keeps per-type overrides, matching Reset to Defaults.
+  assert.deepEqual(clearScope(store, "GLOBAL"), { "COL.LabelSizePt": "12", "BAR.LabelSizePt": "14" });
+});
+
+test("the settings panel offers each chart type only its own parameters", () => {
+  assert.deepEqual(controlsFor("MEK").map((control) => control.key), ["MekkoGapPt", "LabelSizePt", "Decimals"]);
+  assert.deepEqual(controlsFor("AREA").map((control) => control.key), ["LabelSizePt"]);
+  assert.ok(controlsFor("WF").some((control) => control.key === "WaterfallTotal"));
+  assert.ok(controlsFor("GLOBAL").some((control) => control.key === "PlotWidthCm"));
+  // A percentage is shown as 0-100 even though it is stored as a ratio.
+  assert.equal(controlValues({ "COL.ClusterFill": "0.72" }, "COL").ClusterFill, "72");
+  assert.equal(controlValues({}, "COL").Legend, "1");
+});
+
+test("every style key the panels expose is a known key", () => {
+  for (const scope of ["GLOBAL", "COL", "BAR", "STK", "SBR", "PCT", "WF", "MEK", "LINE", "AREA", "PIE", "DON", "SCAT", "BUB", "GANTT"]) {
+    for (const control of controlsFor(scope)) {
+      assert.ok(isKnownStyleKey(control.key), `${scope}.${control.key} is not a documented style key`);
+    }
+  }
+});
+
+// --- Annotation maths ------------------------------------------------------
+
+test("bar tags round-trip the datum they were drawn from", () => {
+  assert.deepEqual(parseBarTag(`chart ${barTag(2, 3, -12.5)}`), { series: 2, category: 3, value: -12.5 });
+  assert.equal(parseBarTag("no tag here"), null);
+});
+
+test("CAGR and percent difference come from the data, not the pixels", () => {
+  assert.ok(Math.abs(cagr(100, 121, 2) - 10) < 1e-9);
+  assert.ok(Math.abs(percentDifference(80, 100) - 25) < 1e-9);
+  assert.ok(Math.abs(percentDifference(100, 80) + 20) < 1e-9);
+  assert.throws(() => cagr(100, 121, 0), /at least one period/);
+  assert.throws(() => cagr(-1, 121, 2), /two positive values/);
+  assert.throws(() => percentDifference(0, 10), /non-zero/);
+});
+
+// --- Geometry added for parity ---------------------------------------------
+
+test("swap rotates positions through the selection", () => {
+  const three: Box[] = [
+    { id: "a", left: 0, top: 0, width: 10, height: 10 },
+    { id: "b", left: 40, top: 0, width: 20, height: 20 },
+    { id: "c", left: 80, top: 0, width: 10, height: 10 },
+  ];
+  const result = swapPositions(three, "C");
+  // a takes b's centre, b takes c's, c takes a's.
+  assert.equal(result[0]!.left, 45);
+  assert.equal(result[1]!.left, 75);
+  assert.equal(result[2]!.left, 0);
+  assert.equal(result[0]!.width, 10, "sizes stay put unless asked for");
+
+  const sized = swapPositions(three, "TL", true);
+  assert.equal(sized[0]!.width, 20);
+  assert.equal(sized[0]!.left, 40);
+  assert.throws(() => swapPositions([three[0]!], "C"), /at least two/);
+});
+
+test("one-click matrix picks a near-square grid", () => {
+  assert.equal(squareColumns(4), 2);
+  assert.equal(squareColumns(6), 3);
+  assert.equal(squareColumns(9), 3);
+  assert.equal(squareColumns(10), 4);
+  assert.equal(squareColumns(1), 1);
+});
+
+test("process chain matches the reference band and closes the gaps", () => {
+  const arrows: Box[] = [
+    { id: "a", left: 0, top: 5, width: 30, height: 10 },
+    { id: "b", left: 50, top: 20, width: 40, height: 30 },
+  ];
+  const reference: Box = { id: "r", left: 0, top: 12, width: 30, height: 24, rotation: 15 };
+  const result = processChain(arrows, reference);
+  assert.deepEqual(result.map((box) => box.left), [0, 30]);
+  assert.deepEqual(result.map((box) => box.top), [12, 12]);
+  assert.deepEqual(result.map((box) => box.height), [24, 24]);
+  assert.deepEqual(result.map((box) => box.rotation), [15, 15]);
+});
+
+// --- Solid icon fill -------------------------------------------------------
+
+test("solid icon sources are recognised", () => {
+  assert.equal(isFilledIcon("bootstrap-alarm"), true);
+  assert.equal(isFilledIcon("heroicons-bell-solid"), true);
+  assert.equal(isFilledIcon("lucide-bell"), false);
+  assert.equal(isFilledIcon("tabler-flask-2"), false);
+});
+
+test("a solid region scan-converts to spans covering it", () => {
+  const square = flattenPath("M4 4 L20 4 L20 20 L4 20 Z");
+  const spans = fillSpans(square, 8);
+  assert.equal(spans.length, 8);
+  for (const span of spans) {
+    assert.ok(Math.abs(span.left - 4) < 1e-6);
+    assert.ok(Math.abs(span.width - 16) < 1e-6);
+  }
+  // The slices span the shape's full height, with a little overlap so no
+  // hairline shows between them.
+  assert.ok(Math.abs(spans[0]!.top - 4) < 1e-6);
+  assert.ok(spans[spans.length - 1]!.top + spans[spans.length - 1]!.height >= 20);
+});
+
+test("even-odd fill leaves holes open", () => {
+  // Outer box with an inner box: the inner one must punch through, which is what
+  // makes a Bootstrap "0 circle" read as a ring rather than a disc.
+  const ring = [...flattenPath("M0 0 L24 0 L24 24 L0 24 Z"), ...flattenPath("M8 8 L16 8 L16 16 L8 16 Z")];
+  const spans = fillSpans(ring, 12);
+  const middle = spans.filter((span) => span.top < 12 && span.top + span.height > 12);
+  assert.equal(middle.length, 2, "a scanline through the hole yields two spans");
+  assert.ok(middle[0]!.left + middle[0]!.width <= 8 + 1e-6);
+  assert.ok(middle[1]!.left >= 16 - 1e-6);
+  // A scanline above the hole is one solid run.
+  const top = spans.filter((span) => span.top < 2);
+  assert.equal(top.length, 1);
+  assert.ok(Math.abs(top[0]!.width - 24) < 1e-6);
+});
+
+test("filled catalog icons produce drawable spans", () => {
+  // A real solid glyph, flattened and scan-converted the way Make Editable does.
+  const glyph = flattenPath("M12 2 C6.5 2 2 6.5 2 12 C2 17.5 6.5 22 12 22 C17.5 22 22 17.5 22 12 C22 6.5 17.5 2 12 2 Z");
+  const spans = fillSpans(glyph, 24);
+  assert.ok(spans.length >= 20);
+  // Widest span sits near the middle of a circle.
+  const widest = spans.reduce((best, span) => (span.width > best.width ? span : best), spans[0]!);
+  assert.ok(widest.top > 8 && widest.top < 16, "a circle is widest across its middle");
+  assert.ok(widest.width > 18);
+});
+
+// --- Shared contract: shared/specs must match the implementation -----------
+//
+// These files are described as the reviewable contract between the two
+// products. Nothing enforced that, so drift was silent and only showed up as
+// two platforms drawing different charts.
+
+test("chart style keys and defaults match shared/specs/chart-style.json", () => {
+  const spec = chartStyleSpec as { keys: { key: string; default: string; description: string }[]; paletteFamilies: Record<string, string[]> };
+  assert.deepEqual(
+    STYLE_KEYS.map((entry) => ({ key: entry.key, default: entry.value, description: entry.description })),
+    spec.keys,
+    "src/core/chart-style.ts and shared/specs/chart-style.json disagree",
+  );
+  // Every kind belongs to exactly the family the spec assigns it.
+  for (const family of Object.keys(spec.paletteFamilies)) {
+    if (family === "comment") continue;
+    for (const kind of spec.paletteFamilies[family]!) {
+      assert.equal(familyForKind(kind), family, `${kind} should be in ${family}`);
+    }
+  }
+});
+
+test("palettes match shared/specs/palettes.json", () => {
+  assert.deepEqual(PALETTES, palettesSpec, "deck palettes have drifted from the shared spec");
+  for (const name of Object.keys(PALETTES)) {
+    assert.equal(PALETTES[name]!.length, 6, `${name} must have six colors`);
+    for (const color of PALETTES[name]!) assert.match(color, /^#[0-9A-F]{6}$/, `${name} has a malformed color`);
+  }
+});
+
+test("chart kinds match shared/specs/chart-kinds.json", () => {
+  const spec = chartKindsSpec as { chartKinds: string[] };
+  // Every kind the spec lists must build, style and sample cleanly.
+  const sampled = SAMPLES.map((sample) => sample.kind);
+  assert.deepEqual([...sampled].sort(), [...spec.chartKinds].sort(), "Sample Slides and the shared spec disagree");
+  for (const kind of spec.chartKinds) {
+    assert.ok(controlsFor(kind).length > 0, `${kind} has no Chart Settings controls`);
+    assert.ok(["BARS", "LINES", "PIES"].includes(familyForKind(kind)), `${kind} has no palette family`);
+  }
+});
+
+test("every chart type documents a data layout with a usable example", () => {
+  const layouts = dataLayouts();
+  assert.equal(layouts.length, 14);
+  for (const layout of layouts) {
+    assert.ok(layout.layout.length > 20, `${layout.kind} needs a real layout description`);
+    assert.ok(layout.example.includes("|"), `${layout.kind} needs example rows`);
+  }
+  // The examples must actually satisfy the validator they are teaching.
+  for (const sample of SAMPLES) {
+    assert.doesNotThrow(() => validateChartData(sample.kind, { cells: sample.cells }), `${sample.kind} sample does not validate`);
+  }
 });
