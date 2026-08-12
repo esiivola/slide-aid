@@ -42,7 +42,7 @@ every section, because the reference is the concept every position tool depends 
 - Read-only Google Sheets connections: build from an explicit spreadsheet URL, tab, and range, then refresh the selected chart from current values.
 - A live selection inspector, command search across every button, matrix preview, and named layouts shared with deck collaborators.
 - Shared element libraries backed by one explicitly configured Slides presentation. Slide Aid never searches the user's Drive.
-- An **Icons** panel carrying the same 54,250-icon library as PowerPoint plus the reviewed consulting set, with the task pane's concept search, set and category filters, color selection, and incremental loading. Icons insert as pictures and **Make Editable** converts them to native shapes, matching PowerPoint's flow.
+- An **Icons** panel carrying the same 54,250-icon library as PowerPoint plus the reviewed consulting set, with the task pane's concept search, set and category filters, color selection, and incremental loading. Every icon inserts as grouped, editable Slides shapes; the legacy **Convert old PNGs** action upgrades picture icons inserted by earlier versions.
 - Deck QA reporting for off-slide objects, tiny text, missing alt text, low contrast, fixed RGB fills, stale/broken Sheet sources, orphan datasheets, and irregular horizontal spacing. Safe mechanical issues have targeted fixes.
 - The PowerPoint PNG icons are embedded into the built sidebar at build time, so no public image host is required.
 
@@ -57,20 +57,21 @@ Area, pie, and doughnut charts are server-rendered with the Apps Script Charts s
 The shared Slides library replaces the local PowerPoint My Elements store, but it is intentionally URL-based rather than a Drive-wide browser. Google Slides still lacks reliable click-order tracking and add-on keyboard-shortcut hooks.
 
 The Icons panel carries the same library as PowerPoint — 54,250 icons from 14
-permissively licensed libraries, plus the 70-icon reviewed consulting set — and
-follows PowerPoint's two-step model: clicking inserts a picture, and **Make
-Editable** turns it into real shapes. Inserting every vector segment directly on
-each click would make complex icons unwieldy, so the picture remains the default.
+permissively licensed libraries, plus the 70-icon reviewed consulting set — but
+uses one consistent Google Slides behavior: every click inserts an editable group.
+Stroke icons become native line runs at the catalog's common 1.6/24 stroke scale.
+Solid icons — all of Bootstrap, plus any `-solid`/`-mini` variant — become filled
+slices under SVG's even-odd rule, because Slides cannot fill an arbitrary outline;
+holes stay open, so a Bootstrap "0 circle" remains a ring rather than a disc. The
+consulting icons carry their own simple primitives and use the same grouped-shape
+result.
 
-Both steps are exact. The sidebar rasterises the icon from the same normalized
-path data the add-in uses, so the picture matches the thumbnail; **Make Editable**
-then flattens those paths into native Slides geometry occupying the picture's own
-box. Stroke icons become line runs. Solid icons — all of Bootstrap, plus any
-`-solid`/`-mini` variant — are scan-converted into filled slices under SVG's
-even-odd rule, because Slides cannot fill an arbitrary outline; holes stay open,
-so a Bootstrap "0 circle" converts to a ring rather than a disc. The consulting
-icons carry their own primitives and go straight in as shapes, skipping the
-picture step.
+This is genuine Slides geometry that can be recolored, resized, ungrouped and
+edited. It is not a hidden SVG: Google exposes no freeform-path creation API.
+Consequently, a complex curved icon can contain hundreds of small line or fill
+pieces. That object count is the unavoidable cost of making the entire catalog
+editable through supported APIs. **Convert old PNGs** remains only so decks made
+with an earlier Slide Aid version can migrate to the same editable representation.
 
 The delivery split is a Slides constraint worth knowing about: an Apps Script
 sidebar has no HTTP cache to lean on the way the Office task pane does, so
@@ -151,10 +152,10 @@ dist/Code.js            the add-on
 dist/Sidebar.html       the sidebar, with the icon search index embedded
 dist/appsscript.json    manifest and OAuth scopes
 dist/IconShards.html    icon shard boundary table
-dist/IconPaths00..22    icon path data, read on demand
+dist/IconPaths00..120   icon path data, read on demand
 ```
 
-To check your changes first: `npm run check` (types) and `npm test` (71 tests).
+To check your changes first: `npm run check` (types) and `npm test` (75 tests).
 
 ### 2. Connect an Apps Script project
 
@@ -179,7 +180,7 @@ replacing `YOUR_SCRIPT_ID`, and keeping `rootDir` as `dist`.
 npm run push
 ```
 
-This rebuilds and uploads. It is ~6 MB, most of it icon data, so the first push
+This rebuilds and uploads. It is ~55 MB, most of it icon data, so the first push
 takes a moment.
 
 ### 4. Install it into Google Slides
@@ -203,7 +204,7 @@ Worth doing once, since these three paths exercise most of the add-on:
 - **Position** — draw two boxes, select one, **Set reference**, select the other, **Left**.
 - **Chart Aid** — insert a 3x3 table (blank top-left, categories across, series down),
   select it, click **Column**. You should get bars with value labels and a legend.
-- **Icons** — search `strategy`, click an icon, then **Make Editable**.
+- **Icons** — search `strategy`, click an icon, then ungroup it to edit individual pieces.
 
 ### Updating
 
@@ -237,7 +238,7 @@ Named layouts store normalized object positions and sizes in the presentation. S
 
 For a shared library, create a normal Google Slides presentation containing one reusable component per slide. Connect its exact URL under **Deck → My Elements**. Library inserts copy every element except Slide Aid's metadata marker and retain a source-slide link. Saving the same item name updates that source slide; select an inserted component and use **Refresh selected** to pull the latest version while keeping its current position and size. **Add current selection** requires edit access to the library presentation.
 
-Under **Icons**, search by concept, synonym, category, or consulting terminology — typing a concept such as "AI" or "KPI" surfaces the icons that express it, even when none is named that — then narrow by set or category, choose a color, and click an icon to insert it at the center of the slide. Results render in pages of 120. An inserted icon is a picture; select it (or leave nothing selected to take every icon on the slide) and click **Make Editable** to turn it into shapes you can recolor, ungroup and reshape.
+Under **Icons**, search by concept, synonym, category, or consulting terminology — typing a concept such as "AI" or "KPI" surfaces the icons that express it, even when none is named that — then narrow by set or category, choose a color, and click an icon to insert it at the center of the slide. Results render in pages of 120. Every inserted icon is a grouped set of editable Slides shapes; recolor or resize the group, or ungroup it to edit individual lines and filled pieces. **Convert old PNGs** handles picture icons left by earlier versions.
 
 Deck QA is non-destructive until the user clicks a specific **Fix** button. Accessibility and contrast findings that require editorial judgment are report-only.
 

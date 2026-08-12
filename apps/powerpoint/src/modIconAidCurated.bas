@@ -358,6 +358,23 @@ Private Function MaterializeIcon(ByVal sl As Slide, ByVal idx As Long, _
             CallByName sl.Shapes.Range(nm), "MergeShapes", VbMethod, 2
             If Err.Number = 0 Then merged = True
             On Error GoTo 0
+
+            If Not merged Then
+                ' Mac PowerPoint exposes Merge Shapes in the UI even on builds
+                ' whose VBA type library/object model rejects MergeShapes. Use
+                ' that native command before accepting the lossy group fallback:
+                ' a group stacks every contour as an opaque shape and turns rings,
+                ' counters, eyes, letters, etc. into solid blobs.
+                Dim beforeMergeCount As Long
+                beforeMergeCount = sl.Shapes.Count
+                On Error Resume Next
+                sl.Shapes.Range(nm).Select
+                Err.Clear
+                Application.CommandBars.ExecuteMso "ShapesCombine"
+                merged = (Err.Number = 0 And _
+                          sl.Shapes.Count = beforeMergeCount - grp.Count + 1)
+                On Error GoTo 0
+            End If
         End If
         If merged Then
             ' MergeShapes leaves the combined shape selected; grab it to name+lock.
@@ -380,8 +397,9 @@ Private Function MaterializeIcon(ByVal sl As Slide, ByVal idx As Long, _
     MaterializeIcon = True
 End Function
 
-' Bootstrap icons (and any heroicons solid/mini) are filled shapes; everything
-' else is a stroke outline. Mirrors the sidebar's isFilled().
+' Filled catalog IDs retain a -solid/-mini suffix for this legacy VBA path;
+' Bootstrap predates that convention and remains source-classified. Mirrors the
+' sidebar's isFilled().
 Private Function IconIsFilled(ByVal iconId As String) As Boolean
     Dim s As String: s = LCase$(iconId)
     IconIsFilled = (Left$(s, 10) = "bootstrap-") Or (Right$(s, 6) = "-solid") Or (Right$(s, 5) = "-mini")

@@ -23,7 +23,7 @@ import {
 import {
   buildAgenda, copyToAllSlides, hideObjects, removeGeneratedAgenda, removeSpeakerNotes, slideSummary, unhideAll,
 } from "../commands/deck-commands";
-import { insertCuratedIcon, insertIconImage, makeIconsEditable } from "../slides/icons";
+import { insertCuratedIcon, insertEditableIcon, insertIconImage, makeIconsEditable } from "../slides/icons";
 import { iconPathsFor } from "../slides/icon-catalog";
 
 export interface ApiResponse<T = unknown> {
@@ -190,6 +190,10 @@ export function refreshSelectedSlideAidLibraryItem(): ApiResponse {
 
 export function insertSlideAidIcon(id: string, name: string, color: string, pngBase64: string): ApiResponse {
   return response(() => insertIconImage(id, name, color, pngBase64));
+}
+
+export function insertSlideAidEditableIcon(id: string, name: string, color: string): ApiResponse {
+  return response(() => insertEditableIcon(id, name, color));
 }
 
 export function insertSlideAidCuratedIcon(icon: unknown, color: string, strokeWidth?: number): ApiResponse {

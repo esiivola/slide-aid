@@ -74,6 +74,11 @@ def test_generated_icon_catalog_is_current_and_searchable() -> None:
     assert "icons.dat" in loader
     assert "MakeIconsEditable" in loader
     assert "LockAspectRatio = msoTrue" in loader   # editable icons keep proportion
+    # Mac builds can expose Merge Shapes only through the native command, not
+    # ShapeRange.MergeShapes. Without this fallback, filled counters/holes become
+    # opaque because the contours are merely grouped on top of one another.
+    assert 'Application.CommandBars.ExecuteMso "ShapesCombine"' in loader
+    assert "beforeMergeCount - grp.Count + 1" in loader
 
 
 def test_consulting_search_vocabulary_finds_expected_concepts() -> None:

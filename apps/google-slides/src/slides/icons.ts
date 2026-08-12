@@ -25,17 +25,68 @@ function requireColor(color: string): string {
   return color.toUpperCase();
 }
 
+function requireIconId(id: string): string {
+  const value = String(id);
+  if (!/^[a-z0-9-]{1,64}$/.test(value)) throw new Error("The icon id is invalid.");
+  return value;
+}
+
+function catalogRuns(id: string): IconPolyline[] | null {
+  const subpaths = iconPaths(id);
+  if (!subpaths?.length) return null;
+  const runs: IconPolyline[] = [];
+  // Some upstream icon packages repeat identical SVG paths (377 catalog
+  // entries currently do this). Rendering those duplicates with even-odd fill
+  // cancels the geometry completely, so normalize them once at the boundary.
+  for (const subpath of new Set(subpaths)) {
+    try {
+      runs.push(...flattenPath(subpath));
+    } catch {
+      // The catalog is built from normalized paths, but one bad subpath should
+      // not prevent the remaining geometry in the icon from being inserted.
+    }
+  }
+  return runs.length ? runs : null;
+}
+
+function addCatalogGeometry(
+  batch: ShapeBatch,
+  id: string,
+  color: string,
+  box: { left: number; top: number; width: number; height: number },
+  runs: readonly IconPolyline[],
+): void {
+  const scaleX = box.width / DESIGN_GRID;
+  const scaleY = box.height / DESIGN_GRID;
+  if (isFilledIcon(id)) {
+    for (const span of fillSpans(runs)) {
+      batch.addShape(
+        "RECTANGLE",
+        box.left + span.left * scaleX, box.top + span.top * scaleY,
+        span.width * scaleX, span.height * scaleY, color,
+      );
+    }
+    return;
+  }
+
+  const weight = DEFAULT_STROKE * Math.min(scaleX, scaleY);
+  for (const segment of polylineSegments(runs)) {
+    batch.addLine(
+      box.left + segment.x1 * scaleX, box.top + segment.y1 * scaleY,
+      box.left + segment.x2 * scaleX, box.top + segment.y2 * scaleY,
+      color, weight,
+    );
+  }
+}
+
 /**
- * Inserts an icon as a tagged picture, exactly as the PowerPoint task pane does.
+ * Inserts a legacy icon as a tagged picture.
  *
- * The sidebar rasterises the icon on a canvas and passes the PNG here. That keeps
- * insertion to one lightweight object that always looks right - including the
- * solid Bootstrap icons - and leaves converting to real shapes as a deliberate
- * second step. Inserting the vectors directly instead would put a median of ~56
- * and up to 1081 objects on the slide for every click.
+ * Kept for compatibility with older sidebar deployments and presentations.
+ * Current sidebar insertions use insertEditableIcon instead.
  */
 export function insertIconImage(id: string, name: string, color: string, pngBase64: string): { ok: true; message: string } {
-  if (!/^[a-z0-9-]{1,64}$/.test(String(id))) throw new Error("The icon id is invalid.");
+  const iconId = requireIconId(id);
   const hex = requireColor(color);
   const payload = String(pngBase64 ?? "");
   if (!payload || payload.length > 4_000_000 || !/^[A-Za-z0-9+/=]+$/.test(payload)) throw new Error("The icon preview could not be read.");
@@ -43,12 +94,35 @@ export function insertIconImage(id: string, name: string, color: string, pngBase
   const context = activeContext();
   const left = (context.presentation.getPageWidth() - ICON_SIZE_PT) / 2;
   const top = (context.presentation.getPageHeight() - ICON_SIZE_PT) / 2;
-  const blob = Utilities.newBlob(Utilities.base64Decode(payload), "image/png", `${id}.png`);
+  const blob = Utilities.newBlob(Utilities.base64Decode(payload), "image/png", `${iconId}.png`);
   const image = context.slide.insertImage(blob, left, top, ICON_SIZE_PT, ICON_SIZE_PT);
-  image.setTitle(`IconAid: ${name || id}`);
-  image.setDescription(`Slide Aid icon. Use Make Editable to turn it into shapes. ${iconTag(id, hex)}`);
+  image.setTitle(`IconAid: ${name || iconId}`);
+  image.setDescription(`Slide Aid icon. Use Make Editable to turn it into shapes. ${iconTag(iconId, hex)}`);
   image.select();
-  return { ok: true, message: `Inserted ${name || id}. Select it and click Make Editable to turn it into shapes.` };
+  return { ok: true, message: `Inserted ${name || iconId}. Select it and click Make Editable to turn it into shapes.` };
+}
+
+/** Inserts any catalog icon immediately as grouped, editable Slides geometry. */
+export function insertEditableIcon(id: string, name: string, color: string): { ok: true; message: string } {
+  const iconId = requireIconId(id);
+  const hex = requireColor(color);
+  const runs = catalogRuns(iconId);
+  if (!runs) throw new Error(`The icon data for ${iconId} is not in this deployment's catalog.`);
+
+  const context = activeContext();
+  const box = {
+    left: (context.presentation.getPageWidth() - ICON_SIZE_PT) / 2,
+    top: (context.presentation.getPageHeight() - ICON_SIZE_PT) / 2,
+    width: ICON_SIZE_PT,
+    height: ICON_SIZE_PT,
+  };
+  const batch = new ShapeBatch(context.presentation.getId(), context.slide.getObjectId());
+  addCatalogGeometry(batch, iconId, hex, box, runs);
+  const label = String(name || iconId);
+  const objectId = batch.commit(`IconAid: ${label}`, `Editable Slide Aid icon ${iconTag(iconId, hex)}`);
+  const inserted = context.presentation.getPageElementById(objectId);
+  if (inserted) inserted.select();
+  return { ok: true, message: `Inserted ${label} as ${batch.size} editable shape${batch.size === 1 ? "" : "s"}.` };
 }
 
 /** Curated schema-3 icons carry their own primitives and insert as shapes directly. */
@@ -121,48 +195,16 @@ export function makeIconsEditable(): { ok: true; message: string } {
   let objects = 0;
   const missing: string[] = [];
   for (const icon of icons) {
-    const subpaths = iconPaths(icon.id);
-    if (!subpaths?.length) {
+    const runs = catalogRuns(icon.id);
+    if (!runs) {
       missing.push(icon.id);
       continue;
     }
     const box = elementBox(icon.element);
-    // Icons are square on the 24-unit design grid; honour the picture's own box
-    // so a resized icon converts at the size the user actually gave it.
-    const scaleX = box.width / DESIGN_GRID;
-    const scaleY = box.height / DESIGN_GRID;
     const batch = new ShapeBatch(context.presentation.getId(), context.slide.getObjectId());
-    const runs: IconPolyline[] = [];
-    for (const subpath of subpaths) {
-      try {
-        runs.push(...flattenPath(subpath));
-      } catch {
-        // A single unreadable subpath should not lose the whole icon.
-      }
-    }
-    if (!runs.length) {
-      missing.push(icon.id);
-      continue;
-    }
-
-    if (isFilledIcon(icon.id)) {
-      for (const span of fillSpans(runs)) {
-        batch.addShape(
-          "RECTANGLE",
-          box.left + span.left * scaleX, box.top + span.top * scaleY,
-          span.width * scaleX, span.height * scaleY, icon.color,
-        );
-      }
-    } else {
-      const weight = DEFAULT_STROKE * Math.min(scaleX, scaleY);
-      for (const segment of polylineSegments(runs)) {
-        batch.addLine(
-          box.left + segment.x1 * scaleX, box.top + segment.y1 * scaleY,
-          box.left + segment.x2 * scaleX, box.top + segment.y2 * scaleY,
-          icon.color, weight,
-        );
-      }
-    }
+    // Honour the picture's own box so a resized legacy icon converts at the
+    // size the user actually gave it.
+    addCatalogGeometry(batch, icon.id, icon.color, box, runs);
     if (!batch.size) {
       missing.push(icon.id);
       continue;

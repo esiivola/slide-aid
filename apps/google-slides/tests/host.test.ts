@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { installHost, insertedText, requestsOfKind, restoreHost, type HostState } from "./host";
-import { insertIconImage, makeIconsEditable } from "../src/slides/icons";
+import { insertEditableIcon, insertIconImage, makeIconsEditable } from "../src/slides/icons";
+import { flattenPath, polylineSegments, type IconPolyline } from "../src/core/icon-path";
+import { fillSpans, isFilledIcon } from "../src/core/icon-fill";
 import { buildChart, applyChartSettings, chartSettingsState, saveFamilyPalette } from "../src/charts/charts";
 import { annotateDifference, insertHarveyBall } from "../src/charts/annotations";
 import { barTag } from "../src/core/chart-data";
@@ -18,7 +22,9 @@ const PROJECT_FILES = {
     { shard: 0, firstId: "bootstrap-box", lastId: "bootstrap-box" },
     { shard: 1, firstId: "lucide-frame", lastId: "lucide-frame" },
   ]),
-  IconPaths00: JSON.stringify({ "bootstrap-box": [SOLID_PATH] }),
+  // Duplicate paths mirror a defect present in hundreds of upstream catalog
+  // entries. Production must normalize these before even-odd fill conversion.
+  IconPaths00: JSON.stringify({ "bootstrap-box": [SOLID_PATH, SOLID_PATH] }),
   IconPaths01: JSON.stringify({ "lucide-frame": [STROKE_PATH] }),
 };
 
@@ -50,6 +56,72 @@ test("icon insertion rejects malformed input", (t) => {
   assert.throws(() => insertIconImage("Bad Id", "x", "#1F497D", "QUJD"), /icon id is invalid/);
   assert.throws(() => insertIconImage("lucide-frame", "x", "red", "QUJD"), /#RRGGBB/);
   assert.throws(() => insertIconImage("lucide-frame", "x", "#1F497D", "not base64!"), /could not be read/);
+});
+
+test("direct icon insertion creates an editable stroke group", (t) => {
+  t.after(teardown);
+  const state = installHost({ projectFiles: PROJECT_FILES });
+
+  const result = insertEditableIcon("lucide-frame", "Frame", "#123456");
+
+  assert.match(result.message, /Inserted Frame as 4 editable shapes/);
+  assert.equal(state.batchUpdates, 1, "the editable icon is inserted atomically");
+  assert.equal(requestsOfKind(state, "createImage").length, 0, "no picture is inserted");
+  assert.equal(requestsOfKind(state, "createLine").length, 4, "the closed path becomes native lines");
+  assert.equal(requestsOfKind(state, "createShape").length, 0, "a stroke icon has no filled slices");
+  const group = requestsOfKind(state, "groupObjects")[0]!;
+  assert.equal((group.childrenObjectIds as string[]).length, 4);
+  const alt = requestsOfKind(state, "updatePageElementAltText").at(-1)!;
+  assert.match(String(alt.description), /\[iconaid:lucide-frame:#123456\]/);
+});
+
+test("direct icon insertion creates an editable solid group", (t) => {
+  t.after(teardown);
+  const state = installHost({ projectFiles: PROJECT_FILES });
+
+  const result = insertEditableIcon("bootstrap-box", "Box", "#000000");
+
+  assert.match(result.message, /Inserted Box as .* editable shapes/);
+  assert.equal(state.batchUpdates, 1);
+  assert.equal(requestsOfKind(state, "createLine").length, 0, "solid icons stay filled");
+  assert.ok(requestsOfKind(state, "createShape").length > 20, "the filled path becomes native slices");
+});
+
+test("direct icon insertion validates ids and deployment data", (t) => {
+  t.after(teardown);
+  installHost({ projectFiles: PROJECT_FILES });
+  assert.throws(() => insertEditableIcon("Bad Id", "x", "#1F497D"), /icon id is invalid/);
+  assert.throws(() => insertEditableIcon("tabler-unknown", "x", "#1F497D"), /not in this deployment's catalog/);
+});
+
+test("all 54,250 catalog icons produce editable Slides geometry", () => {
+  const slidesDir = resolve(process.cwd(), "../../shared/iconaid/slides");
+  const index = JSON.parse(readFileSync(resolve(slidesDir, "index.json"), "utf8")) as {
+    icons: { id: string; k: number; f?: number }[];
+  };
+  const shards = new Map<number, Record<string, string[]>>();
+  for (const icon of index.icons) {
+    let shard = shards.get(icon.k);
+    if (!shard) {
+      shard = JSON.parse(readFileSync(resolve(slidesDir, `paths-${String(icon.k).padStart(2, "0")}.json`), "utf8")) as Record<string, string[]>;
+      shards.set(icon.k, shard);
+    }
+    const paths = shard[icon.id];
+    assert.ok(paths?.length, `${icon.id} has no path data`);
+    const runs: IconPolyline[] = [];
+    for (const path of new Set(paths)) {
+      try {
+        runs.push(...flattenPath(path));
+      } catch {
+        // Production skips isolated malformed subpaths and preserves the rest
+        // of the icon. The catalog currently contains move-only SVG fragments.
+      }
+    }
+    assert.equal(isFilledIcon(icon.id), icon.f === 1, `${icon.id} has inconsistent fill metadata`);
+    const objects = icon.f === 1 ? fillSpans(runs).length : polylineSegments(runs).length;
+    assert.ok(objects > 0, `${icon.id} produced no editable objects`);
+  }
+  assert.equal(index.icons.length, 54_250);
 });
 
 test("Make Editable converts a stroke icon into lines in its own box", (t) => {
@@ -271,7 +343,7 @@ test("an icon resolves to its shard by binary search over the boundary table", (
   installHost({ projectFiles: PROJECT_FILES });
   // One id from each shard, plus ids that fall outside every range.
   assert.deepEqual(iconPathsFor(["lucide-frame"]), { "lucide-frame": [STROKE_PATH] });
-  assert.deepEqual(iconPathsFor(["bootstrap-box"]), { "bootstrap-box": [SOLID_PATH] });
+  assert.deepEqual(iconPathsFor(["bootstrap-box"]), { "bootstrap-box": [SOLID_PATH, SOLID_PATH] });
   assert.deepEqual(iconPathsFor(["aaa-before-everything"]), {});
   assert.deepEqual(iconPathsFor(["zzz-after-everything"]), {});
   // A mixed request spans both shards and drops the unknown one.

@@ -409,8 +409,8 @@
           <label>Set</label><select id="iconSet" onchange="renderIcons(true)"><option value="">All sets</option></select>
           <select id="iconCategory" onchange="renderIcons(true)"><option value="">All categories</option></select>
         </div>
-        <div class="row"><label>Color</label><input id="iconColor" type="color" value="#1f497d"><button onclick="api('makeSlideAidIconsEditable')" title="Turn inserted icons on this slide into editable shapes you can recolour, ungroup and reshape.">Make Editable</button></div>
-        <div class="note">Clicking an icon inserts it as a picture, exactly as in PowerPoint. <strong>Make Editable</strong> then turns it into real shapes.</div>
+        <div class="row"><label>Color</label><input id="iconColor" type="color" value="#1f497d"><button onclick="api('makeSlideAidIconsEditable')" title="Convert picture icons inserted by an older Slide Aid version into editable shapes.">Convert old PNGs</button></div>
+        <div class="note">Every icon inserts as grouped, editable Slides shapes. Ungroup it to edit individual lines or filled pieces.</div>
       </div>
       <div class="group"><div class="icon-grid" id="iconGrid"></div><div class="note" id="iconCount"></div></div>
     </section>
@@ -1024,36 +1024,11 @@
       }).withFailureHandler(failure).getSlideAidIconPaths(ids);
     }
 
-    /**
-     * Rasterises the icon and inserts it as a picture, the same two-step flow the
-     * PowerPoint task pane uses. Curated icons skip the raster and go in as shapes
-     * directly, since they are only a handful of objects each.
-     */
+    /** Every catalog entry inserts through the same editable native-shape path. */
     function insertIcon(icon) {
       const color = $('iconColor').value;
       if (icon.curated) { call('insertSlideAidCuratedIcon', icon.curated, color, ICONAID_CATALOG.style.stroke); return; }
-      const subpaths = pathCache.get(icon.id);
-      if (!subpaths) { status('Still loading that icon — try again in a moment.', 'error'); return; }
-      const stroke = ICON_INDEX.style;
-      const attrs = icon.f
-        ? `fill="${color}" fill-rule="evenodd" stroke="none"`
-        : `fill="none" stroke="${color}" stroke-width="${stroke.stroke}" stroke-linecap="${stroke.lineCap}" stroke-linejoin="${stroke.lineJoin}"`;
-      const size = 256;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ICON_INDEX.viewBox} ${ICON_INDEX.viewBox}" width="${size}" height="${size}"><path d="${subpaths.join(' ')}" ${attrs}/></svg>`;
-      const image = new Image();
-      status(`Inserting ${icon.n}…`);
-      image.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = size; canvas.height = size;
-          canvas.getContext('2d').drawImage(image, 0, 0, size, size);
-          call('insertSlideAidIcon', icon.id, icon.n, color, canvas.toDataURL('image/png').split(',')[1]);
-        } catch (error) {
-          status(`Could not render that icon: ${error.message}`, 'error');
-        }
-      };
-      image.onerror = () => status('Could not render that icon preview.', 'error');
-      image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      call('insertSlideAidEditableIcon', icon.id, icon.n, color);
     }
 
     function debounceIcons(fn, ms) { let timer; return () => { clearTimeout(timer); timer = setTimeout(fn, ms); }; }
