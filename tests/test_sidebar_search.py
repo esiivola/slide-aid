@@ -82,15 +82,26 @@ A.ok(fa.includes('fill="#ff0000"') && fa.includes("evenodd") && fa.includes('str
 const oa = api.pathAttrs({s: "tabler", id: "tabler-heart"}, "#00ff00");
 A.ok(oa.includes('fill="none"') && oa.includes('stroke="#00ff00"'));
 
-// ---- style filter: "line" keeps outline icons, "fill" keeps filled icons ----
-const solid = mk("bootstrap-heart Heart", "General"); solid.s = "bootstrap"; solid.id = "bootstrap-heart";
-const line  = mk("tabler-heart Heart", "General");    line.s = "tabler";     line.id = "tabler-heart";
-A.equal(api.matches(solid, [], "", "fill"), true);
-A.equal(api.matches(solid, [], "", "line"), false);
-A.equal(api.matches(line,  [], "", "line"), true);
-A.equal(api.matches(line,  [], "", "fill"), false);
-A.equal(api.matches(line,  [], "", ""), true);          // no style filter = any
-A.equal(api.matches(solid, [], ""), true);              // omitted arg = any (back-compat)
+// ---- style filter by convert-result category (geometry + render) ----
+const filled   = {s: "bootstrap", id: "bootstrap-heart", c: "General", d: ["M0 0 L5 0 L5 5 Z"]};
+const cleanLn  = {s: "tabler", id: "tabler-line", c: "General", d: ["M0 0 L5 5", "M1 1 C2 2 3 3 4 4"]};
+const mixedIco = {s: "tabler", id: "tabler-arrow", c: "General", d: ["M0 0 L9 0", "M6 -2 L9 0 L6 2 Z"]};
+const outShape = {s: "tabler", id: "tabler-box", c: "General", d: ["M0 0 L5 0 L5 1 L0 1 Z"]};
+
+A.equal(api.iconCategory(filled), "filled");
+A.equal(api.iconCategory(cleanLn), "lines");
+A.equal(api.iconCategory(mixedIco), "mixed");
+A.equal(api.iconCategory(outShape), "outshape");        // outline, but every contour closed
+
+A.equal(api.matches(cleanLn, [], "", "lines"), true);
+A.equal(api.matches(cleanLn, [], "", "mixed"), false);
+A.equal(api.matches(mixedIco, [], "", "mixed"), true);
+A.equal(api.matches(outShape, [], "", "outshape"), true);
+A.equal(api.matches(outShape, [], "", "lines"), false); // the deceptive case is NOT "lines"
+A.equal(api.matches(filled, [], "", "filled"), true);
+A.equal(api.matches(filled, [], "", "lines"), false);
+A.equal(api.matches(cleanLn, [], "", ""), true);        // no style filter = any
+A.equal(api.matches(filled, [], ""), true);             // omitted arg = any (back-compat)
 
 // svgFor emits a single <path> svg with the joined path data
 const svg = api.svgFor({s: "tabler", id: "x", d: ["M0 0 L1 1"]}, "#000");

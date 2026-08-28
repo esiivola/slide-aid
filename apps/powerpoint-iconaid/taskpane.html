@@ -32,8 +32,10 @@
   .badge { position: absolute; top: 3px; right: 3px; font-size: 8px; line-height: 1; letter-spacing: .2px;
            padding: 2px 3px; border-radius: 3px; opacity: .55; pointer-events: none; }
   .cell:hover .badge { opacity: 1; }
-  .b-fill { background: var(--accent); color: #fff; }
-  .b-line { background: var(--line); color: var(--muted); }
+  .b-lines { background: var(--line); color: var(--muted); }
+  .b-mixed { background: #0e9f6e; color: #fff; }
+  .b-outshape { background: #e67e22; color: #fff; }
+  .b-filled { background: var(--accent); color: #fff; }
   .cell svg { width: 34px; height: 34px; display: block; }
   .cap { font-size: 9.5px; color: var(--muted); line-height: 1.15; max-width: 100%;
          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -54,16 +56,18 @@
     </div>
     <div class="row">
       <select id="category"><option value="">All categories</option></select>
-      <select id="style" title="Filter by icon style">
+      <select id="style" title="Filter by what Make Editable produces">
         <option value="">All styles</option>
-        <option value="line">Line only</option>
-        <option value="fill">Has fill</option>
+        <option value="lines">Lines only</option>
+        <option value="mixed">Lines + shapes</option>
+        <option value="outshape">Outline-as-shapes</option>
+        <option value="filled">Filled</option>
       </select>
       <div class="meta" style="flex:1;"><span id="count"></span></div>
     </div>
   </div>
   <div id="grid"><div id="sentinel"></div></div>
   <div id="status">Loading icon catalog…</div>
-  <script src="taskpane.js?v=7"></script>
+  <script src="taskpane.js?v=8"></script>
 </body>
 </html>

@@ -26,6 +26,35 @@
     return icon.f === 1 || icon.s === "bootstrap" || /-(solid|mini)$/.test(icon.id);
   }
 
+  // Geometry: a subpath is a closed contour when it contains a Z command.
+  function hasClosedContour(icon) {
+    return (icon.d || []).some(function (p) { return /[Zz]/.test(p); });
+  }
+  function hasOpenContour(icon) {
+    return (icon.d || []).some(function (p) { return p && !/[Zz]/.test(p); });
+  }
+
+  // Category by what "Make Editable" produces:
+  //   filled   - solid glyph -> filled shapes
+  //   lines    - outline, all centerlines open -> clean editable lines
+  //   mixed    - outline with open strokes AND closed contours -> lines + shapes
+  //   outshape - outline but every contour closed (stroke drawn as a thin shape)
+  //              -> looks like a line icon but converts to shapes, not lines
+  function iconCategory(icon) {
+    if (isFilled(icon)) return "filled";
+    if (!hasClosedContour(icon)) return "lines";
+    if (hasOpenContour(icon)) return "mixed";
+    return "outshape";
+  }
+
+  var BADGE_LABEL = { lines: "Line", mixed: "L+S", outshape: "Shape", filled: "Fill" };
+  var BADGE_TITLE = {
+    lines: "Line only (clean centerlines)",
+    mixed: "Lines + shapes",
+    outshape: "Outline drawn as shapes - converts to shapes, not lines",
+    filled: "Filled (solid)"
+  };
+
   function pathAttrs(icon, color) {
     return isFilled(icon)
       ? 'fill="' + color + '" fill-rule="evenodd" stroke="none"'
@@ -157,11 +186,10 @@
     });
   }
 
-  // style: "" (any) | "fill" (only filled icons) | "line" (only outline icons).
+  // style: "" (any) | "lines" | "mixed" | "outshape" | "filled" (see iconCategory).
   function matches(icon, groups, category, style) {
     if (category && icon.c !== category) return false;
-    if (style === "fill" && !isFilled(icon)) return false;
-    if (style === "line" && isFilled(icon)) return false;
+    if (style && iconCategory(icon) !== style) return false;
     for (var g = 0; g < groups.length; g++) {
       var grp = groups[g], hay = grp.tok ? icon._st : icon._s, ok = false;
       for (var v = 0; v < grp.vs.length; v++) {
@@ -202,9 +230,9 @@
     var html = "";
     for (var i = shownCount; i < end; i++) {
       var ic = filtered[i];
-      var fill = isFilled(ic);
-      var badge = '<span class="badge ' + (fill ? "b-fill" : "b-line") + '" title="' +
-        (fill ? "Filled icon" : "Line icon") + '">' + (fill ? "Fill" : "Line") + "</span>";
+      var cat = iconCategory(ic);
+      var badge = '<span class="badge b-' + cat + '" title="' + BADGE_TITLE[cat] + '">' +
+        BADGE_LABEL[cat] + "</span>";
       html += '<button type="button" class="cell" data-idx="' + i + '" title="' + esc(ic.n) + '">' +
         badge + svgFor(ic, color) + '<span class="cap">' + esc(ic.n) + "</span></button>";
     }
@@ -313,6 +341,6 @@
   // Exposed for Node-based unit tests only; a no-op in the browser (module is
   // undefined there), so it never changes the shipped sidebar behavior.
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { isFilled: isFilled, pathAttrs: pathAttrs, svgFor: svgFor, queryGroups: queryGroups, matches: matches };
+    module.exports = { isFilled: isFilled, iconCategory: iconCategory, pathAttrs: pathAttrs, svgFor: svgFor, queryGroups: queryGroups, matches: matches };
   }
 })();

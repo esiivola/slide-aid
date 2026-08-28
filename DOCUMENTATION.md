@@ -260,7 +260,7 @@ Use **Cycle State** repeatedly to step selected Harvey balls and checkboxes thro
 
 On PowerPoint's built-in **Insert** tab, click **Insert Icons** to open a searchable sidebar of 10,000+ vector icons; click any icon to drop it on the slide as a picture. To recolor or reshape one, keep it selected and click **Make Editable** (also on the Insert tab) to convert every inserted icon on the slide into editable vector shapes. Google Slides works the same way: the same icons live in the **Icons** sidebar tab, click inserts a picture, and **Make Editable** converts it into shapes.
 
-Use the **style** dropdown next to the category filter to narrow the library to **Line only** or **Has fill** icons; a small **Line**/**Fill** badge on each tile shows which is which at a glance.
+Use the **style** dropdown next to the category filter to narrow the library by what **Make Editable** produces: **Lines only** (clean centerlines → real editable lines), **Lines + shapes** (strokes plus closed contours like arrowheads), **Outline-as-shapes** (looks like a line icon but every contour is closed, so it converts to thin shapes rather than lines), or **Filled** (solid glyphs). A small badge on each tile (Line / L+S / Shape / Fill) shows the category at a glance.
 
 **Make Editable** splits an icon into independently-editable parts: each subpath becomes its own shape — closed contours become filled shapes, open contours become lines — so you can restyle a single part's fill or line weight. Overlapping filled contours are merged into one shape so holes (the gap in a ring, the counter of an "o") stay open; parts that don't overlap remain separate. Everything is grouped so the icon still moves and scales as one object.
 
