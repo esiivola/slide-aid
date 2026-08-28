@@ -25,6 +25,7 @@ import {
 } from "../commands/deck-commands";
 import { insertCuratedIcon, insertEditableIcon, insertIconImage, makeIconsEditable } from "../slides/icons";
 import { iconPathsFor } from "../slides/icon-catalog";
+import { addReviewCallout, addReviewNote, removeReviewMarkup, reviewInitials, setReviewInitials, type ReviewKind } from "../slides/review";
 
 export interface ApiResponse<T = unknown> {
   ok: boolean;
@@ -81,6 +82,7 @@ export function getSidebarState(): ApiResponse {
       selection: context.elements.map((element) => ({ label: labelFor(element), type: String(element.getPageElementType()), ...elementBox(element) })),
       selectionBounds: context.elements.length ? bounds(context.elements.map(elementBox)) : null,
       reference: referenceState(),
+      reviewInitials: reviewInitials(),
       settings: { ...settings, palette: deckSettings.palette ?? settings.palette },
       deckSettings,
       palettes: Object.keys(PALETTES),
@@ -282,6 +284,24 @@ export function insertSlideAidCheckbox(state: string, color: string): ApiRespons
 
 export function cycleSlideAidElementState(color: string): ApiResponse {
   return response(() => cycleElementState(color));
+}
+
+// --- Slide Aid: Review markup ----------------------------------------------
+
+export function addSlideAidReviewNote(kind: string, comment: string): ApiResponse {
+  return response(() => addReviewNote((kind === "TODO" || kind === "EDIT" ? kind : "NOTE") as ReviewKind, String(comment ?? "")));
+}
+
+export function addSlideAidReviewCallout(comment: string): ApiResponse {
+  return response(() => addReviewCallout(String(comment ?? "")));
+}
+
+export function removeSlideAidReviewMarkup(): ApiResponse {
+  return response(removeReviewMarkup);
+}
+
+export function setSlideAidReviewInitials(initials: string): ApiResponse {
+  return response(() => setReviewInitials(String(initials ?? "")));
 }
 
 // --- Slide Aid: Wizards, Color, Text, Shape --------------------------------

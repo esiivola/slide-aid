@@ -289,6 +289,18 @@
         <div class="note" id="summaryBox" hidden></div>
         <div class="note">Animations, proofing language, master-object visibility and add-on keyboard shortcuts are not scriptable in Google Slides.</div>
       </div>
+
+      <div class="group">
+        <div class="group-title">Review</div>
+        <div class="grid">
+          <button class="action" onclick="reviewNote('NOTE')" title="Add a bright sticky comment in the slide corner, stamped with your initials and the date."><img src="{{ICON:sa_info}}">Comment</button>
+          <button class="action" onclick="reviewNote('TODO')" title="Add a red TODO marker with your initials and a note."><img src="{{ICON:sa_roundrect}}">To-Do</button>
+          <button class="action" onclick="reviewCallout()" title="Select one object first: adds a note with a leader line pointing at it."><img src="{{ICON:sa_blockarrow}}">Callout</button>
+          <button class="action" onclick="confirmCall('removeSlideAidReviewMarkup','Remove all Slide Aid review marks from the whole deck?')" title="Delete every Slide Aid review mark across the deck before final export."><img src="{{ICON:sa_cleanup}}">Remove Marks</button>
+        </div>
+        <div class="row"><label>Initials</label><input id="reviewInitials" type="text" maxlength="6" style="flex:0 0 66px" title="Stamped on review marks. Seeded from your account; edit anytime."><button onclick="saveInitials()">Set</button></div>
+        <div class="note">Review marks are deliberately bright and show in exported PDFs; remove them before sending.</div>
+      </div>
     </section>
 
     <!-- ============================ CHART AID ============================ -->
@@ -492,6 +504,9 @@
       };
     }
     function command(command, argument) { call('runSlideAidCommand', { ...requestBase(), command, argument }); }
+    function reviewNote(kind) { const c = prompt(kind === 'TODO' ? 'To-do note:' : 'Comment:', ''); if (c !== null) call('addSlideAidReviewNote', kind, c); }
+    function reviewCallout() { const c = prompt('Callout note:', ''); if (c !== null) call('addSlideAidReviewCallout', c); }
+    function saveInitials() { call('setSlideAidReviewInitials', $('reviewInitials').value); }
     function matrixAuto() { call('runSlideAidCommand', { ...requestBase(), command:'matrix', columns:0 }); }
     function duplicate(kind) { call('runSlideAidCommand', { ...requestBase(), command:kind, columns:Number($('dupeColumns').value) }); }
     function swap() { call('runSlideAidCommand', { ...requestBase(), command:'swap', swapAnchor:$('swapAnchor').value, swapSizes:$('swapSizes').checked }); }
@@ -1102,6 +1117,7 @@
           : 'Select objects to inspect or modify.';
         $('gap').value = state.settings.gapCm;
         $('columns').value = state.settings.matrixColumns;
+        if (document.activeElement !== $('reviewInitials')) $('reviewInitials').value = state.reviewInitials || '';
         if (!$('palette').options.length) state.palettes.forEach((name) => $('palette').add(new Option(name, name)));
         $('palette').value = state.settings.palette;
         renderTheme(state.theme);

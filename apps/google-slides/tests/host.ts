@@ -162,6 +162,8 @@ export interface HostOptions {
   pageHeight?: number;
   /** Icon path data, keyed by project file name, e.g. IconPaths00. */
   projectFiles?: Record<string, string>;
+  /** Account email returned by Session.getActiveUser(), for initials seeding. */
+  userEmail?: string;
 }
 
 /**
@@ -276,6 +278,9 @@ export function installHost(options: HostOptions = {}): HostState {
     getDocumentProperties: () => properties(state.documentProperties),
     getUserProperties: () => properties(state.userProperties),
   };
+  (globalThis as Record<string, unknown>).Session = {
+    getActiveUser: () => ({ getEmail: () => options.userEmail ?? "" }),
+  };
   (globalThis as Record<string, unknown>).LockService = { getDocumentLock: () => null };
   (globalThis as Record<string, unknown>).HtmlService = {
     createHtmlOutputFromFile: (name: string) => {
@@ -290,7 +295,7 @@ export function installHost(options: HostOptions = {}): HostState {
 }
 
 export function restoreHost(): void {
-  for (const name of ["SlidesApp", "Slides", "Utilities", "PropertiesService", "LockService", "HtmlService"]) {
+  for (const name of ["SlidesApp", "Slides", "Utilities", "PropertiesService", "Session", "LockService", "HtmlService"]) {
     delete (globalThis as Record<string, unknown>)[name];
   }
 }

@@ -89,6 +89,12 @@ Public Sub RB_DispatchTag(ByVal tagStr As String)
         Case "UnhideObj": UnhideHiddenObjects
         Case "MasterObj": ToggleMasterShapes
 
+        ' --- Review markup ---
+        Case "Review":     AddReviewNote parts(1)
+        Case "Callout":    AddReviewCallout
+        Case "ReviewDel":  RemoveReviewMarkup
+        Case "ReviewInit": SetReviewInitials
+
         ' --- Wizards / productivity ---
         Case "Painter":  AdvancedFormatPainter
         Case "SelSim":   SelectSimilarShapes parts(1)

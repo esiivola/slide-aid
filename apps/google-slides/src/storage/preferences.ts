@@ -10,6 +10,8 @@ export interface UserSettings {
   gapCm: number;
   matrixColumns: number;
   useAtomicUpdates: boolean;
+  /** Reviewer initials stamped on review marks; empty means "derive from the account". */
+  initials?: string;
 }
 
 const REFERENCE_KEY = "slideAid.reference";

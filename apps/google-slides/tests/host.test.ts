@@ -13,6 +13,7 @@ import { iconPathsFor } from "../src/slides/icon-catalog";
 import { hideObjects, unhideAll } from "../src/commands/deck-commands";
 import { snapToTable } from "../src/commands/object-commands";
 import { executeCommand } from "../src/commands/geometry-commands";
+import { addReviewCallout, addReviewNote, initialsFrom, removeReviewMarkup, setReviewInitials } from "../src/slides/review";
 
 // A tiny two-shard catalog: one stroke icon and one solid one.
 const STROKE_PATH = "M4 4 L20 4 L20 20 L4 20 Z";
@@ -334,6 +335,69 @@ test("a chart with no payload is reported as not being a Chart Aid chart", (t) =
   t.after(teardown);
   installHost({ existing: [{ id: "shape1", type: "SHAPE" }], selectedIds: ["shape1"] });
   assert.throws(() => annotateDifference("ABS"), /Select a Chart Aid chart/);
+});
+
+// --- Review markup ---------------------------------------------------------
+
+test("a comment mark is a loud tagged note stamped with initials", (t) => {
+  t.after(teardown);
+  const state = installHost({ userEmail: "eero.siivola@example.com", pageWidth: 720 });
+  const result = addReviewNote("NOTE", "tighten this headline");
+
+  const shapes = requestsOfKind(state, "createShape");
+  assert.equal(shapes.length, 2, "a filled note plus a text box");
+  assert.equal(shapes[0]!.shapeType, "ROUND_RECTANGLE");
+  const fill = requestsOfKind(state, "updateShapeProperties")[0]! as { shapeProperties: { shapeBackgroundFill: { solidFill: { color: { rgbColor: { red: number } } } } } };
+  assert.ok(fill.shapeProperties.shapeBackgroundFill.solidFill.color.rgbColor.red === 1, "loud yellow fill (R=1)");
+  const text = insertedText(state).join("\n");
+  assert.match(text, /ES ·/, "initials derived from the account email");
+  assert.match(text, /tighten this headline/);
+  const alt = requestsOfKind(state, "updatePageElementAltText").at(-1)!;
+  assert.match(String(alt.description), /\[slide-aid-review:NOTE\]/);
+  assert.match(result.message, /comment mark/i);
+});
+
+test("stored initials override the account-derived ones", (t) => {
+  t.after(teardown);
+  const state = installHost({ userEmail: "someone.else@example.com" });
+  setReviewInitials("XY");
+  addReviewNote("TODO", "fix");
+  assert.match(insertedText(state).join("\n"), /TODO · XY ·/, "TODO label plus the chosen initials");
+});
+
+test("a callout adds a leader line to the selected object", (t) => {
+  t.after(teardown);
+  const state = installHost({
+    existing: [{ id: "img1", type: "IMAGE", left: 300, top: 200, width: 100, height: 80 }],
+    selectedIds: ["img1"],
+    userEmail: "ada.lovelace@example.com",
+  });
+  addReviewCallout("is this the right chart?");
+  assert.equal(requestsOfKind(state, "createLine").length, 1, "one leader line");
+  const alt = requestsOfKind(state, "updatePageElementAltText").at(-1)!;
+  assert.match(String(alt.description), /\[slide-aid-review:CALLOUT\]/);
+});
+
+test("remove markup sweeps every tagged shape across the deck", (t) => {
+  t.after(teardown);
+  const state = installHost({
+    existing: [
+      { id: "note1", type: "SHAPE", description: "Slide Aid NOTE [slide-aid-review:NOTE] a" },
+      { id: "todo1", type: "GROUP", description: "[slide-aid-review:TODO] b" },
+      { id: "keep1", type: "SHAPE", description: "a normal shape" },
+    ],
+  });
+  const result = removeReviewMarkup();
+  assert.equal(result.removed, 2, "both review marks, not the normal shape");
+  assert.ok(state.elements.has("keep1"));
+  assert.ok(!state.elements.has("note1") && !state.elements.has("todo1"));
+});
+
+test("initials derive from a name or email local-part, capped at three", () => {
+  assert.equal(initialsFrom("eero.siivola"), "ES");
+  assert.equal(initialsFrom("Ada King Lovelace"), "AKL");
+  assert.equal(initialsFrom("a_b_c_d"), "ABC");
+  assert.equal(initialsFrom(""), "");
 });
 
 // --- Icon catalog sharding -------------------------------------------------
