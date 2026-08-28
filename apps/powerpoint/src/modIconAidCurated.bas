@@ -310,7 +310,14 @@ Private Function IconTagOf(ByVal shp As Shape) As String
     If InStr(s, "IconAid:") = 1 Then IconTagOf = Mid$(s, 9)
 End Function
 
-' Build icon idx as an editable freeform fitted into (left0,top0,w,h).
+' Build icon idx as editable freeform PARTS fitted into (left0,top0,w,h).
+'
+' Each subpath becomes its own shape so its fill and line can be edited
+' independently: a closed subpath (one containing Z) is filled; an open subpath
+' is a stroked line. Filled parts whose bounding boxes overlap are combined into
+' one shape so even-odd holes (the gap in a ring, the counter of an "o") survive;
+' filled parts that do not overlap, and every line, stay separate. Everything is
+' grouped at the end so the icon still moves and scales as a single object.
 Private Function MaterializeIcon(ByVal sl As Slide, ByVal idx As Long, _
     ByVal left0 As Single, ByVal top0 As Single, ByVal w As Single, ByVal h As Single, _
     ByVal strokeCol As Long) As Boolean
@@ -320,70 +327,90 @@ Private Function MaterializeIcon(ByVal sl As Slide, ByVal idx As Long, _
     If UBound(parts) < 4 Then Exit Function
 
     Dim st As CuratedIconStyle: SetDefaultCuratedStyle st
-    If strokeCol >= 0 Then st.StrokeColor = strokeCol
-    Dim isFilled As Boolean: isFilled = IconIsFilled(parts(0))
-    If isFilled Then st.FillColor = st.StrokeColor    ' filled design -> solid fill
+    Dim baseCol As Long: baseCol = st.StrokeColor
+    If strokeCol >= 0 Then baseCol = strokeCol
     Dim boxSz As Single: boxSz = w: If h < boxSz Then boxSz = h
-    st.Size = boxSz
     Dim sc As Single: sc = boxSz / ICON_VIEWBOX
 
-    Dim grp As New Collection, i As Long, shp As Shape
+    ' Create one shape per subpath, remembering which are filled and their bounds.
+    Dim shps As New Collection        ' Shape per part
+    Dim fills As New Collection       ' Boolean per part: filled (closed) region?
+    Dim bx1 As New Collection, by1 As New Collection
+    Dim bx2 As New Collection, by2 As New Collection
+    Dim i As Long, shp As Shape, closed As Boolean, st2 As CuratedIconStyle
     For i = 4 To UBound(parts)
         If Len(parts(i)) > 0 Then
-            Set shp = CreateCuratedShape(sl, parts(i), left0, top0, sc, st)
-            If Not shp Is Nothing Then grp.Add shp
-        End If
-    Next i
-    If grp.Count = 0 Then Exit Function
-
-    Dim result As Shape
-    If grp.Count = 1 Then
-        Set result = grp(1)
-    Else
-        Dim nm() As String, j As Long
-        ReDim nm(1 To grp.Count)
-        For j = 1 To grp.Count: nm(j) = grp(j).Name: Next j
-
-        Dim merged As Boolean: merged = False
-        If isFilled Then
-            ' Combine overlapping contours so even-odd holes (e.g. the gap in a
-            ' ring) survive - leaves ONE editable shape whose fill and outline you
-            ' can color independently. MergeShapes / msoMergeCombine are NOT in
-            ' every Mac PowerPoint's VBA type library; naming a missing constant
-            ' would stop this whole module compiling ("compile error in hidden
-            ' module"). So call it LATE-BOUND: the module always compiles, and
-            ' where the method is absent the call fails at runtime and we fall
-            ' back to a plain group (then holes render filled). 2 = msoMergeCombine.
-            On Error Resume Next
-            CallByName sl.Shapes.Range(nm), "MergeShapes", VbMethod, 2
-            If Err.Number = 0 Then merged = True
-            On Error GoTo 0
-
-            If Not merged Then
-                ' Mac PowerPoint exposes Merge Shapes in the UI even on builds
-                ' whose VBA type library/object model rejects MergeShapes. Use
-                ' that native command before accepting the lossy group fallback:
-                ' a group stacks every contour as an opaque shape and turns rings,
-                ' counters, eyes, letters, etc. into solid blobs.
-                Dim beforeMergeCount As Long
-                beforeMergeCount = sl.Shapes.Count
-                On Error Resume Next
-                sl.Shapes.Range(nm).Select
-                Err.Clear
-                Application.CommandBars.ExecuteMso "ShapesCombine"
-                merged = (Err.Number = 0 And _
-                          sl.Shapes.Count = beforeMergeCount - grp.Count + 1)
-                On Error GoTo 0
+            closed = (InStr(1, parts(i), "Z", vbTextCompare) > 0)
+            st2 = st
+            If closed Then
+                st2.FillColor = baseCol       ' closed subpath -> filled region
+            Else
+                st2.FillColor = -1            ' open subpath -> stroked line
+                st2.StrokeColor = baseCol
+            End If
+            Set shp = CreateCuratedShape(sl, parts(i), left0, top0, sc, st2)
+            If Not shp Is Nothing Then
+                ' Rely on PowerPoint's unique default shape names (e.g. "Freeform
+                ' 7") so Range() lookups never collide, even when two copies of the
+                ' same icon are converted on one slide.
+                shps.Add shp: fills.Add closed
+                bx1.Add shp.Left: by1.Add shp.Top
+                bx2.Add shp.Left + shp.Width: by2.Add shp.Top + shp.Height
             End If
         End If
-        If merged Then
-            ' MergeShapes leaves the combined shape selected; grab it to name+lock.
-            On Error Resume Next
-            Set result = ActiveWindow.Selection.ShapeRange(1)
-            On Error GoTo 0
-        Else
-            Set result = sl.Shapes.Range(nm).Group
+    Next i
+    Dim n As Long: n = shps.Count
+    If n = 0 Then Exit Function
+
+    ' Union-find: cluster filled parts whose bounding boxes overlap. Lines never
+    ' join a cluster, so they always come out as their own editable objects.
+    Dim parent() As Long: ReDim parent(1 To n)
+    For i = 1 To n: parent(i) = i: Next i
+    Dim a As Long, b As Long
+    For a = 1 To n - 1
+        For b = a + 1 To n
+            If fills(a) And fills(b) Then
+                If BoxesOverlap(bx1(a), by1(a), bx2(a), by2(a), _
+                                bx1(b), by1(b), bx2(b), by2(b)) Then UnionSet parent, a, b
+            End If
+        Next b
+    Next a
+
+    ' Reduce each cluster to a single shape: merge multi-part clusters (keeping
+    ' holes), leave singletons as they are.
+    Dim finalNames As New Collection, processed() As Boolean: ReDim processed(1 To n)
+    Dim root As Long, k As Long
+    For a = 1 To n
+        root = FindSet(parent, a)
+        If Not processed(root) Then
+            processed(root) = True
+            Dim members As Collection: Set members = New Collection
+            For b = 1 To n
+                If FindSet(parent, b) = root Then members.Add shps(b).Name
+            Next b
+            If members.Count = 1 Then
+                finalNames.Add members(1)
+            Else
+                Dim nm() As String: ReDim nm(1 To members.Count)
+                For k = 1 To members.Count: nm(k) = members(k): Next k
+                Dim ok As Boolean, mshp As Shape
+                Set mshp = MergeNamed(sl, nm, ok)
+                If Not mshp Is Nothing Then finalNames.Add mshp.Name
+            End If
         End If
+    Next a
+    If finalNames.Count = 0 Then Exit Function
+
+    ' Group all parts so the icon behaves as one object; each part stays editable.
+    Dim result As Shape
+    If finalNames.Count = 1 Then
+        Set result = sl.Shapes(finalNames(1))
+    Else
+        Dim allnm() As String: ReDim allnm(1 To finalNames.Count)
+        For k = 1 To finalNames.Count: allnm(k) = finalNames(k): Next k
+        On Error Resume Next
+        Set result = sl.Shapes.Range(allnm).Group
+        On Error GoTo 0
     End If
 
     If Not result Is Nothing Then
@@ -397,13 +424,70 @@ Private Function MaterializeIcon(ByVal sl As Slide, ByVal idx As Long, _
     MaterializeIcon = True
 End Function
 
-' Filled catalog IDs retain a -solid/-mini suffix for this legacy VBA path;
-' Bootstrap predates that convention and remains source-classified. Mirrors the
-' sidebar's isFilled().
-Private Function IconIsFilled(ByVal iconId As String) As Boolean
-    Dim s As String: s = LCase$(iconId)
-    IconIsFilled = (Left$(s, 10) = "bootstrap-") Or (Right$(s, 6) = "-solid") Or (Right$(s, 5) = "-mini")
+' Combine the named shapes into ONE, preserving even-odd holes. Returns the
+' combined shape (or a plain group where Merge Shapes is unavailable).
+Private Function MergeNamed(ByVal sl As Slide, ByRef nm() As String, ByRef mergedOK As Boolean) As Shape
+    mergedOK = False
+    Dim grpCount As Long: grpCount = UBound(nm) - LBound(nm) + 1
+
+    ' MergeShapes / msoMergeCombine are NOT in every Mac PowerPoint's VBA type
+    ' library; naming a missing constant would stop this whole module compiling
+    ' ("compile error in hidden module"). So call it LATE-BOUND: the module always
+    ' compiles, and where the method is absent the call fails at runtime and we
+    ' fall back below. 2 = msoMergeCombine.
+    On Error Resume Next
+    CallByName sl.Shapes.Range(nm), "MergeShapes", VbMethod, 2
+    If Err.Number = 0 Then mergedOK = True
+    On Error GoTo 0
+
+    If Not mergedOK Then
+        ' Mac PowerPoint exposes Merge Shapes in the UI even on builds whose VBA
+        ' type library/object model rejects MergeShapes. Use that native command
+        ' before accepting the lossy group fallback: a group stacks every contour
+        ' as an opaque shape and turns rings, counters, eyes, letters into blobs.
+        Dim beforeMergeCount As Long
+        beforeMergeCount = sl.Shapes.Count
+        On Error Resume Next
+        sl.Shapes.Range(nm).Select
+        Err.Clear
+        Application.CommandBars.ExecuteMso "ShapesCombine"
+        mergedOK = (Err.Number = 0 And _
+                    sl.Shapes.Count = beforeMergeCount - grpCount + 1)
+        On Error GoTo 0
+    End If
+
+    If mergedOK Then
+        ' Merge leaves the combined shape selected; hand it back to name it.
+        On Error Resume Next
+        Set MergeNamed = ActiveWindow.Selection.ShapeRange(1)
+        On Error GoTo 0
+    Else
+        On Error Resume Next
+        Set MergeNamed = sl.Shapes.Range(nm).Group
+        On Error GoTo 0
+    End If
 End Function
+
+' Axis-aligned bounding-box overlap (shared edges alone do not count).
+Private Function BoxesOverlap(ByVal ax1 As Single, ByVal ay1 As Single, ByVal ax2 As Single, ByVal ay2 As Single, _
+    ByVal bxa As Single, ByVal bya As Single, ByVal bxb As Single, ByVal byb As Single) As Boolean
+    BoxesOverlap = Not (ax2 <= bxa Or bxb <= ax1 Or ay2 <= bya Or byb <= ay1)
+End Function
+
+' Union-find with path halving, over 1-based part indices.
+Private Function FindSet(ByRef parent() As Long, ByVal x As Long) As Long
+    Do While parent(x) <> x
+        parent(x) = parent(parent(x))
+        x = parent(x)
+    Loop
+    FindSet = x
+End Function
+
+Private Sub UnionSet(ByRef parent() As Long, ByVal a As Long, ByVal b As Long)
+    Dim ra As Long, rb As Long
+    ra = FindSet(parent, a): rb = FindSet(parent, b)
+    If ra <> rb Then parent(rb) = ra
+End Sub
 
 ' "#RRGGBB" (or "RRGGBB") -> RGB Long; -1 if invalid.
 Private Function HexToRgb(ByVal hx As String) As Long

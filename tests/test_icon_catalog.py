@@ -78,7 +78,11 @@ def test_generated_icon_catalog_is_current_and_searchable() -> None:
     # ShapeRange.MergeShapes. Without this fallback, filled counters/holes become
     # opaque because the contours are merely grouped on top of one another.
     assert 'Application.CommandBars.ExecuteMso "ShapesCombine"' in loader
-    assert "beforeMergeCount - grp.Count + 1" in loader
+    assert "beforeMergeCount - grpCount + 1" in loader
+    # Converted icons are split per subpath (closed = filled, open = line) so each
+    # part's fill/line can be edited independently; overlapping filled parts are
+    # clustered and merged so holes survive, non-overlapping parts stay separate.
+    assert "BoxesOverlap" in loader and "FindSet" in loader
 
 
 def test_consulting_search_vocabulary_finds_expected_concepts() -> None:

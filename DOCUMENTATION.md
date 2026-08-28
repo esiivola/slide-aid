@@ -258,7 +258,11 @@ Use **Cycle State** repeatedly to step selected Harvey balls and checkboxes thro
 
 #### Icons
 
-On PowerPoint's built-in **Insert** tab, click **Insert Icons** to open a searchable sidebar of 10,000+ vector icons; click any icon to drop it on the slide as a picture. To recolor or reshape one, keep it selected and click **Make Editable** (also on the Insert tab) to convert every inserted icon on the slide into an editable vector group. Google Slides works the same way: the same icons live in the **Icons** sidebar tab, click inserts a picture, and **Make Editable** converts it into shapes.
+On PowerPoint's built-in **Insert** tab, click **Insert Icons** to open a searchable sidebar of 10,000+ vector icons; click any icon to drop it on the slide as a picture. To recolor or reshape one, keep it selected and click **Make Editable** (also on the Insert tab) to convert every inserted icon on the slide into editable vector shapes. Google Slides works the same way: the same icons live in the **Icons** sidebar tab, click inserts a picture, and **Make Editable** converts it into shapes.
+
+Use the **style** dropdown next to the category filter to narrow the library to **Line only** or **Has fill** icons; a small **Line**/**Fill** badge on each tile shows which is which at a glance.
+
+**Make Editable** splits an icon into independently-editable parts: each subpath becomes its own shape — closed contours become filled shapes, open contours become lines — so you can restyle a single part's fill or line weight. Overlapping filled contours are merged into one shape so holes (the gap in a ring, the counter of an "o") stay open; parts that don't overlap remain separate. Everything is grouped so the icon still moves and scales as one object.
 
 ### Ribbon tour
 
@@ -458,7 +462,7 @@ The icon tools sit on PowerPoint's built-in **Insert** tab.
 | Icon | Tool | What it does |
 |---|---|---|
 | — | **Insert Icons** | Open the searchable icon browser - 10,000+ vector icons. Click any icon to drop it on the slide. Provided by the companion Office task pane in `apps/powerpoint-iconaid/` (uses its own icon); needs an internet connection for its catalog. |
-| <img src="shared/icons/sa_magic.png" width="32" alt="sa_magic"> | **Make Editable** | Turn inserted icons into editable vector shapes. Select an inserted icon (or run it to convert every inserted icon on the slide), then recolor, change the line weight, or reshape it like any PowerPoint shape. |
+| <img src="shared/icons/sa_magic.png" width="32" alt="sa_magic"> | **Make Editable** | Turn inserted icons into editable vector shapes, split per contour (filled contours become fillable shapes, open contours become lines) so each part's fill and line weight can be changed independently; overlapping filled contours are merged to keep holes open, and the parts are grouped. Select an inserted icon (or run it to convert every inserted icon on the slide). |
 
 ## Color and Palette Icons
 

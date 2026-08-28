@@ -82,6 +82,16 @@ A.ok(fa.includes('fill="#ff0000"') && fa.includes("evenodd") && fa.includes('str
 const oa = api.pathAttrs({s: "tabler", id: "tabler-heart"}, "#00ff00");
 A.ok(oa.includes('fill="none"') && oa.includes('stroke="#00ff00"'));
 
+// ---- style filter: "line" keeps outline icons, "fill" keeps filled icons ----
+const solid = mk("bootstrap-heart Heart", "General"); solid.s = "bootstrap"; solid.id = "bootstrap-heart";
+const line  = mk("tabler-heart Heart", "General");    line.s = "tabler";     line.id = "tabler-heart";
+A.equal(api.matches(solid, [], "", "fill"), true);
+A.equal(api.matches(solid, [], "", "line"), false);
+A.equal(api.matches(line,  [], "", "line"), true);
+A.equal(api.matches(line,  [], "", "fill"), false);
+A.equal(api.matches(line,  [], "", ""), true);          // no style filter = any
+A.equal(api.matches(solid, [], ""), true);              // omitted arg = any (back-compat)
+
 // svgFor emits a single <path> svg with the joined path data
 const svg = api.svgFor({s: "tabler", id: "x", d: ["M0 0 L1 1"]}, "#000");
 A.ok(svg.startsWith("<svg") && svg.includes("<path") && svg.includes("M0 0 L1 1"));
