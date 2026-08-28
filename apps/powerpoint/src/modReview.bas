@@ -209,20 +209,12 @@ Private Sub StyleNote(ByVal s As Shape, ByVal kind As String)
     End With
 End Sub
 
-' Give the note a visibly rounded corner and a soft drop shadow so it reads as
-' a sticker. Called AFTER the text/autosize settle the size, so the radius is a
-' predictable ~6pt rather than a fraction that collapses toward square. Only
-' long-standing ShadowFormat members are touched, to stay Mac-safe.
+' Give the note a visibly rounded corner. Called AFTER the text/autosize settle
+' the size, so the radius is a predictable ~6pt rather than a fraction that
+' collapses toward square.
 Private Sub FinishNote(ByVal s As Shape)
     On Error Resume Next
     s.Adjustments(1) = RoundnessFor(s)
-    With s.Shadow
-        .Visible = msoTrue
-        .OffsetX = 2
-        .OffsetY = 2
-        .ForeColor.RGB = RGB(0, 0, 0)
-        .Transparency = 0.65
-    End With
     On Error GoTo 0
 End Sub
 
