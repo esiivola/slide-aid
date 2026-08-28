@@ -9,8 +9,8 @@ Attribute VB_Name = "modReview"
 ' missed. Every mark is tagged "SA_REVIEW" so the whole deck can be swept
 ' clean before the final send.
 '
-' Initials come from Application.UserName (PowerPoint's registered author
-' name) with no setup, are cached in prefs, and can be changed any time.
+' Initials are seeded with no setup from the account name (the app user name
+' where available, else the Mac login), cached in prefs, and editable.
 ' =====================================================================
 Option Explicit
 
@@ -28,11 +28,25 @@ Public Function ReviewInitials() As String
     Dim v As String
     v = GetPref("ReviewInitials", "")
     If Len(v) = 0 Then
-        v = DeriveInitials(Application.UserName)
+        v = DeriveInitials(AccountName())
         If Len(v) = 0 Then v = "?"
         SetPref "ReviewInitials", v
     End If
     ReviewInitials = v
+End Function
+
+' Account name for seeding initials, with no setup. PowerPoint's Application
+' object (unlike Word/Excel) has no UserName property on every build, so read
+' it LATE-BOUND - a missing property fails at runtime instead of breaking
+' compilation - and fall back to the Mac login name from the environment.
+Private Function AccountName() As String
+    Dim nm As String, app As Object
+    Set app = Application
+    On Error Resume Next
+    nm = app.UserName
+    On Error GoTo 0
+    If Len(Trim$(nm)) = 0 Then nm = Environ("USER")
+    AccountName = Trim$(nm)
 End Function
 
 Private Function DeriveInitials(ByVal nm As String) As String
@@ -51,9 +65,9 @@ Public Sub SetReviewInitials()
     Dim cur As String, v As String
     cur = ReviewInitials()
     v = InputBox("Your initials for review marks:", "Slide Aid", cur)
-    If StrPtr(v) = 0 Then Exit Sub          ' Cancel (as opposed to an empty box)
     v = Trim$(v)
-    If Len(v) > 0 Then SetPref "ReviewInitials", Left$(v, 6)
+    If Len(v) = 0 Then Exit Sub             ' Cancel or an empty box: leave unchanged
+    SetPref "ReviewInitials", Left$(v, 6)
 End Sub
 
 ' ---------------------------------------------------------------
@@ -69,7 +83,7 @@ Public Sub AddReviewNote(ByVal kind As String)
 
     Dim body As String
     body = InputBox(PromptFor(kind), "Slide Aid - " & KindLabel(kind))
-    If StrPtr(body) = 0 Then Exit Sub       ' Cancel
+    If Len(body) = 0 Then Exit Sub          ' Cancel or an empty box
 
     Dim leftP As Single, topP As Single
     leftP = SlideW() - NOTE_W - CORNER_MARGIN
@@ -105,7 +119,7 @@ Public Sub AddReviewCallout()
 
     Dim body As String
     body = InputBox("Callout note:", "Slide Aid - Callout")
-    If StrPtr(body) = 0 Then Exit Sub
+    If Len(body) = 0 Then Exit Sub          ' Cancel or an empty box
 
     ' Place the note above-right of the target, clamped to the slide.
     Dim leftP As Single, topP As Single
