@@ -47,6 +47,22 @@ test("size matching keeps target centers", () => {
   assert.deepEqual(result, { ...boxes[0], left: 15, top: 15, width: 20, height: 20 });
 });
 
+test("ratio width matching scales height by the same factor and keeps center", () => {
+  const source: Box = { id: "img", left: 0, top: 0, width: 10, height: 20 };
+  const reference: Box = { id: "m", left: 0, top: 0, width: 30, height: 5 };
+  const result = matchSize([source], reference, "WR")[0]!;
+  // factor 3: width 10->30, height 20->60; center (5,10) preserved.
+  assert.deepEqual(result, { id: "img", left: -10, top: -20, width: 30, height: 60 });
+});
+
+test("ratio height matching scales width by the same factor and keeps center", () => {
+  const source: Box = { id: "img", left: 0, top: 0, width: 20, height: 10 };
+  const reference: Box = { id: "m", left: 0, top: 0, width: 5, height: 30 };
+  const result = matchSize([source], reference, "HR")[0]!;
+  // factor 3: height 10->30, width 20->60; center (10,5) preserved.
+  assert.deepEqual(result, { id: "img", left: -20, top: -10, width: 60, height: 30 });
+});
+
 test("fill gap extends only when target is on the requested side", () => {
   const reference = { id: "r", left: 40, top: 0, width: 10, height: 10 };
   const rightTarget = { id: "t", left: 70, top: 0, width: 20, height: 10 };

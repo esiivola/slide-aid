@@ -182,7 +182,7 @@ export function executeCommand(request: CommandRequest): CommandResult {
     if (command === "dock") result = dock(boxes, reference, request.argument as "L" | "R" | "T" | "B");
     if (command === "stretch") result = stretch(boxes, reference, request.argument as "L" | "R" | "T" | "B");
     if (command === "fillGap") result = fillGap(boxes, reference, request.argument as "L" | "R" | "T" | "B");
-    if (command === "size") result = matchSize(boxes, reference, request.argument as "W" | "H" | "WH");
+    if (command === "size") result = matchSize(boxes, reference, request.argument as "W" | "H" | "WH" | "WR" | "HR");
     if (command === "golden") result = boxes.map((box) => ({ ...box, top: reference.top + (reference.height - box.height) / 3 }));
     applyBoxes(elements, result);
     count = elements.length;

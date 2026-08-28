@@ -109,6 +109,8 @@ Public Sub BuildShortcutMenu(Optional ByVal verbose As Boolean = True)
     AddItem menu, "Same Width as Master", "SC_SizeW", True
     AddItem menu, "Same Height as Master", "SC_SizeH"
     AddItem menu, "Same Size as Master", "SC_SizeWH"
+    AddItem menu, "Same Width as Master (keep ratio)", "SC_SizeWR"
+    AddItem menu, "Same Height as Master (keep ratio)", "SC_SizeHR"
     AddItem menu, "Magic Resizer", "SC_Magic"
     AddItem menu, "Stretch Right to Master", "SC_StretchR"
     AddItem menu, "Stretch Left to Master", "SC_StretchL"
@@ -167,6 +169,8 @@ Public Sub SC_Golden():   GoldenCanon:              End Sub
 Public Sub SC_SizeW():    MatchSizeToMaster "W":    End Sub
 Public Sub SC_SizeH():    MatchSizeToMaster "H":    End Sub
 Public Sub SC_SizeWH():   MatchSizeToMaster "WH":   End Sub
+Public Sub SC_SizeWR():   MatchSizeToMaster "WR":   End Sub
+Public Sub SC_SizeHR():   MatchSizeToMaster "HR":   End Sub
 Public Sub SC_Magic():    MagicResizer:             End Sub
 Public Sub SC_StretchR(): StretchToMaster "R":      End Sub
 Public Sub SC_StretchL(): StretchToMaster "L":      End Sub

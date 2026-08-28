@@ -90,13 +90,29 @@ export function fillGap(boxes: readonly Box[], reference: Box, direction: Exclud
   });
 }
 
-export function matchSize(boxes: readonly Box[], reference: Box, dimension: "W" | "H" | "WH"): Box[] {
+/**
+ * Match objects to the reference's size. "W"/"H"/"WH" set width and/or height
+ * independently (the reference's dimension is copied verbatim). "WR"/"HR" match
+ * one dimension and scale the other by the same factor, so each object keeps its
+ * own aspect ratio - the variant to use on images, which "WH" would distort.
+ */
+export function matchSize(boxes: readonly Box[], reference: Box, dimension: "W" | "H" | "WH" | "WR" | "HR"): Box[] {
   return boxes.map((source) => {
     const cx = centerX(source);
     const cy = centerY(source);
     const box = { ...source };
-    if (dimension.includes("W")) box.width = reference.width;
-    if (dimension.includes("H")) box.height = reference.height;
+    if (dimension === "WR") {
+      const factor = source.width === 0 ? 1 : reference.width / source.width;
+      box.width = reference.width;
+      box.height = source.height * factor;
+    } else if (dimension === "HR") {
+      const factor = source.height === 0 ? 1 : reference.height / source.height;
+      box.height = reference.height;
+      box.width = source.width * factor;
+    } else {
+      if (dimension.includes("W")) box.width = reference.width;
+      if (dimension.includes("H")) box.height = reference.height;
+    }
     box.left = cx - box.width / 2;
     box.top = cy - box.height / 2;
     return box;

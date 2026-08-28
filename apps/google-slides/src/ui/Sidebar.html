@@ -196,6 +196,8 @@
           <button class="action" onclick="command('size','W')" title="Give all objects the reference's width, keeping their centers."><img src="{{ICON:sa_width}}">Width</button>
           <button class="action" onclick="command('size','H')"><img src="{{ICON:sa_height}}">Height</button>
           <button class="action" onclick="command('size','WH')"><img src="{{ICON:sa_size}}">Width + Height</button>
+          <button class="action" onclick="command('size','WR')" title="Give all objects the reference's width and scale height to keep each object's aspect ratio. Use this on images."><img src="{{ICON:sa_chain}}">Width (ratio)</button>
+          <button class="action" onclick="command('size','HR')" title="Give all objects the reference's height and scale width to keep each object's aspect ratio. Use this on images."><img src="{{ICON:sa_chain}}">Height (ratio)</button>
         </div>
         <div class="row"><label>Scale (%)</label><input id="scale" type="number" value="120" min="1"><label style="min-width:auto"><input type="checkbox" id="scaleFonts" checked> Fonts</label></div>
         <div class="row"><label>Rows / Cols</label><input id="rows" type="number" value="2" min="1"><input id="dupeColumns" type="number" value="2" min="1"></div>

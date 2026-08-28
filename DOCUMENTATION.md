@@ -124,6 +124,8 @@ Select the objects to resize first and the Master last. **Width + Height** gives
 
 Use **Width** or **Height** when only one dimension should match. This is useful for cards, icons, labels, and bars that already sit in the right place.
 
+**Width (ratio)** and **Height (ratio)** match one dimension and scale the other by the same factor, so each object keeps its own aspect ratio. Use these on images and other objects that would be distorted by the plain **Width**, **Height**, or **Width + Height** buttons.
+
 #### Dock
 
 ![Dock demo](docs/img/demo-dock.gif)
@@ -268,7 +270,7 @@ The ribbon is split into the main production jobs: reusable wizards, positioning
 
 1. Select the objects to change.
 2. Select the reference object last. This is the Master.
-3. Use **Left**, **Right**, **Top**, **Bottom**, **Center**, **Middle**, **Width**, **Height**, or **Width + Height**.
+3. Use **Left**, **Right**, **Top**, **Bottom**, **Center**, **Middle**, **Width**, **Height**, **Width + Height**, **Width (ratio)**, or **Height (ratio)**.
 
 Use **To Slide** when the slide itself should be the reference. Use **Dock**, **Stretch**, and **Fill Gap** when objects should touch or extend toward the Master instead of merely aligning to it.
 
@@ -339,6 +341,8 @@ The tables below list the top-level controls that appear on the Slide Aid and Ch
 | <img src="shared/icons/sa_width.png" width="32" alt="sa_width"> | **Width** | Give all objects the Master's width. The Master is always the object you selected last. Objects keep their centers. |
 | <img src="shared/icons/sa_height.png" width="32" alt="sa_height"> | **Height** | Give all objects the Master's height. The Master is always the object you selected last. Objects keep their centers. |
 | <img src="shared/icons/sa_size.png" width="32" alt="sa_size"> | **Width + Height** | Give all objects the Master's size. The Master is always the object you selected last. Objects keep their centers. |
+| <img src="shared/icons/sa_chain.png" width="32" alt="sa_chain"> | **Width (ratio)** | Give all objects the Master's width, scaling height by the same factor to keep each object's aspect ratio. Use on images. Objects keep their centers. |
+| <img src="shared/icons/sa_chain.png" width="32" alt="sa_chain"> | **Height (ratio)** | Give all objects the Master's height, scaling width by the same factor to keep each object's aspect ratio. Use on images. Objects keep their centers. |
 | <img src="shared/icons/sa_stretch.png" width="32" alt="sa_stretch"> | **Stretch** | Stretch the objects to the far edge of the Master. The Master is always the object you selected last. Example: Stretch Right extends each object's right edge to the Master's right edge; the opposite edge stays fixed. With a single object selected, the slide is the reference instead. Menu entries: Left, Right, Top, Bottom. |
 | <img src="shared/icons/sa_fill.png" width="32" alt="sa_fill"> | **Fill Gap** | Fill the gap between the objects and the Master. The Master is always the object you selected last. Each object is extended toward the Master until they touch. Example: Fill Rightwards extends right edges to the Master's left edge. Menu entries: Leftwards, Rightwards, Upwards, Downwards. |
 | <img src="shared/icons/sa_slice.png" width="32" alt="sa_slice"> | **Slice** | Slice the shape into equal pieces. Cuts the selected shape into a rows-by-columns grid with a gap you choose; the pieces exactly reassemble the original footprint. |

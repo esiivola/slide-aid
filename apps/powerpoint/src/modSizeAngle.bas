@@ -6,7 +6,11 @@ Attribute VB_Name = "modSizeAngle"
 Option Explicit
 
 ' ---------------------------------------------------------------
-' MATCH SIZE: dim = "W", "H" or "WH". Objects keep their center.
+' MATCH SIZE: dim = "W", "H" or "WH" set width and/or height to the
+' Master's, independently. "WR"/"HR" match one dimension and scale the
+' other by the same factor, so each object keeps its own aspect ratio -
+' the variant to use on images, which "WH" would distort. Objects keep
+' their center.
 ' ---------------------------------------------------------------
 Public Sub MatchSizeToMaster(ByVal dim_ As String)
     Dim sr As ShapeRange
@@ -16,13 +20,23 @@ Public Sub MatchSizeToMaster(ByVal dim_ As String)
     Dim m As Shape
     Set m = GetMaster(sr)
 
-    Dim i As Long, s As Shape, cx As Single, cy As Single
+    Dim i As Long, s As Shape, cx As Single, cy As Single, f As Single
     For i = 1 To sr.Count - 1
         Set s = sr(i)
         cx = ShpCenterX(s): cy = ShpCenterY(s)
         s.LockAspectRatio = msoFalse
-        If InStr(dim_, "W") > 0 Then s.Width = m.Width
-        If InStr(dim_, "H") > 0 Then s.Height = m.Height
+        If dim_ = "WR" Then
+            If s.Width <> 0 Then f = m.Width / s.Width Else f = 1
+            s.Width = m.Width
+            s.Height = s.Height * f
+        ElseIf dim_ = "HR" Then
+            If s.Height <> 0 Then f = m.Height / s.Height Else f = 1
+            s.Height = m.Height
+            s.Width = s.Width * f
+        Else
+            If InStr(dim_, "W") > 0 Then s.Width = m.Width
+            If InStr(dim_, "H") > 0 Then s.Height = m.Height
+        End If
         s.Left = cx - s.Width / 2
         s.Top = cy - s.Height / 2
     Next i
