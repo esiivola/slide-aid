@@ -12,7 +12,7 @@
   var shownCount = 0;             // how many of `filtered` are in the DOM
 
   var $ = function (id) { return document.getElementById(id); };
-  var gridEl, sentinelEl, searchEl, categoryEl, colorEl, countEl, statusEl;
+  var gridEl, sentinelEl, searchEl, categoryEl, styleEl, colorEl, countEl, statusEl;
 
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
@@ -157,8 +157,11 @@
     });
   }
 
-  function matches(icon, groups, category) {
+  // style: "" (any) | "fill" (only filled icons) | "line" (only outline icons).
+  function matches(icon, groups, category, style) {
     if (category && icon.c !== category) return false;
+    if (style === "fill" && !isFilled(icon)) return false;
+    if (style === "line" && isFilled(icon)) return false;
     for (var g = 0; g < groups.length; g++) {
       var grp = groups[g], hay = grp.tok ? icon._st : icon._s, ok = false;
       for (var v = 0; v < grp.vs.length; v++) {
@@ -173,9 +176,10 @@
     var q = searchEl.value.trim().toLowerCase();
     var groups = queryGroups(q);
     var category = categoryEl.value;
+    var style = styleEl.value;
     filtered = [];
     for (var i = 0; i < catalog.length; i++) {
-      if (matches(catalog[i], groups, category)) filtered.push(catalog[i]);
+      if (matches(catalog[i], groups, category, style)) filtered.push(catalog[i]);
     }
     // reset the grid (keep the sentinel node)
     var node = gridEl.firstChild;
@@ -198,8 +202,11 @@
     var html = "";
     for (var i = shownCount; i < end; i++) {
       var ic = filtered[i];
+      var fill = isFilled(ic);
+      var badge = '<span class="badge ' + (fill ? "b-fill" : "b-line") + '" title="' +
+        (fill ? "Filled icon" : "Line icon") + '">' + (fill ? "Fill" : "Line") + "</span>";
       html += '<button type="button" class="cell" data-idx="' + i + '" title="' + esc(ic.n) + '">' +
-        svgFor(ic, color) + '<span class="cap">' + esc(ic.n) + "</span></button>";
+        badge + svgFor(ic, color) + '<span class="cap">' + esc(ic.n) + "</span></button>";
     }
     sentinelEl.insertAdjacentHTML("beforebegin", html);
     shownCount = end;
@@ -258,10 +265,12 @@
 
   function initUI() {
     gridEl = $("grid"); sentinelEl = $("sentinel"); searchEl = $("search");
-    categoryEl = $("category"); colorEl = $("color"); countEl = $("count"); statusEl = $("status");
+    categoryEl = $("category"); styleEl = $("style"); colorEl = $("color");
+    countEl = $("count"); statusEl = $("status");
 
     searchEl.addEventListener("input", debounce(applyFilter, 120));
     categoryEl.addEventListener("change", applyFilter);
+    styleEl.addEventListener("change", applyFilter);
     colorEl.addEventListener("input", debounce(applyFilter, 120));
     gridEl.addEventListener("click", function (ev) {
       var cell = ev.target.closest ? ev.target.closest(".cell") : null;

@@ -26,9 +26,14 @@
 
   #grid { flex: 1; overflow-y: auto; padding: 8px;
           display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 4px; align-content: start; }
-  .cell { border: 1px solid transparent; border-radius: 8px; padding: 6px 4px 5px; cursor: pointer;
+  .cell { position: relative; border: 1px solid transparent; border-radius: 8px; padding: 6px 4px 5px; cursor: pointer;
           display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
   .cell:hover { background: var(--hover); border-color: var(--line); }
+  .badge { position: absolute; top: 3px; right: 3px; font-size: 8px; line-height: 1; letter-spacing: .2px;
+           padding: 2px 3px; border-radius: 3px; opacity: .55; pointer-events: none; }
+  .cell:hover .badge { opacity: 1; }
+  .b-fill { background: var(--accent); color: #fff; }
+  .b-line { background: var(--line); color: var(--muted); }
   .cell svg { width: 34px; height: 34px; display: block; }
   .cap { font-size: 9.5px; color: var(--muted); line-height: 1.15; max-width: 100%;
          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -49,11 +54,16 @@
     </div>
     <div class="row">
       <select id="category"><option value="">All categories</option></select>
+      <select id="style" title="Filter by icon style">
+        <option value="">All styles</option>
+        <option value="line">Line only</option>
+        <option value="fill">Has fill</option>
+      </select>
       <div class="meta" style="flex:1;"><span id="count"></span></div>
     </div>
   </div>
   <div id="grid"><div id="sentinel"></div></div>
   <div id="status">Loading icon catalog…</div>
-  <script src="taskpane.js?v=6"></script>
+  <script src="taskpane.js?v=7"></script>
 </body>
 </html>
