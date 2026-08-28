@@ -365,6 +365,13 @@ test("stored initials override the account-derived ones", (t) => {
   assert.match(insertedText(state).join("\n"), /TODO · XY ·/, "TODO label plus the chosen initials");
 });
 
+test("a single-token login shows the full name, not a lonely letter", (t) => {
+  t.after(teardown);
+  const state = installHost({ userEmail: "eerosiivola@example.com" });
+  addReviewNote("NOTE", "x");
+  assert.match(insertedText(state).join("\n"), /eerosiivola ·/, "no separators to split, so the whole login is shown");
+});
+
 test("a callout adds a leader line to the selected object", (t) => {
   t.after(teardown);
   const state = installHost({

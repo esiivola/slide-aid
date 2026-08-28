@@ -49,7 +49,11 @@ export function reviewInitials(): string {
   } catch {
     email = "";
   }
-  return initialsFrom(email.split("@")[0] ?? "") || "?";
+  const local = (email.split("@")[0] ?? "").trim();
+  const derived = initialsFrom(local);
+  // Single-token logins can't form real initials - show the whole name rather
+  // than a lonely letter; the user can shorten it with the initials field.
+  return derived.length >= 2 ? derived : local || "?";
 }
 
 export function setReviewInitials(value: string): { message: string; initials: string } {

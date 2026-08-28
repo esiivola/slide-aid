@@ -49,15 +49,23 @@ Private Function AccountName() As String
     AccountName = Trim$(nm)
 End Function
 
+' Compress a name or login into up to three uppercase initials. Handles
+' "First Last", first.last, first_last and first-last. Falls back to the whole
+' name when it is a single token (e.g. a bare login), rather than a lonely
+' single letter - the user can shorten it with the Initials button.
 Private Function DeriveInitials(ByVal nm As String) As String
-    Dim words() As String, i As Long, r As String
-    nm = Trim$(nm)
-    If Len(nm) = 0 Then Exit Function
-    words = Split(nm, " ")
+    Dim t As String, words() As String, i As Long, r As String
+    t = Trim$(nm)
+    If Len(t) = 0 Then Exit Function
+    t = Replace(t, ".", " ")
+    t = Replace(t, "_", " ")
+    t = Replace(t, "-", " ")
+    words = Split(t, " ")
     For i = LBound(words) To UBound(words)
         If Len(words(i)) > 0 Then r = r & UCase$(Left$(words(i), 1))
     Next i
     If Len(r) > 3 Then r = Left$(r, 3)
+    If Len(r) < 2 Then r = Trim$(nm)          ' single token: show the name itself
     DeriveInitials = r
 End Function
 
@@ -91,14 +99,12 @@ Public Sub AddReviewNote(ByVal kind As String)
 
     Dim s As Shape
     Set s = sl.Shapes.AddShape(msoShapeRoundedRectangle, leftP, topP, NOTE_W, NOTE_H)
-    On Error Resume Next
-    s.Adjustments(1) = 0.08
-    On Error GoTo 0
     StyleNote s, kind
     s.TextFrame.TextRange.Text = HeaderFor(kind) & vbCrLf & body
     On Error Resume Next
     s.TextFrame.TextRange.Paragraphs(1, 1).Font.Bold = msoTrue
     On Error GoTo 0
+    FinishNote s
     TagReview s, kind
 End Sub
 
@@ -131,14 +137,12 @@ Public Sub AddReviewCallout()
 
     Dim note As Shape
     Set note = sl.Shapes.AddShape(msoShapeRoundedRectangle, leftP, topP, NOTE_W, NOTE_H)
-    On Error Resume Next
-    note.Adjustments(1) = 0.08
-    On Error GoTo 0
     StyleNote note, "NOTE"
     note.TextFrame.TextRange.Text = HeaderFor("NOTE") & vbCrLf & body
     On Error Resume Next
     note.TextFrame.TextRange.Paragraphs(1, 1).Font.Bold = msoTrue
     On Error GoTo 0
+    FinishNote note
 
     ' Leader from the note's bottom-center to the target's center.
     Dim ln As Shape
@@ -205,6 +209,33 @@ Private Sub StyleNote(ByVal s As Shape, ByVal kind As String)
     End With
 End Sub
 
+' Give the note a visibly rounded corner and a soft drop shadow so it reads as
+' a sticker. Called AFTER the text/autosize settle the size, so the radius is a
+' predictable ~6pt rather than a fraction that collapses toward square. Only
+' long-standing ShadowFormat members are touched, to stay Mac-safe.
+Private Sub FinishNote(ByVal s As Shape)
+    On Error Resume Next
+    s.Adjustments(1) = RoundnessFor(s)
+    With s.Shadow
+        .Visible = msoTrue
+        .OffsetX = 2
+        .OffsetY = 2
+        .ForeColor.RGB = RGB(0, 0, 0)
+        .Transparency = 0.65
+    End With
+    On Error GoTo 0
+End Sub
+
+' Corner-radius fraction that yields roughly a 6pt radius on this shape.
+Private Function RoundnessFor(ByVal s As Shape) As Single
+    Dim m As Single
+    m = s.Width
+    If s.Height < m Then m = s.Height
+    If m <= 0 Then RoundnessFor = 0.12: Exit Function
+    RoundnessFor = 6 / m
+    If RoundnessFor > 0.5 Then RoundnessFor = 0.5
+End Function
+
 Private Sub TagReview(ByVal s As Shape, ByVal kind As String)
     On Error Resume Next
     s.Tags.Add REVIEW_TAG, kind
@@ -228,11 +259,12 @@ End Function
 
 Private Function HeaderFor(ByVal kind As String) As String
     Dim stamp As String
-    stamp = ReviewInitials() & " " & Chr$(183) & " " & Format$(Date, "d mmm")
+    ' ChrW gives a real Unicode middot; Chr(183) is "sum" in Mac's code page.
+    stamp = ReviewInitials() & " " & ChrW$(183) & " " & Format$(Date, "d mmm")
     If UCase$(kind) = "NOTE" Then
         HeaderFor = stamp
     Else
-        HeaderFor = UCase$(kind) & " " & Chr$(183) & " " & stamp
+        HeaderFor = UCase$(kind) & " " & ChrW$(183) & " " & stamp
     End If
 End Function
 
