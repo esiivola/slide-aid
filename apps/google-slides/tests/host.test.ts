@@ -13,7 +13,7 @@ import { iconPathsFor } from "../src/slides/icon-catalog";
 import { hideObjects, unhideAll } from "../src/commands/deck-commands";
 import { snapToTable } from "../src/commands/object-commands";
 import { executeCommand } from "../src/commands/geometry-commands";
-import { addReviewCallout, addReviewNote, initialsFrom, removeReviewMarkup, setReviewInitials } from "../src/slides/review";
+import { addReviewCallout, addReviewNote, addStatusStamp, initialsFrom, removeReviewMarkup, setReviewInitials } from "../src/slides/review";
 
 // A tiny two-shard catalog: one stroke icon and one solid one.
 const STROKE_PATH = "M4 4 L20 4 L20 20 L4 20 Z";
@@ -339,36 +339,52 @@ test("a chart with no payload is reported as not being a Chart Aid chart", (t) =
 
 // --- Review markup ---------------------------------------------------------
 
-test("a comment mark is a loud tagged note stamped with initials", (t) => {
+test("a sticky note is a sharp tagged rectangle stamped with initials", (t) => {
   t.after(teardown);
   const state = installHost({ userEmail: "eero.siivola@example.com", pageWidth: 720 });
-  const result = addReviewNote("NOTE", "tighten this headline");
+  const result = addReviewNote("YELLOW", "tighten this headline");
 
   const shapes = requestsOfKind(state, "createShape");
   assert.equal(shapes.length, 2, "a filled note plus a text box");
-  assert.equal(shapes[0]!.shapeType, "ROUND_RECTANGLE");
+  assert.equal(shapes[0]!.shapeType, "RECTANGLE", "sharp rectangle, not rounded");
   const fill = requestsOfKind(state, "updateShapeProperties")[0]! as { shapeProperties: { shapeBackgroundFill: { solidFill: { color: { rgbColor: { red: number } } } } } };
-  assert.ok(fill.shapeProperties.shapeBackgroundFill.solidFill.color.rgbColor.red === 1, "loud yellow fill (R=1)");
+  assert.ok(fill.shapeProperties.shapeBackgroundFill.solidFill.color.rgbColor.red === 1, "yellow fill (R=1)");
   const text = insertedText(state).join("\n");
   assert.match(text, /ES ·/, "initials derived from the account email");
   assert.match(text, /tighten this headline/);
   const alt = requestsOfKind(state, "updatePageElementAltText").at(-1)!;
-  assert.match(String(alt.description), /\[slide-aid-review:NOTE\]/);
-  assert.match(result.message, /comment mark/i);
+  assert.match(String(alt.description), /\[slide-aid-review:NOTE:YELLOW\]/);
+  assert.match(result.message, /sticky note/i);
 });
 
 test("stored initials override the account-derived ones", (t) => {
   t.after(teardown);
   const state = installHost({ userEmail: "someone.else@example.com" });
   setReviewInitials("XY");
-  addReviewNote("TODO", "fix");
-  assert.match(insertedText(state).join("\n"), /TODO · XY ·/, "TODO label plus the chosen initials");
+  addReviewNote("GREEN", "fix");
+  assert.match(insertedText(state).join("\n"), /XY ·/, "the chosen initials, no kind prefix");
+});
+
+test("a status stamp is a bold banner that toggles off on re-apply", (t) => {
+  t.after(teardown);
+  const state = installHost({ pageWidth: 720 });
+  const on = addStatusStamp("DRAFT");
+  assert.equal(on.toggledOff, false);
+  assert.match(insertedText(state).join("\n"), /DRAFT/);
+  const alt = requestsOfKind(state, "updatePageElementAltText").at(-1)!;
+  assert.match(String(alt.description), /\[slide-aid-stamp:DRAFT\]/);
+
+  // Re-applying the same stamp removes it (the mock element carries the tag).
+  const state2 = installHost({ existing: [{ id: "st1", type: "SHAPE", description: "[slide-aid-stamp:DRAFT]" }] });
+  const off = addStatusStamp("DRAFT");
+  assert.equal(off.toggledOff, true);
+  assert.ok(!state2.elements.has("st1"), "the existing stamp was removed");
 });
 
 test("a single-token login shows the full name, not a lonely letter", (t) => {
   t.after(teardown);
   const state = installHost({ userEmail: "eerosiivola@example.com" });
-  addReviewNote("NOTE", "x");
+  addReviewNote("YELLOW", "x");
   assert.match(insertedText(state).join("\n"), /eerosiivola ·/, "no separators to split, so the whole login is shown");
 });
 
@@ -389,15 +405,15 @@ test("remove markup sweeps every tagged shape across the deck", (t) => {
   t.after(teardown);
   const state = installHost({
     existing: [
-      { id: "note1", type: "SHAPE", description: "Slide Aid NOTE [slide-aid-review:NOTE] a" },
-      { id: "todo1", type: "GROUP", description: "[slide-aid-review:TODO] b" },
+      { id: "note1", type: "SHAPE", description: "Slide Aid note [slide-aid-review:NOTE:YELLOW] a" },
+      { id: "stamp1", type: "GROUP", description: "[slide-aid-stamp:DRAFT] b" },
       { id: "keep1", type: "SHAPE", description: "a normal shape" },
     ],
   });
   const result = removeReviewMarkup();
-  assert.equal(result.removed, 2, "both review marks, not the normal shape");
+  assert.equal(result.removed, 2, "the note and the stamp, not the normal shape");
   assert.ok(state.elements.has("keep1"));
-  assert.ok(!state.elements.has("note1") && !state.elements.has("todo1"));
+  assert.ok(!state.elements.has("note1") && !state.elements.has("stamp1"));
 });
 
 test("initials derive from a name or email local-part, capped at three", () => {

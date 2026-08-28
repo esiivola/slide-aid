@@ -25,7 +25,7 @@ import {
 } from "../commands/deck-commands";
 import { insertCuratedIcon, insertEditableIcon, insertIconImage, makeIconsEditable } from "../slides/icons";
 import { iconPathsFor } from "../slides/icon-catalog";
-import { addReviewCallout, addReviewNote, removeReviewMarkup, reviewInitials, setReviewInitials, type ReviewKind } from "../slides/review";
+import { addReviewCallout, addReviewNote, addStatusStamp, removeReviewMarkup, reviewInitials, setReviewInitials } from "../slides/review";
 
 export interface ApiResponse<T = unknown> {
   ok: boolean;
@@ -288,8 +288,12 @@ export function cycleSlideAidElementState(color: string): ApiResponse {
 
 // --- Slide Aid: Review markup ----------------------------------------------
 
-export function addSlideAidReviewNote(kind: string, comment: string): ApiResponse {
-  return response(() => addReviewNote((kind === "TODO" || kind === "EDIT" ? kind : "NOTE") as ReviewKind, String(comment ?? "")));
+export function addSlideAidReviewNote(color: string, comment: string): ApiResponse {
+  return response(() => addReviewNote(String(color ?? "YELLOW"), String(comment ?? "")));
+}
+
+export function addSlideAidStatusStamp(kind: string): ApiResponse {
+  return response(() => addStatusStamp(String(kind ?? "DRAFT")));
 }
 
 export function addSlideAidReviewCallout(comment: string): ApiResponse {

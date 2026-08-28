@@ -1,24 +1,33 @@
 Attribute VB_Name = "modReview"
 ' =====================================================================
-' Slide Aid - on-slide review markup: sticky comment notes, TODO/EDIT
-' markers, and callouts that point at an object.
+' Slide Aid - on-slide review markup, modelled on the reference review
+' toolbar (BCG "Cool Macros" / PPT Productivity):
 '
-' Unlike PowerPoint's native comments (which live in a side pane and do
-' not print), these are real shapes stamped with the reviewer's initials
-' and the date, drawn in deliberately loud fixed colors so they cannot be
-' missed. Every mark is tagged "SA_REVIEW" so the whole deck can be swept
-' clean before the final send.
+'   * Sticky Notes  - a coloured note (6 colours, yellow default) docked
+'                     top-right, stamped with the reviewer's initials and
+'                     the date, with the comment below.
+'   * Status Stamps - a bold banner (Draft, WIP, Confidential, ...) toggled
+'                     on the slide.
+'   * Callout       - a note with a leader line to the selected object.
 '
-' Initials are seeded with no setup from the account name (the app user name
-' where available, else the Mac login), cached in prefs, and editable.
+' Unlike PowerPoint's native comments (side pane, do not print) these are
+' real shapes that show in exported PDFs. Every mark is tagged so the deck
+' can be swept clean before the final send.
+'
+' Notes/stamps are plain (sharp-cornered) rectangles with no shadow, to
+' match the reference. Initials are seeded with no setup from the account
+' name (app user name where available, else the Mac login), cached in
+' prefs, and editable.
 ' =====================================================================
 Option Explicit
 
-Private Const REVIEW_TAG As String = "SA_REVIEW"
+Private Const NOTE_TAG As String = "SA_REVIEW"     ' sticky notes + callouts
+Private Const STAMP_TAG As String = "SA_STAMP"     ' status stamps
 Private Const NOTE_W As Single = 156
-Private Const NOTE_H As Single = 52
+Private Const NOTE_H As Single = 50
 Private Const CORNER_MARGIN As Single = 10
-Private Const CASCADE As Single = 16
+Private Const CASCADE As Single = 14
+Private Const NOTE_TEXT As Long = 2171169          ' RGB(34,34,34) dark grey
 
 ' ---------------------------------------------------------------
 ' Reviewer initials: derived from the account name on first use,
@@ -51,8 +60,7 @@ End Function
 
 ' Compress a name or login into up to three uppercase initials. Handles
 ' "First Last", first.last, first_last and first-last. Falls back to the whole
-' name when it is a single token (e.g. a bare login), rather than a lonely
-' single letter - the user can shorten it with the Initials button.
+' name for a single-token login rather than a lonely letter.
 Private Function DeriveInitials(ByVal nm As String) As String
     Dim t As String, words() As String, i As Long, r As String
     t = Trim$(nm)
@@ -74,15 +82,15 @@ Public Sub SetReviewInitials()
     cur = ReviewInitials()
     v = InputBox("Your initials for review marks:", "Slide Aid", cur)
     v = Trim$(v)
-    If Len(v) = 0 Then Exit Sub             ' Cancel or an empty box: leave unchanged
+    If Len(v) = 0 Then Exit Sub               ' Cancel or empty box: leave unchanged
     SetPref "ReviewInitials", Left$(v, 6)
 End Sub
 
 ' ---------------------------------------------------------------
-' Add a sticky comment note (kind "NOTE"), or a TODO/EDIT marker,
-' in the top-right corner, cascading below any marks already there.
+' Sticky note in one of six colours (colourKey), docked top-right and
+' cascading below any notes already on the slide.
 ' ---------------------------------------------------------------
-Public Sub AddReviewNote(ByVal kind As String)
+Public Sub AddReviewNote(ByVal colourKey As String)
     Dim sl As Slide
     On Error Resume Next
     Set sl = ActiveWindow.View.Slide
@@ -90,26 +98,23 @@ Public Sub AddReviewNote(ByVal kind As String)
     If sl Is Nothing Then Exit Sub
 
     Dim body As String
-    body = InputBox(PromptFor(kind), "Slide Aid - " & KindLabel(kind))
-    If Len(body) = 0 Then Exit Sub          ' Cancel or an empty box
+    body = InputBox("Comment:", "Slide Aid - Sticky Note")
+    If Len(body) = 0 Then Exit Sub            ' Cancel or empty box
 
     Dim leftP As Single, topP As Single
     leftP = SlideW() - NOTE_W - CORNER_MARGIN
-    topP = CORNER_MARGIN + ReviewCountOnSlide(sl) * CASCADE
+    topP = CORNER_MARGIN + NoteCountOnSlide(sl) * (NOTE_H + CASCADE)
 
     Dim s As Shape
-    Set s = sl.Shapes.AddShape(msoShapeRoundedRectangle, leftP, topP, NOTE_W, NOTE_H)
-    StyleNote s, kind
-    s.TextFrame.TextRange.Text = HeaderFor(kind) & vbCrLf & body
-    On Error Resume Next
-    s.TextFrame.TextRange.Paragraphs(1, 1).Font.Bold = msoTrue
-    On Error GoTo 0
-    FinishNote s
-    TagReview s, kind
+    Set s = sl.Shapes.AddShape(msoShapeRectangle, leftP, topP, NOTE_W, NOTE_H)
+    StyleNote s, colourKey
+    s.TextFrame.TextRange.Text = StampLine() & vbCrLf & body
+    BoldFirstLine s
+    TagShape s, NOTE_TAG, "NOTE:" & UCase$(colourKey)
 End Sub
 
 ' ---------------------------------------------------------------
-' Add a callout: a note plus a leader line to the selected object.
+' Callout: a yellow note plus a leader line to the selected object.
 ' ---------------------------------------------------------------
 Public Sub AddReviewCallout()
     Dim sl As Slide, target As Shape
@@ -125,9 +130,8 @@ Public Sub AddReviewCallout()
 
     Dim body As String
     body = InputBox("Callout note:", "Slide Aid - Callout")
-    If Len(body) = 0 Then Exit Sub          ' Cancel or an empty box
+    If Len(body) = 0 Then Exit Sub
 
-    ' Place the note above-right of the target, clamped to the slide.
     Dim leftP As Single, topP As Single
     leftP = ShpRight(target) + 16
     If leftP > SlideW() - NOTE_W - CORNER_MARGIN Then leftP = SlideW() - NOTE_W - CORNER_MARGIN
@@ -136,34 +140,75 @@ Public Sub AddReviewCallout()
     If topP < CORNER_MARGIN Then topP = CORNER_MARGIN
 
     Dim note As Shape
-    Set note = sl.Shapes.AddShape(msoShapeRoundedRectangle, leftP, topP, NOTE_W, NOTE_H)
-    StyleNote note, "NOTE"
-    note.TextFrame.TextRange.Text = HeaderFor("NOTE") & vbCrLf & body
-    On Error Resume Next
-    note.TextFrame.TextRange.Paragraphs(1, 1).Font.Bold = msoTrue
-    On Error GoTo 0
-    FinishNote note
+    Set note = sl.Shapes.AddShape(msoShapeRectangle, leftP, topP, NOTE_W, NOTE_H)
+    StyleNote note, "YELLOW"
+    note.TextFrame.TextRange.Text = StampLine() & vbCrLf & body
+    BoldFirstLine note
 
-    ' Leader from the note's bottom-center to the target's center.
     Dim ln As Shape
     Set ln = sl.Shapes.AddLine(leftP + NOTE_W / 2, topP + NOTE_H, ShpCenterX(target), ShpCenterY(target))
-    ln.Line.ForeColor.RGB = RGB(255, 59, 48)
-    ln.Line.Weight = 2.25
-    ln.Line.EndArrowheadStyle = msoArrowheadTriangle
+    ln.Line.ForeColor.RGB = RGB(230, 60, 50)
+    ln.Line.Weight = 2#
 
     Dim g As Shape
     Set g = sl.Shapes.Range(Array(note.Name, ln.Name)).Group
-    TagReview g, "CALLOUT"
+    TagShape g, NOTE_TAG, "CALLOUT"
 End Sub
 
 ' ---------------------------------------------------------------
-' Remove every Slide Aid review mark across the whole deck.
+' Status stamp: a bold banner (Draft, WIP, ...) toggled on this slide.
+' Clicking the same stamp again removes it.
+' ---------------------------------------------------------------
+Public Sub AddStatusStamp(ByVal kind As String)
+    Dim sl As Slide
+    On Error Resume Next
+    Set sl = ActiveWindow.View.Slide
+    On Error GoTo 0
+    If sl Is Nothing Then Exit Sub
+
+    ' Toggle off: if this stamp is already on the slide, remove it and stop.
+    Dim shp As Shape
+    For Each shp In sl.Shapes
+        If ShapeTag(shp, STAMP_TAG) = UCase$(kind) Then
+            shp.Delete
+            Exit Sub
+        End If
+    Next shp
+
+    Dim s As Shape
+    Set s = sl.Shapes.AddShape(msoShapeRectangle, 0, 18, 240, 40)
+    s.Fill.Solid
+    s.Fill.ForeColor.RGB = StampColor(kind)
+    s.Line.Visible = msoFalse
+    With s.TextFrame
+        .MarginLeft = 10: .MarginRight = 10: .MarginTop = 3: .MarginBottom = 3
+        .WordWrap = msoFalse
+        On Error Resume Next
+        .AutoSize = ppAutoSizeShapeToFitText
+        On Error GoTo 0
+        With .TextRange
+            .Text = StampLabel(kind)
+            .Font.Size = 20
+            .Font.Bold = msoTrue
+            .Font.Name = "Arial"
+            .Font.Color.RGB = RGB(255, 255, 255)
+            .ParagraphFormat.Alignment = ppAlignCenter
+        End With
+    End With
+    s.Left = (SlideW() - s.Width) / 2          ' centre horizontally, after autosize
+    s.Top = 18
+    TagShape s, STAMP_TAG, UCase$(kind)
+End Sub
+
+' ---------------------------------------------------------------
+' Remove every Slide Aid review mark (notes, callouts, stamps) across
+' the whole deck.
 ' ---------------------------------------------------------------
 Public Sub RemoveReviewMarkup()
     Dim doomed As New Collection, sl As Slide, shp As Shape, i As Long
     For Each sl In ActivePresentation.Slides
         For Each shp In sl.Shapes
-            If HasReviewTag(shp) Then doomed.Add shp
+            If Len(ShapeTag(shp, NOTE_TAG)) > 0 Or Len(ShapeTag(shp, STAMP_TAG)) > 0 Then doomed.Add shp
         Next shp
     Next sl
     If doomed.Count = 0 Then
@@ -182,20 +227,12 @@ End Sub
 ' ---------------------------------------------------------------
 ' Helpers
 ' ---------------------------------------------------------------
-Private Sub StyleNote(ByVal s As Shape, ByVal kind As String)
-    ' Loud, fixed colors - review marks must be impossible to miss and are
-    ' removed before export, so matching the deck theme is a non-goal.
-    Dim fillC As Long, textC As Long
-    Select Case UCase$(kind)
-        Case "TODO": fillC = RGB(255, 59, 48):  textC = RGB(255, 255, 255)   ' red
-        Case "EDIT": fillC = RGB(255, 159, 10): textC = RGB(17, 17, 17)      ' orange
-        Case Else:   fillC = RGB(255, 214, 10): textC = RGB(17, 17, 17)      ' yellow
-    End Select
+Private Sub StyleNote(ByVal s As Shape, ByVal colourKey As String)
     s.Fill.Solid
-    s.Fill.ForeColor.RGB = fillC
-    s.Line.Visible = msoFalse
+    s.Fill.ForeColor.RGB = NoteColor(colourKey)
+    s.Line.Visible = msoFalse                  ' sharp rectangle, no border, no shadow
     With s.TextFrame
-        .MarginLeft = 4: .MarginRight = 4: .MarginTop = 3: .MarginBottom = 3
+        .MarginLeft = 5: .MarginRight = 5: .MarginTop = 3: .MarginBottom = 3
         .WordWrap = msoTrue
         On Error Resume Next
         .AutoSize = ppAutoSizeShapeToFitText
@@ -203,75 +240,73 @@ Private Sub StyleNote(ByVal s As Shape, ByVal kind As String)
         With .TextRange
             .Font.Size = 9
             .Font.Name = "Arial"
-            .Font.Color.RGB = textC
+            .Font.Color.RGB = NOTE_TEXT
             .ParagraphFormat.Alignment = ppAlignLeft
         End With
     End With
 End Sub
 
-' Give the note a visibly rounded corner. Called AFTER the text/autosize settle
-' the size, so the radius is a predictable ~6pt rather than a fraction that
-' collapses toward square.
-Private Sub FinishNote(ByVal s As Shape)
+Private Sub BoldFirstLine(ByVal s As Shape)
     On Error Resume Next
-    s.Adjustments(1) = RoundnessFor(s)
+    s.TextFrame.TextRange.Paragraphs(1, 1).Font.Bold = msoTrue
     On Error GoTo 0
 End Sub
 
-' Corner-radius fraction that yields roughly a 6pt radius on this shape.
-Private Function RoundnessFor(ByVal s As Shape) As Single
-    Dim m As Single
-    m = s.Width
-    If s.Height < m Then m = s.Height
-    If m <= 0 Then RoundnessFor = 0.12: Exit Function
-    RoundnessFor = 6 / m
-    If RoundnessFor > 0.5 Then RoundnessFor = 0.5
+' Header line: "ES <middot> 28 Aug". ChrW gives a real Unicode middot;
+' Chr(183) is "sum" in Mac's code page.
+Private Function StampLine() As String
+    StampLine = ReviewInitials() & " " & ChrW$(183) & " " & Format$(Date, "d mmm")
 End Function
 
-Private Sub TagReview(ByVal s As Shape, ByVal kind As String)
+Private Sub TagShape(ByVal s As Shape, ByVal tagName As String, ByVal value As String)
     On Error Resume Next
-    s.Tags.Add REVIEW_TAG, kind
+    s.Tags.Add tagName, value
     On Error GoTo 0
-    s.Name = "SAReview_" & kind & "_" & CStr(Int(Timer * 1000))
+    s.Name = "SAReview_" & value & "_" & CStr(Int(Timer * 1000))
 End Sub
 
-Private Function HasReviewTag(ByVal s As Shape) As Boolean
+Private Function ShapeTag(ByVal s As Shape, ByVal tagName As String) As String
     On Error Resume Next
-    HasReviewTag = (Len(s.Tags(REVIEW_TAG)) > 0)
+    ShapeTag = s.Tags(tagName)
     On Error GoTo 0
 End Function
 
-Private Function ReviewCountOnSlide(ByVal sl As Slide) As Long
+Private Function NoteCountOnSlide(ByVal sl As Slide) As Long
     Dim shp As Shape, n As Long
     For Each shp In sl.Shapes
-        If HasReviewTag(shp) Then n = n + 1
+        If Len(ShapeTag(shp, NOTE_TAG)) > 0 Then n = n + 1
     Next shp
-    ReviewCountOnSlide = n
+    NoteCountOnSlide = n
 End Function
 
-Private Function HeaderFor(ByVal kind As String) As String
-    Dim stamp As String
-    ' ChrW gives a real Unicode middot; Chr(183) is "sum" in Mac's code page.
-    stamp = ReviewInitials() & " " & ChrW$(183) & " " & Format$(Date, "d mmm")
-    If UCase$(kind) = "NOTE" Then
-        HeaderFor = stamp
-    Else
-        HeaderFor = UCase$(kind) & " " & ChrW$(183) & " " & stamp
-    End If
-End Function
-
-Private Function KindLabel(ByVal kind As String) As String
-    Select Case UCase$(kind)
-        Case "TODO": KindLabel = "To-Do"
-        Case "EDIT": KindLabel = "Edit"
-        Case Else:   KindLabel = "Comment"
+' The six reference note colours; yellow is the default.
+Private Function NoteColor(ByVal key As String) As Long
+    Select Case UCase$(key)
+        Case "GREEN":    NoteColor = RGB(178, 223, 138)
+        Case "BLUE":     NoteColor = RGB(160, 210, 255)
+        Case "PINK":     NoteColor = RGB(255, 179, 198)
+        Case "LAVENDER": NoteColor = RGB(214, 196, 240)
+        Case "LAVBLUE":  NoteColor = RGB(190, 200, 245)
+        Case Else:       NoteColor = RGB(255, 224, 79)   ' yellow (default)
     End Select
 End Function
 
-Private Function PromptFor(ByVal kind As String) As String
+Private Function StampColor(ByVal kind As String) As Long
     Select Case UCase$(kind)
-        Case "TODO": PromptFor = "To-do:"
-        Case "EDIT": PromptFor = "Edit needed:"
-        Case Else:   PromptFor = "Comment:"
+        Case "NEW":         StampColor = RGB(40, 160, 70)
+        Case "UPDATED":     StampColor = RGB(40, 110, 200)
+        Case "WIP":         StampColor = RGB(230, 140, 0)
+        Case "ONHOLD":      StampColor = RGB(130, 70, 160)
+        Case "DRAFT":       StampColor = RGB(120, 120, 120)
+        Case Else:          StampColor = RGB(200, 30, 30)   ' Confidential / Out of Date / Remove
+    End Select
+End Function
+
+Private Function StampLabel(ByVal kind As String) As String
+    Select Case UCase$(kind)
+        Case "WIP":       StampLabel = "WORK IN PROGRESS"
+        Case "ONHOLD":    StampLabel = "ON HOLD"
+        Case "OUTOFDATE": StampLabel = "OUT OF DATE"
+        Case Else:        StampLabel = UCase$(kind)
     End Select
 End Function

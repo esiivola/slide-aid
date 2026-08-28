@@ -230,12 +230,27 @@
         </group>
 
         <group id="saReview" label="Review">
-          <button id="saRvNote" label="Comment" image="sa_info" size="normal" onAction="RB_Dispatch" tag="Review:NOTE" screentip="Add a sticky comment note to the slide." supertip="Drops a bright note in the top-right corner, stamped with your initials and the date, plus the comment you type. Unlike PowerPoint comments it shows in exported PDFs - remove marks before the final send."/>
-          <button id="saRvTodo" label="To-Do" image="sa_roundrect" size="normal" onAction="RB_Dispatch" tag="Review:TODO" screentip="Add a red TODO marker with your initials." supertip="A loud red action marker stamped TODO, your initials and the date, plus the note you type."/>
-          <button id="saRvEdit" label="Edit Mark" image="sa_roundrect" size="normal" onAction="RB_Dispatch" tag="Review:EDIT" screentip="Add an orange EDIT marker with your initials." supertip="A loud orange marker stamped EDIT, your initials and the date, plus the note you type."/>
-          <button id="saRvCall" label="Callout" image="sa_blockarrow" size="normal" onAction="RB_Dispatch" tag="Callout:0" screentip="Point a note at the selected object." supertip="Select one object first. Adds a note with a red leader line pointing at it, stamped with your initials and the date."/>
-          <button id="saRvDel" label="Remove Marks" image="sa_cleanup" size="normal" onAction="RB_Dispatch" tag="ReviewDel:0" screentip="Remove all Slide Aid review marks in the deck." supertip="Deletes every comment, marker and callout added by Slide Aid across the whole presentation - run this before the final export."/>
-          <button id="saRvInit" label="Initials" image="sa_pick" size="normal" onAction="RB_Dispatch" tag="ReviewInit:0" screentip="Set the initials stamped on review marks." supertip="Seeded automatically from your PowerPoint author name; change them here at any time."/>
+          <menu id="saRvNote" label="Sticky Note" image="sa_info" itemSize="normal" screentip="Add a sticky comment note to the slide." supertip="Drops a coloured note in the top-right corner, stamped with your initials and the date, plus the comment you type. Unlike PowerPoint comments it shows in exported PDFs - remove marks before the final send.">
+            <button id="saRvNoteY" label="Yellow" onAction="RB_Dispatch" tag="Note:YELLOW"/>
+            <button id="saRvNoteG" label="Green" onAction="RB_Dispatch" tag="Note:GREEN"/>
+            <button id="saRvNoteB" label="Blue" onAction="RB_Dispatch" tag="Note:BLUE"/>
+            <button id="saRvNoteP" label="Pink" onAction="RB_Dispatch" tag="Note:PINK"/>
+            <button id="saRvNoteL" label="Lavender" onAction="RB_Dispatch" tag="Note:LAVENDER"/>
+            <button id="saRvNoteLB" label="Lavender Blue" onAction="RB_Dispatch" tag="Note:LAVBLUE"/>
+          </menu>
+          <menu id="saRvStamp" label="Status Stamp" image="sa_masterobj" itemSize="normal" screentip="Stamp the slide Draft, WIP, Confidential, ..." supertip="Adds a bold status banner across the top of the slide. Click the same stamp again to remove it.">
+            <button id="saRvStDraft" label="Draft" onAction="RB_Dispatch" tag="Stamp:DRAFT"/>
+            <button id="saRvStWip" label="Work in Progress" onAction="RB_Dispatch" tag="Stamp:WIP"/>
+            <button id="saRvStNew" label="New" onAction="RB_Dispatch" tag="Stamp:NEW"/>
+            <button id="saRvStUpd" label="Updated" onAction="RB_Dispatch" tag="Stamp:UPDATED"/>
+            <button id="saRvStConf" label="Confidential" onAction="RB_Dispatch" tag="Stamp:CONFIDENTIAL"/>
+            <button id="saRvStHold" label="On Hold" onAction="RB_Dispatch" tag="Stamp:ONHOLD"/>
+            <button id="saRvStOld" label="Out of Date" onAction="RB_Dispatch" tag="Stamp:OUTOFDATE"/>
+            <button id="saRvStRem" label="Remove" onAction="RB_Dispatch" tag="Stamp:REMOVE"/>
+          </menu>
+          <button id="saRvCall" label="Callout" image="sa_blockarrow" size="normal" onAction="RB_Dispatch" tag="Callout:0" screentip="Point a note at the selected object." supertip="Select one object first. Adds a yellow note with a leader line pointing at it, stamped with your initials and the date."/>
+          <button id="saRvDel" label="Remove Marks" image="sa_cleanup" size="normal" onAction="RB_Dispatch" tag="ReviewDel:0" screentip="Remove all Slide Aid review marks in the deck." supertip="Deletes every sticky note, callout and status stamp added by Slide Aid across the whole presentation - run this before the final export."/>
+          <button id="saRvInit" label="Initials" image="sa_pick" size="normal" onAction="RB_Dispatch" tag="ReviewInit:0" screentip="Set the initials stamped on review marks." supertip="Seeded automatically from your account name; change them here at any time."/>
         </group>
 
       </tab>

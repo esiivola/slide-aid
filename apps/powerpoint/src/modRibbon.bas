@@ -90,7 +90,8 @@ Public Sub RB_DispatchTag(ByVal tagStr As String)
         Case "MasterObj": ToggleMasterShapes
 
         ' --- Review markup ---
-        Case "Review":     AddReviewNote parts(1)
+        Case "Note":       AddReviewNote parts(1)
+        Case "Stamp":      AddStatusStamp parts(1)
         Case "Callout":    AddReviewCallout
         Case "ReviewDel":  RemoveReviewMarkup
         Case "ReviewInit": SetReviewInitials

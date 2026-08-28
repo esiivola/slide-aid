@@ -266,15 +266,15 @@ Use the **style** dropdown next to the category filter to narrow the library to 
 
 #### Review marks
 
-The **Review** group on the Slide Aid tab adds on-slide markup for review rounds. Unlike PowerPoint's native comments (which sit in a side pane and do not print), these are real, deliberately loud shapes that show in exported PDFs and printouts.
+The **Review** group on the Slide Aid tab adds on-slide markup for review rounds, modelled on the reference review toolbar. Unlike PowerPoint's native comments (which sit in a side pane and do not print), these are real shapes that show in exported PDFs and printouts.
 
-- **Comment** drops a bright yellow sticky note in the top-right corner, stamped with your initials and the date plus the comment you type; extra notes cascade below.
-- **To-Do** and **Edit Mark** add loud red / orange action markers stamped `TODO`/`EDIT`, your initials, the date, and a note.
-- **Callout** points a note at the selected object with a red leader line — select one object first.
-- **Remove Marks** deletes every Slide Aid review mark across the whole deck; run it before the final send.
-- **Initials** are seeded automatically from your account name (PowerPoint author name / Google account) and can be changed any time; on Google Slides the field lives at the bottom of the Review group.
+- **Sticky Note** drops a coloured note (six colours, yellow default) in the top-right corner, stamped with your initials and the date plus the comment you type; extra notes cascade below. The notes are plain sharp-cornered rectangles.
+- **Status Stamp** adds a bold banner across the top of the slide — Draft, Work in Progress, New, Updated, Confidential, On Hold, Out of Date, or Remove. Applying the same stamp again removes it.
+- **Callout** points a yellow note at the selected object with a leader line — select one object first.
+- **Remove Marks** deletes every Slide Aid review mark (notes, callouts and stamps) across the whole deck; run it before the final send.
+- **Initials** are seeded automatically from your account name (app user name where available, else the Mac login / Google account); a single-token login is shown in full rather than as one letter, and you can change them any time. On Google Slides the initials field lives at the bottom of the Review group.
 
-Google Slides offers the same tools in the **Review** group of the Slide Aid sidebar tab.
+Google Slides offers the same tools in the **Review** group of the Slide Aid sidebar tab, with the note colour and stamp chosen from dropdowns.
 
 ### Ribbon tour
 
@@ -408,11 +408,11 @@ The tables below list the top-level controls that appear on the Slide Aid and Ch
 | <img src="shared/icons/sa_paste.png" width="32" alt="sa_paste"> | **Paste on Slides** | Paste the clipboard on every selected slide. Copy an object first, select several slides in the thumbnail pane, then click. |
 | <img src="shared/icons/sa_lang.png" width="32" alt="sa_lang"> | **Language** | Set the proofing language. For the current selection or the whole presentation. Menu entries: Selection: Suomi, Selection: English (US), Selection: English (UK), Selection: Svenska, Selection: Deutsch, Whole Presentation: Suomi, Whole Presentation: English (US), Whole Presentation: English (UK), Whole Presentation: Svenska, Whole Presentation: Deutsch. |
 | <img src="shared/icons/sa_shortcut.png" width="32" alt="sa_shortcut"> | **Shortcuts** | Edit your keyboard shortcuts. Opens the Hammerspoon shortcut config (one line per shortcut; saving applies immediately). If Hammerspoon isn't installed, shows how to set it up. |
-| <img src="shared/icons/sa_info.png" width="32" alt="sa_info"> | **Comment** | Add a bright sticky comment note in the slide corner, stamped with your initials and the date. Shows in exported PDFs, unlike native comments. |
-| <img src="shared/icons/sa_roundrect.png" width="32" alt="sa_roundrect"> | **To-Do / Edit Mark** | Add a loud red (TODO) or orange (EDIT) action marker with your initials, the date, and a note. |
-| <img src="shared/icons/sa_blockarrow.png" width="32" alt="sa_blockarrow"> | **Callout** | Point a note at the selected object with a red leader line. Select one object first. |
-| <img src="shared/icons/sa_cleanup.png" width="32" alt="sa_cleanup"> | **Remove Marks** | Delete every Slide Aid review mark (comments, markers, callouts) across the whole deck. Run before the final export. |
-| <img src="shared/icons/sa_pick.png" width="32" alt="sa_pick"> | **Initials** | Set the initials stamped on review marks. Seeded automatically from your author name; change any time. |
+| <img src="shared/icons/sa_info.png" width="32" alt="sa_info"> | **Sticky Note** | Add a coloured sticky note (6 colours) in the slide corner, stamped with your initials and the date. Shows in exported PDFs, unlike native comments. |
+| <img src="shared/icons/sa_masterobj.png" width="32" alt="sa_masterobj"> | **Status Stamp** | Stamp the slide Draft, WIP, New, Updated, Confidential, On Hold, Out of Date or Remove. Apply the same stamp again to remove it. |
+| <img src="shared/icons/sa_blockarrow.png" width="32" alt="sa_blockarrow"> | **Callout** | Point a yellow note at the selected object with a leader line. Select one object first. |
+| <img src="shared/icons/sa_cleanup.png" width="32" alt="sa_cleanup"> | **Remove Marks** | Delete every Slide Aid review mark (notes, callouts, stamps) across the whole deck. Run before the final export. |
+| <img src="shared/icons/sa_pick.png" width="32" alt="sa_pick"> | **Initials** | Set the initials stamped on review marks. Seeded automatically from your account name; change any time. |
 
 ### Chart Aid Tab
 
